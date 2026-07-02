@@ -2,100 +2,88 @@
 
 namespace Database\Seeders;
 
-use App\Models\Car;
-use App\Models\Reservation;
-use App\Models\User;
-use Carbon\Carbon;
+
+use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
+use App\Models\Reservation;
+use App\Models\User;
+use App\Models\Car;
+use App\Models\Agency;
 
 class ReservationSeeder extends Seeder
 {
+    /**
+     * Run the database seeds.
+     */
     public function run(): void
     {
-        $reservations = [
-            [
-                'reference' => 'SEED-PENDING-YARIS',
-                'client_email' => 'client@test.com',
-                'plate_number' => '123-A-45',
-                'start_date' => now()->addDays(3)->toDateString(),
-                'end_date' => now()->addDays(5)->toDateString(),
-                'status' => 'pending',
-                'expires_at' => now()->addHour(),
-            ],
-            [
-                'reference' => 'SEED-CONFIRMED-I10',
-                'client_email' => 'sara@test.com',
-                'plate_number' => '456-B-67',
-                'start_date' => now()->addDays(8)->toDateString(),
-                'end_date' => now()->addDays(11)->toDateString(),
-                'status' => 'confirmed',
-                'confirmed_at' => now()->subHour(),
-            ],
-            [
-                'reference' => 'SEED-CANCELLED-DUSTER',
-                'client_email' => 'client@test.com',
-                'plate_number' => '789-C-89',
-                'start_date' => now()->addDays(14)->toDateString(),
-                'end_date' => now()->addDays(16)->toDateString(),
-                'status' => 'cancelled',
-                'cancelled_at' => now()->subMinutes(30),
-                'cancelled_by' => 'client',
-                'cancellation_reason' => 'Seeded cancellation for refund testing.',
-            ],
-            [
-                'reference' => 'SEED-COMPLETED-SPORTAGE',
-                'client_email' => 'sara@test.com',
-                'plate_number' => '999-K-10',
-                'start_date' => now()->subDays(10)->toDateString(),
-                'end_date' => now()->subDays(7)->toDateString(),
-                'status' => 'completed',
-                'confirmed_at' => now()->subDays(12),
-                'completed_at' => now()->subDays(7),
-            ],
-        ];
+        // Get data from DB
+        $john  = User::where('email', 'client@test.ma')->first();
+        $sara  = User::where('email', 'sara@test.ma')->first();
 
-        foreach ($reservations as $reservation) {
-            $client = User::where('email', $reservation['client_email'])->first();
-            $car = Car::with('agency')->where('plate_number', $reservation['plate_number'])->first();
+        $corolla = Car::where('plate_number', 'A-12345-B')->first();
+        $duster  = Car::where('plate_number', 'A-67890-B')->first();
+        $clio    = Car::where('plate_number', 'M-11111-C')->first();
 
-            // Skip the reservation row if the required client, car, or agency seed is missing.
-            if (!$client || !$car || !$car->agency) {
-                continue;
-            }
+        $automaroc     = Agency::where('slug', 'automaroc')->first();
+        $marrakechcars = Agency::where('slug', 'marrakech-cars')->first();
 
-            // Calculate totals from each car so seeded reservations match the real pricing rules.
-            $days = max(1, Carbon::parse($reservation['start_date'])->diffInDays(Carbon::parse($reservation['end_date'])));
-            $total = $car->price_per_day * $days;
+        // Reservation 1 — completed
+        Reservation::create([
+            'id'                    => Str::uuid(),
+            'client_id'             => $john->id,
+            'car_id'                => $corolla->id,
+            'agency_id'             => $automaroc->id,
+            'reference_number'      => 'RES-' . strtoupper(Str::random(8)),
+            'start_date'            => '2026-05-01 10:00:00',
+            'end_date'              => '2026-05-05 10:00:00',
+            'price_per_day_snapshot'=> 350.00,
+            'total_amount'          => 1400.00,
+            'commission_amount'     => 210.00,
+            'agency_earning'        => 1190.00,
+            'status'                => 'completed',
+            'cancellation_reason'   => null,
+            'cancelled_at'          => null,
+            'completed_at'          => '2026-05-05 10:00:00',
+        ]);
 
-            // Seed by client/car/start date so reruns update the same booking scenario.
-            Reservation::updateOrCreate(
-                [
-                    'client_id' => $client->id,
-                    'car_id' => $car->id,
-                    'start_date' => $reservation['start_date'],
-                ],
-                [
-                    'id' => Reservation::where('client_id', $client->id)
-                        ->where('car_id', $car->id)
-                        ->where('start_date', $reservation['start_date'])
-                        ->value('id') ?? (string) Str::uuid(),
-                    'client_id' => $client->id,
-                    'car_id' => $car->id,
-                    'agency_id' => $car->agency->id,
-                    'start_date' => $reservation['start_date'],
-                    'end_date' => $reservation['end_date'],
-                    'price_per_day_snapshot' => $car->price_per_day,
-                    'total_amount' => $total,
-                    'status' => $reservation['status'],
-                    'confirmed_at' => $reservation['confirmed_at'] ?? null,
-                    'expires_at' => $reservation['expires_at'] ?? null,
-                    'cancelled_at' => $reservation['cancelled_at'] ?? null,
-                    'cancelled_by' => $reservation['cancelled_by'] ?? null,
-                    'completed_at' => $reservation['completed_at'] ?? null,
-                    'cancellation_reason' => $reservation['cancellation_reason'] ?? null,
-                ]
-            );
-        }
+        // Reservation 2 — confirmed
+        Reservation::create([
+            'id'                    => Str::uuid(),
+            'client_id'             => $sara->id,
+            'car_id'                => $duster->id,
+            'agency_id'             => $automaroc->id,
+            'reference_number'      => 'RES-' . strtoupper(Str::random(8)),
+            'start_date'            => '2026-06-10 09:00:00',
+            'end_date'              => '2026-06-15 09:00:00',
+            'price_per_day_snapshot'=> 450.00,
+            'total_amount'          => 2250.00,
+            'commission_amount'     => 337.50,
+            'agency_earning'        => 1912.50,
+            'status'                => 'confirmed',
+            'cancellation_reason'   => null,
+            'cancelled_at'          => null,
+            'completed_at'          => null,
+        ]);
+
+        // Reservation 3 — cancelled
+        Reservation::create([
+            'id'                    => Str::uuid(),
+            'client_id'             => $john->id,
+            'car_id'                => $clio->id,
+            'agency_id'             => $marrakechcars->id,
+            'reference_number'      => 'RES-' . strtoupper(Str::random(8)),
+            'start_date'            => '2026-05-20 08:00:00',
+            'end_date'              => '2026-05-23 08:00:00',
+            'price_per_day_snapshot'=> 250.00,
+            'total_amount'          => 750.00,
+            'commission_amount'     => 112.50,
+            'agency_earning'        => 637.50,
+            'status'                => 'cancelled',
+            'cancellation_reason'   => 'Changed travel plans',
+            'cancelled_at'          => '2026-05-18 14:00:00',
+            'completed_at'          => null,
+        ]);
     }
 }

@@ -4,25 +4,37 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
+
 
 class Review extends Model
 {
-    // Enable soft deletes because the reviews table has a deleted_at column.
-    use SoftDeletes;
+    use SoftDeletes , HasUuids;
 
-    public $incrementing = false;
-    protected $keyType = 'string';
     protected $fillable = [
         'id',
         'reservation_id',
-        // Allow review scores and optional comments from the review workflow.
+        'client_id',
         'car_rating',
         'agency_rating',
         'comment',
     ];
 
-    public function reservation()
+    protected function casts(): array
     {
+        return [
+            'car_rating' => 'decimal:1',
+            'agency_rating' => 'decimal:1',
+            'deleted_at' => 'datetime',
+        ];
+    }
+    public function user(){
+        return $this->belongsTo(User::class, 'client_id');
+    }
+    public function client(){
+        return $this->belongsTo(User::class, 'client_id');
+    }
+    public function reservation(){
         return $this->belongsTo(Reservation::class);
     }
 }

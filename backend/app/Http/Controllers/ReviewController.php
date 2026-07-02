@@ -3,133 +3,134 @@
 namespace App\Http\Controllers;
 
 use App\Http\Resources\ReviewResource;
-use App\Models\Agency;
 use App\Models\Car;
-use App\Models\Reservation;
+use App\Models\Agency;
 use App\Models\Review;
+use App\Models\Reservation;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class ReviewController extends Controller
 {
-    // -------------------------------------------------------------------------
-    // CLIENT: Post a review for a completed reservation
-    // Only the client who made the reservation can review it, and only once.
-    // -------------------------------------------------------------------------
-    public function store(Request $request, $reservationId)
+    // ── GET /api/cars/{car}/reviews — public
+    public function carReviews(Car $car)
     {
-        $user = auth()->user();
+        $reviews = Review::whereHas('reservation', fn($q) => $q->where('car_id', $car->id))
+            ->with(['client', 'reservation'])
+            ->orderBy('created_at', 'desc')
+            ->paginate(10);
 
-        // Only clients can write reviews — agency owners and admins cannot.
-        if ($user->role !== 'client') {
-            return response()->json(['message' => 'Only clients can post reviews'], 403);
+        return ReviewResource::collection($reviews);
+    }
+
+    // ── GET /api/agencies/{agency}/reviews — public
+    public function agencyReviews(Agency $agency)
+    {
+        $reviews = Review::whereHas('reservation', fn($q) => $q->where('agency_id', $agency->id))
+            ->with(['client', 'reservation'])
+            ->orderBy('created_at', 'desc')
+            ->paginate(10);
+
+        return ReviewResource::collection($reviews);
+    }
+
+    // ── POST /api/client/reservations/{reservation}/review — client
+    public function store(Request $request, Reservation $reservation)
+    {
+        // Check ownership
+        if ($reservation->client_id !== $request->user()->id) {
+            return response()->json([
+                'message' => 'Unauthorized'
+            ], 403);
         }
 
-        // Load the reservation with car and agency so we can update their ratings after.
-        $reservation = Reservation::with(['car', 'agency'])->findOrFail($reservationId);
-
-        // Cast both sides to string — client_id comes from DB as a string while
-        // $user->id may be a LazyUuidFromString object when freshly created.
-        if ((string) $reservation->client_id !== (string) $user->id) {
-            return response()->json(['message' => 'You can only review your own reservations'], 403);
-        }
-
-        // Only completed rentals can be reviewed — the experience must have happened.
+        // Check reservation is completed
         if ($reservation->status !== 'completed') {
-            return response()->json(['message' => 'You can only review completed reservations'], 400);
+            return response()->json([
+                'message' => 'You can only review completed reservations'
+            ], 422);
         }
 
-        // One review per reservation — prevent duplicate submissions.
+        // Check not already reviewed
         if ($reservation->review) {
-            return response()->json(['message' => 'You have already reviewed this reservation'], 400);
+            return response()->json([
+                'message' => 'You already reviewed this reservation'
+            ], 422);
         }
 
-        $data = $request->validate([
-            // Ratings must be whole numbers from 1 to 5.
-            'car_rating'    => 'required|integer|min:1|max:5',
-            'agency_rating' => 'required|integer|min:1|max:5',
+        $validated = $request->validate([
+            'car_rating'    => 'required|numeric|min:1|max:5',
+            'agency_rating' => 'required|numeric|min:1|max:5',
             'comment'       => 'nullable|string|max:1000',
         ]);
 
-        // Wrap everything in a transaction so the review insert and rating recalculations
-        // always stay in sync — a partial failure rolls back all three changes.
-        $review = DB::transaction(function () use ($data, $reservation) {
-            $review = Review::create([
-                'id'             => Str::uuid(),
-                'reservation_id' => $reservation->id,
-                'car_rating'     => $data['car_rating'],
-                'agency_rating'  => $data['agency_rating'],
-                'comment'        => $data['comment'] ?? null,
-            ]);
+        $review = Review::create([
+            'id'             => Str::uuid(),
+            'reservation_id' => $reservation->id,
+            'client_id'      => $request->user()->id,
+            'car_rating'     => $validated['car_rating'],
+            'agency_rating'  => $validated['agency_rating'],
+            'comment'        => $validated['comment'],
+        ]);
 
-            // Recalculate the car's average rating from all reviews linked through reservations.
-            $car = $reservation->car;
-            $carStats = Review::whereHas('reservation', fn($q) => $q->where('car_id', $car->id))
-                ->selectRaw('AVG(car_rating) as avg, COUNT(*) as total')
-                ->first();
+        // Update car avg_rating
+        $car = $reservation->car;
+        $car->update([
+            'avg_rating'    => Review::whereHas('reservation', fn($q) => $q->where('car_id', $car->id))->avg('car_rating'),
+            'total_reviews' => Review::whereHas('reservation', fn($q) => $q->where('car_id', $car->id))->count(),
+        ]);
 
-            $car->update([
-                'avg_rating'    => round($carStats->avg, 2),
-                'total_reviews' => $carStats->total,
-            ]);
+        // Update agency avg_rating
+        $agency = $reservation->agency;
+        $agency->update([
+            'avg_rating'    => Review::whereHas('reservation', fn($q) => $q->where('agency_id', $agency->id))->avg('agency_rating'),
+            'total_reviews' => Review::whereHas('reservation', fn($q) => $q->where('agency_id', $agency->id))->count(),
+        ]);
 
-            // Recalculate the agency's average rating from all reviews linked through reservations.
-            $agency = $reservation->agency;
-            $agencyStats = Review::whereHas('reservation', fn($q) => $q->where('agency_id', $agency->id))
-                ->selectRaw('AVG(agency_rating) as avg, COUNT(*) as total')
-                ->first();
+        return new ReviewResource($review->load(['client', 'reservation']));
+    }
 
-            $agency->update([
-                'avg_rating'    => round($agencyStats->avg, 2),
-                'total_reviews' => $agencyStats->total,
-            ]);
+    // ── GET /api/client/reviews — client
+    public function clientIndex(Request $request)
+    {
+        $reviews = Review::where('client_id', $request->user()->id)
+            ->with(['reservation.car', 'reservation.agency'])
+            ->orderBy('created_at', 'desc')
+            ->paginate(10);
 
-            return $review;
-        });
+        return ReviewResource::collection($reviews);
+    }
 
-        // Load the reservation→client chain so ReviewResource can include the reviewer's name.
-        $review->load('reservation.client');
+    // ── GET /api/admin/reviews — admin
+    public function adminIndex(Request $request)
+    {
+        $reviews = Review::withTrashed()
+            ->with(['client', 'reservation.car', 'reservation.agency'])
+            ->when($request->deleted, fn($q) => $q->onlyTrashed())
+            ->orderBy('created_at', 'desc')
+            ->paginate(15);
+
+        return ReviewResource::collection($reviews);
+    }
+
+    // ── DELETE /api/admin/reviews/{review} — admin soft delete
+    public function destroy(Review $review)
+    {
+        $review->delete();
 
         return response()->json([
-            'message' => 'Review submitted successfully',
-            'data'    => new ReviewResource($review),
-        ], 201);
+            'message' => 'Review deleted successfully'
+        ]);
     }
 
-    // -------------------------------------------------------------------------
-    // PUBLIC: List all reviews for a specific car (paginated)
-    // -------------------------------------------------------------------------
-    public function forCar($carId)
+    // ── PUT /api/admin/reviews/{review}/restore — admin restore
+    public function restore($id)
     {
-        // Confirm the car exists before querying reviews.
-        Car::findOrFail($carId);
+        $review = Review::withTrashed()->findOrFail($id);
+        $review->restore();
 
-        // Fetch reviews through the hasManyThrough reservation chain.
-        // Load the reservation→client chain so ReviewResource can show the reviewer's name.
-        $reviews = Review::with('reservation.client')
-            ->whereHas('reservation', fn($q) => $q->where('car_id', $carId))
-            ->latest()
-            ->paginate(15);
-
-        return ReviewResource::collection($reviews);
-    }
-
-    // -------------------------------------------------------------------------
-    // PUBLIC: List all reviews for a specific agency (paginated)
-    // -------------------------------------------------------------------------
-    public function forAgency($agencyId)
-    {
-        // Confirm the agency exists before querying reviews.
-        Agency::findOrFail($agencyId);
-
-        // Fetch reviews through the hasManyThrough reservation chain.
-        // Load the reservation→client chain so ReviewResource can show the reviewer's name.
-        $reviews = Review::with('reservation.client')
-            ->whereHas('reservation', fn($q) => $q->where('agency_id', $agencyId))
-            ->latest()
-            ->paginate(15);
-
-        return ReviewResource::collection($reviews);
+        return response()->json([
+            'message' => 'Review restored successfully'
+        ]);
     }
 }

@@ -3,30 +3,28 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
+
 
 class CarImage extends Model
 {
-    // Match the UUID primary key used by the car_images migration.
-    public $incrementing = false;
-    protected $keyType = 'string';
+    use HasUuids;
     protected $fillable = [
         'id',
         'car_id',
-        // Allow image URL and primary marker used by the reservation resource.
-        'image_url',
+        'url',
         'is_primary',
+        'sort_order',
     ];
 
-    // Cast primary marker to boolean when images are serialized or filtered.
     protected function casts(): array
     {
         return [
             'is_primary' => 'boolean',
+            'sort_order' => 'integer',
         ];
     }
-
-    public function car()
-    {
+    public function car(){
         return $this->belongsTo(Car::class);
     }
 }

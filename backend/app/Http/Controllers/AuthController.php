@@ -1,95 +1,121 @@
 <?php
 
 namespace App\Http\Controllers;
+
+use App\Http\Resources\UserResource;
+use App\Models\Agency;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
-    public function register(Request $request)
+    //Register Client
+    public function registerClient(Request $request){
+        $validated = $request->validate([
+            'first_name' => 'required|string|max:255',
+            'last_name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email',
+            'phone' => 'required|string|max:20',
+            'password' => 'required|string|min:8'
+        ]);
+        $user = User::create([
+            'id' => Str::uuid(),
+            'first_name' => $validated['first_name'],
+            'last_name' => $validated['last_name'],
+            'email' => $validated['email'],
+            'phone' => $validated['phone'],
+            'password' => $validated['password'],
+            'role' => 'client',
+            'status' => 'active'
+        ]);
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        return response()->json([
+            'message' => 'Client registered successfully',
+            'token' => $token,
+            'user' => $user
+        ],201);
+    }
+    // ── Register Agency Owner
+    public function registerAgency(Request $request)
     {
-        $data = $request->validate([
-            'first_name' => 'required|string|max:100',
-            'last_name'  => 'required|string|max:100',
-            'email'      => 'required|email|unique:users',
-            // min:8 — short passwords are a common attack vector.
-            // confirmed — requires a matching password_confirmation field to prevent typos.
-            'password'   => 'required|min:8|confirmed',
-            // Clients register as 'client'; agency owners register as 'agency_owner'.
-            // Admins cannot self-register — they must be created directly in the DB.
-            'role'       => 'sometimes|in:client,agency_owner',
+        $validated = $request->validate([
+            'first_name'  => 'required|string|max:255',
+            'last_name'   => 'required|string|max:255',
+            'email'       => 'required|email|unique:users,email',
+            'password'    => 'required|string|min:8|confirmed',
+            'phone'       => 'required|string|max:20',
+            'agency_name' => 'required|string|max:255',
+            'agency_city' => 'required|uuid|exists:cities,id',
+            'address'     => 'required|string|max:255',
+            'agency_phone'=> 'required|string|max:20',
         ]);
 
+        // Create user
         $user = User::create([
             'id'         => Str::uuid(),
-            'first_name' => $data['first_name'],
-            'last_name'  => $data['last_name'],
-            'email'      => $data['email'],
-            'password'   => Hash::make($data['password']),
-            'role'       => $data['role'] ?? 'client',
+            'first_name' => $validated['first_name'],
+            'last_name'  => $validated['last_name'],
+            'email'      => $validated['email'],
+            'password'   => $validated['password'],
+            'phone'      => $validated['phone'],
+            'role'       => 'agency_owner',
+            'status'     => 'active',
         ]);
 
-        $token = $user->createToken('api_token')->plainTextToken;
+        // Create agency (pending approval)
+        Agency::create([
+            'id'       => Str::uuid(),
+            'owner_id' => $user->id,
+            'city_id'  => $validated['agency_city'],
+            'name'     => $validated['agency_name'],
+            'slug'     => Str::slug($validated['agency_name']),
+            'address'  => $validated['address'],
+            'phone'    => $validated['agency_phone'],
+            'status'   => 'pending',
+        ]);
 
         return response()->json([
-            'user' => $user,
-            'token' => $token,
-            'message' => 'user created',
-        ]);
+            'message' => 'Agency registered successfully, waiting for approval',
+            'user'    => new UserResource($user), 
+        ], 201);
+ 
     }
-    public function login(Request $request)
-    {
-        $data = $request->validate([
-            'email' => 'required|email',
-            'password' => 'required',
+
+    public function login(Request $request){
+        $validated = $request->validate([
+            'email'       => 'required|email',
+            'password'    => 'required|string'
         ]);
-
-        $user = User::where('email', $data['email'])->first();
-
-        if (!$user || !Hash::check($data['password'], $user->password)) {
+        if(!Auth::attempt($validated)){
             return response()->json([
-                'message' => 'Invalid credentials'
-            ], 401);
+                'message' => 'invalide credentials'
+            ],401);
         }
-
-        // Blocked users cannot log in — they must wait for their block window to expire.
-        if ($user->blocked_until && now()->lessThan($user->blocked_until)) {
-            return response()->json([
-                'message' => 'Your account is temporarily blocked. Try again later.',
-                'blocked_until' => $user->blocked_until,
-            ], 403);
-        }
-
-        $token = $user->createToken('api_token')->plainTextToken;
+        $user  = Auth::user()->load('agency');
+        $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
-            'user' => $user,
+            'message' => 'loged in succesfully',
+            'user'    => new UserResource($user), 
             'token' => $token
         ]);
     }
 
-    // Revoke only the token used in this request so other devices stay logged in.
-    // The client should discard the token from storage after calling this.
-    public function logout(Request $request)
-    {
+    public function logout(Request $request){
         $request->user()->currentAccessToken()->delete();
 
-        return response()->json(['message' => 'Logged out successfully']);
+        return response()->json([
+            'message' => 'Logged out successfully',
+        ]);
     }
-
-    // Return the authenticated user's profile along with their agency (if they own one).
-    // Useful for the frontend to know the user's role and agency status on load.
     public function me(Request $request)
     {
-        $user = $request->user();
-
-        // Load the agency relationship so agency_owners get their agency data in one call.
-        if ($user->role === 'agency_owner') {
-            $user->load('agency.city');
-        }
-
-        return response()->json(['user' => $user]);
+        $user = $request->user()->load('agency');
+        return response()->json([
+            'user'    => new UserResource($user),
+        ]);
     }
 }

@@ -3,25 +3,28 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
+
 
 class City extends Model
 {
-    public $incrementing = false;
-    protected $keyType = 'string';
+    use HasUuids;
     protected $fillable = [
-        'id',
-        // Allow city catalog fields that already exist in the cities migration.
         'name',
         'region',
         'country',
         'is_active',
     ];
-
-    // Cast active flag to boolean when cities are serialized or checked.
     protected function casts(): array
     {
         return [
-            'is_active' => 'boolean',
+            'is_active' => 'boolean'
         ];
+    }
+    public function cars(){
+        return $this->hasMany(Car::class);
+    }
+    public function agencies(){
+        return $this->hasMany(Agency::class);
     }
 }

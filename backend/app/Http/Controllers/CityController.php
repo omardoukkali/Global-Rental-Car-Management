@@ -2,21 +2,39 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\CityResource;
 use App\Models\City;
+use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class CityController extends Controller
 {
-    // -------------------------------------------------------------------------
-    // PUBLIC: List all active cities
-    // Used by clients to populate the city filter dropdown on the car search page.
-    // Only active cities are returned — inactive ones have no approved agencies.
-    // -------------------------------------------------------------------------
+    // Public — for dropdowns
     public function index()
     {
         $cities = City::where('is_active', true)
-            ->orderBy('name')
-            ->get(['id', 'name', 'region', 'country']);
+                      ->orderBy('name')
+                      ->get();
 
-        return response()->json(['data' => $cities]);
+        return CityResource::collection($cities);
+    }
+    // Admin — add new city
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'name'    => 'required|string|max:255|unique:cities,name',
+            'region'  => 'required|string|max:255',
+            'country' => 'required|string|max:255',
+        ]);
+
+        $city = City::create([
+            'id'        => Str::uuid(),
+            'name'      => $validated['name'],
+            'region'    => $validated['region'],
+            'country'   => $validated['country'],
+            'is_active' => true,
+        ]);
+
+        return new CityResource($city);
     }
 }

@@ -2,108 +2,108 @@
 
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AgencyController;
-use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CarController;
+use App\Http\Controllers\CarImageController;
 use App\Http\Controllers\CityController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ReservationController;
 use App\Http\Controllers\ReviewController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AuthController;
 
-// =============================================================================
-// PUBLIC AUTH ROUTES
-// These two routes must stay outside Sanctum middleware so users can get a token.
-// Rate-limit login to 10 attempts per minute to prevent brute-force attacks.
-// =============================================================================
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login',    [AuthController::class, 'login'])->middleware('throttle:10,1');
+// ── Public routes
+Route::prefix('auth')->group(function () {
+    Route::post('/register/client', [AuthController::class, 'registerClient']);
+    Route::post('/register/agency', [AuthController::class, 'registerAgency']);
+    Route::post('/login',           [AuthController::class, 'login']);
+});
 
-// =============================================================================
-// PUBLIC BROWSING ROUTES (no token required)
-// Clients and guests can search cars and browse agencies before signing in.
-// =============================================================================
+Route::get('/cities',                       [CityController::class, 'index']);
+Route::get('/agencies',                     [AgencyController::class, 'index']);
+Route::get('/agencies/{agency}',            [AgencyController::class, 'show']);
+Route::get('/cars',                         [CarController::class, 'index']);
+Route::get('/cars/{car}',                   [CarController::class, 'show']);
+Route::get('/cars/{car}/reviews',           [ReviewController::class, 'carReviews']);
+Route::get('/agencies/{agency}/reviews',    [ReviewController::class, 'agencyReviews']);
 
-// City list — used to populate the city filter dropdown on the car search page
-Route::get('/cities', [CityController::class, 'index']);
-
-// Car catalog — supports filters: city_id, type, transmission, min_price, max_price, start_date, end_date
-Route::get('/cars',              [CarController::class, 'index']);
-Route::get('/cars/{id}',         [CarController::class, 'show']);
-Route::get('/cars/{id}/reviews', [ReviewController::class, 'forCar']);
-
-// Agency directory — only approved agencies appear in the public listing
-Route::get('/agencies',              [AgencyController::class, 'index']);
-Route::get('/agencies/{id}',         [AgencyController::class, 'show']);
-Route::get('/agencies/{id}/reviews', [ReviewController::class, 'forAgency']);
-
-// =============================================================================
-// PROTECTED ROUTES (valid Sanctum bearer token required for all routes below)
-// =============================================================================
+// ── Authenticated routes
 Route::middleware('auth:sanctum')->group(function () {
 
-    // -------------------------------------------------------------------------
-    // AUTH EXTRAS
-    // -------------------------------------------------------------------------
-    Route::post('/logout', [AuthController::class, 'logout']); // revokes the current token only
-    Route::get('/me',      [AuthController::class, 'me']);     // returns user profile + agency if owner
+    // Auth
+    Route::prefix('auth')->group(function () {
+        Route::post('/logout', [AuthController::class, 'logout']);
+        Route::get('/me',      [AuthController::class, 'me']);
+    });
 
-    // -------------------------------------------------------------------------
-    // RESERVATIONS
-    // Clients create reservations; agency owners confirm/cancel; admins see all.
-    // -------------------------------------------------------------------------
-    Route::get('/reservations',               [ReservationController::class, 'index']);
-    Route::post('/reservations',              [ReservationController::class, 'store']);
-    Route::get('/reservations/{id}',          [ReservationController::class, 'show']);
-    Route::post('/reservations/{id}/confirm', [ReservationController::class, 'confirm']);
-    Route::post('/reservations/{id}/cancel',  [ReservationController::class, 'cancel']);
-    // Client confirms they physically collected the car — trip officially starts.
-    Route::post('/reservations/{id}/pickup',  [ReservationController::class, 'pickup']);
+    // ── Client only
+    Route::middleware('role:client')->prefix('client')->group(function () {
+        // Reservations
+        Route::post('/reservations',                              [ReservationController::class, 'store']);
+        Route::get('/reservations',                               [ReservationController::class, 'clientIndex']);
+        Route::get('/reservations/{reservation}',                 [ReservationController::class, 'clientShow']);
+        Route::delete('/reservations/{reservation}',              [ReservationController::class, 'cancel']);
+        // Payments
+        Route::post('/reservations/{reservation}/pay',            [PaymentController::class, 'pay']);
+        Route::post('/reservations/{reservation}/refund',         [PaymentController::class, 'refund']);
+        Route::get('/reservations/{reservation}/payment',         [PaymentController::class, 'clientShow']);
+        // Reviews
+        Route::post('/reservations/{reservation}/review',         [ReviewController::class, 'store']);
+        Route::get('/reviews',                                    [ReviewController::class, 'clientIndex']);
+    });
 
-    // Clients post a review after a reservation is completed (one review per reservation).
-    Route::post('/reservations/{id}/review',  [ReviewController::class, 'store']);
+    // ── Agency only
+    Route::middleware('role:agency_owner')->prefix('agency')->group(function () {
+        // Profile
+        Route::put('/profile', [AgencyController::class, 'update']);
+        // Cars
+        Route::get('/cars',              [CarController::class, 'agencyIndex']);
+        Route::post('/cars',             [CarController::class, 'store']);
+        Route::put('/cars/{car}',        [CarController::class, 'update']);
+        Route::delete('/cars/{car}',     [CarController::class, 'destroy']);
+        // Car Images
+        Route::get('/cars/{car}/images',                    [CarImageController::class, 'index']);
+        Route::post('/cars/{car}/images',                   [CarImageController::class, 'store']);
+        Route::put('/cars/{car}/images/{image}/primary',    [CarImageController::class, 'setPrimary']);
+        Route::delete('/cars/{car}/images/{image}',         [CarImageController::class, 'destroy']);
+        // Reservations
+        Route::get('/reservations',                         [ReservationController::class, 'agencyIndex']);
+        Route::get('/reservations/{reservation}',           [ReservationController::class, 'agencyShow']);
+        // Payments
+        Route::get('/payments',                             [PaymentController::class, 'agencyIndex']);
+    });
 
-    // -------------------------------------------------------------------------
-    // PAYMENTS
-    // Admins see all payments; agency owners see only their agency's payments.
-    // -------------------------------------------------------------------------
-    Route::get('/payments', [PaymentController::class, 'index']);
+    // ── Admin only
+    Route::middleware('role:admin')->prefix('admin')->group(function () {
+        // Dashboard
+        Route::get('/dashboard',                            [AdminController::class, 'dashboard']);
+        // Users
+        Route::get('/users',                                [AdminController::class, 'users']);
+        Route::put('/users/{user}/suspend',                 [AdminController::class, 'suspendUser']);
+        Route::put('/users/{user}/activate',                [AdminController::class, 'activateUser']);
+        Route::delete('/users/{user}',                      [AdminController::class, 'deleteUser']);
+        // Cities
+        Route::post('/cities',                              [CityController::class, 'store']);
+        // Agencies
+        Route::get('/agencies',                             [AgencyController::class, 'adminIndex']);
+        Route::put('/agencies/{agency}/approve',            [AgencyController::class, 'approve']);
+        Route::put('/agencies/{agency}/reject',             [AgencyController::class, 'reject']);
+        Route::delete('/agencies/{agency}',                 [AgencyController::class, 'destroy']);
+        // Cars
+        Route::get('/cars',                                 [CarController::class, 'adminIndex']);
+        Route::delete('/cars/{car}',                        [CarController::class, 'destroy']);
+        // Reservations
+        Route::get('/reservations',                         [ReservationController::class, 'adminIndex']);
+        // Payments
+        Route::get('/payments',                             [PaymentController::class, 'adminIndex']);
+        Route::put('/payments/{payment}/release',           [PaymentController::class, 'release']);
+        // Reviews
+        Route::get('/reviews',                              [ReviewController::class, 'adminIndex']);
+        Route::delete('/reviews/{review}',                  [ReviewController::class, 'destroy']);
+        Route::put('/reviews/{id}/restore',                 [ReviewController::class, 'restore']);
+    });
 
-    // -------------------------------------------------------------------------
-    // CAR MANAGEMENT (agency owners only, enforced in CarController + CarPolicy)
-    // -------------------------------------------------------------------------
-    Route::post('/cars',        [CarController::class, 'store']);   // create a car under the owner's agency
-    Route::put('/cars/{id}',    [CarController::class, 'update']);  // update car details
-    Route::delete('/cars/{id}', [CarController::class, 'destroy']); // soft-delete (blocked if active reservations exist)
-
-    // Car image management
-    Route::post('/cars/{id}/images',               [CarController::class, 'addImage']);    // add an image (is_primary demotes others)
-    Route::delete('/cars/{id}/images/{imageId}',   [CarController::class, 'removeImage']); // remove a specific image
-
-    // Car maintenance scheduling
-    Route::post('/cars/{id}/maintenance',             [CarController::class, 'addMaintenance']);    // schedule a maintenance window
-    Route::delete('/cars/{id}/maintenance/{periodId}',[CarController::class, 'removeMaintenance']); // cancel a maintenance window
-
-    // -------------------------------------------------------------------------
-    // AGENCY MANAGEMENT (agency owners only, enforced in AgencyController + AgencyPolicy)
-    // -------------------------------------------------------------------------
-    Route::post('/agencies',     [AgencyController::class, 'store']);  // register a new agency (starts as pending)
-    Route::put('/agencies/{id}', [AgencyController::class, 'update']); // update agency profile
-
-    // -------------------------------------------------------------------------
-    // ADMIN ROUTES (admin role guard is checked inside AdminController::requireAdmin)
-    // -------------------------------------------------------------------------
-
-    // User management
-    Route::get('/admin/users',               [AdminController::class, 'users']);            // list all users (paginated)
-    Route::patch('/admin/users/{id}/status', [AdminController::class, 'updateUserStatus']); // block / activate a user
-
-    // Agency management
-    Route::get('/admin/agencies',                       [AdminController::class, 'agencies']);             // list all agencies (any status)
-    Route::patch('/admin/agencies/{id}/status',         [AdminController::class, 'updateAgencyStatus']);   // approve / reject an agency
-    Route::post('/admin/agencies/{id}/top-up',          [AdminController::class, 'topUpBalance']);         // add funds to agency balance
-    Route::post('/admin/agencies/{id}/approve-changes', [AdminController::class, 'approveAgencyChanges']); // apply pending profile update
-    Route::post('/admin/agencies/{id}/reject-changes',  [AdminController::class, 'rejectAgencyChanges']);  // discard pending profile update
-
-    // Platform statistics
-    Route::get('/admin/stats', [AdminController::class, 'stats']); // user/agency/car/reservation counts + revenue
+    // ── Admin OR Agency
+    Route::middleware('role:admin,agency_owner')->group(function () {
+        // shared routes...
+    });
 });

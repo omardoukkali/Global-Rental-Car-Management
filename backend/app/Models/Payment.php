@@ -3,40 +3,39 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
+
 
 class Payment extends Model
 {
-    //
-    public $incrementing = false;
-    protected $keyType = 'string';
+    use HasUuids;
     protected $fillable = [
         'id',
         'reservation_id',
-        'agency_id',
         'amount',
-        'type',
+        'commission_amount',
+        'agency_amount',
+        'payment_method',
         'status',
-        'balance_before',
-        'balance_after',
-        'reference',
+        'paid_at',
+        'released_at',
     ];
 
-    // Cast ledger amounts to decimals so API responses keep money precision.
     protected function casts(): array
     {
         return [
             'amount' => 'decimal:2',
-            'balance_before' => 'decimal:2',
-            'balance_after' => 'decimal:2',
+            'commission_amount' => 'decimal:2',
+            'agency_amount' => 'decimal:2',
+            'paid_at' => 'datetime',
+            'released_at' => 'datetime',
         ];
     }
-
-    public function reservation()
-    {
+    public function reservation(){
         return $this->belongsTo(Reservation::class);
     }
-    public function agency()
-    {
-        return $this->belongsTo(Agency::class);
+    public function refund(){
+        return $this->hasOne(Refund::class);
     }
+    
 }

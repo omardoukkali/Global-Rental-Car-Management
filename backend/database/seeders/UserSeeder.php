@@ -3,83 +3,85 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 
 class UserSeeder extends Seeder
 {
+    /**
+     * Run the database seeds.
+     */
     public function run(): void
     {
-        $users = [
-            [
-                'first_name' => 'Admin',
-                'last_name' => 'System',
-                'email' => 'admin@test.com',
-                'phone' => '0600000000',
-                'role' => 'admin',
-                'status' => 'active',
-            ],
-            [
-                'first_name' => 'Ahmed',
-                'last_name' => 'Client',
-                'email' => 'client@test.com',
-                'phone' => '0600000001',
-                'role' => 'client',
-                'status' => 'active',
-            ],
-            [
-                'first_name' => 'Sara',
-                'last_name' => 'Client',
-                'email' => 'sara@test.com',
-                'phone' => '0600000002',
-                'role' => 'client',
-                'status' => 'active',
-            ],
-            [
-                'first_name' => 'Blocked',
-                'last_name' => 'Client',
-                'email' => 'blocked@test.com',
-                'phone' => '0600000003',
-                'role' => 'client',
-                'status' => 'active',
-                'cancel_count_today' => 0,
-                'blocked_until' => now()->addHours(12),
-            ],
-            [
-                'first_name' => 'Yassine',
-                'last_name' => 'Agency',
-                'email' => 'agency@test.com',
-                'phone' => '0600000004',
-                'role' => 'agency_owner',
-                'status' => 'active',
-            ],
-            [
-                'first_name' => 'Meryem',
-                'last_name' => 'Agency',
-                'email' => 'agency2@test.com',
-                'phone' => '0600000005',
-                'role' => 'agency_owner',
-                'status' => 'active',
-            ],
-            [
-                'first_name' => 'Pending',
-                'last_name' => 'Owner',
-                'email' => 'pending-owner@test.com',
-                'phone' => '0600000006',
-                'role' => 'agency_owner',
-                'status' => 'pending',
-            ],
-        ];
+        //admin
+        User::create([
+            'id' => Str::uuid(),
+            'first_name' => 'ahmad',
+            'last_name' => 'zaidi',
+            'email' => 'admin@email.com',
+            'password' => '123456',
+            'phone' => '0656565656',
+            'role' => 'admin',
+            'status' => 'active'
+        ]);
+        // Client 1
+        User::create([
+            'id'         => Str::uuid(),
+            'first_name' => 'John',
+            'last_name'  => 'Doe',
+            'email'      => 'client@test.ma',
+            'password'   => '123456',
+            'phone'      => '0611111111',
+            'role'       => 'client',
+            'status'     => 'active',
+        ]);
 
-        foreach ($users as $user) {
-            // Seed by email so the command can be safely rerun without duplicate users.
-            User::updateOrCreate(
-                ['email' => $user['email']],
-                array_merge($user, [
-                    'id' => User::where('email', $user['email'])->value('id') ?? (string) Str::uuid(),
-                    'password' => bcrypt('123456'),
-                ])
-            );
-        }
+        // Client 2
+        User::create([
+            'id'         => Str::uuid(),
+            'first_name' => 'Sara',
+            'last_name'  => 'Smith',
+            'email'      => 'sara@test.ma',
+            'password'   => '123456',
+            'phone'      => '0622222222',
+            'role'       => 'client',
+            'status'     => 'active',
+        ]);
+
+        // Agency owner 1
+        User::create([
+            'id'         => Str::uuid(),
+            'first_name' => 'Hassan',
+            'last_name'  => 'Alaoui',
+            'email'      => 'hassan@agency.ma',
+            'password'   => '123456',
+            'phone'      => '0633333333',
+            'role'       => 'agency_owner',
+            'status'     => 'active',
+        ]);
+
+        // Agency owner 2
+        User::create([
+            'id'         => Str::uuid(),
+            'first_name' => 'Youssef',
+            'last_name'  => 'Benali',
+            'email'      => 'youssef@agency.ma',
+            'password'   => '123456',
+            'phone'      => '0644444444',
+            'role'       => 'agency_owner',
+            'status'     => 'active',
+        ]);
+        // Agency owner 3
+        User::create([
+            'id'         => Str::uuid(),
+            'first_name' => 'salim',
+            'last_name'  => 'akali',
+            'email'      => 'pending@agency.ma',
+            'password'   => '123456',
+            'phone'      => '0645555444',
+            'role'       => 'agency_owner',
+            'status'     => 'pending',
+        ]);
     }
 }

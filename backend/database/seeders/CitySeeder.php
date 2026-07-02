@@ -3,29 +3,32 @@
 namespace Database\Seeders;
 
 use App\Models\City;
+use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 
 class CitySeeder extends Seeder
 {
+    /**
+     * Run the database seeds.
+     */
     public function run(): void
     {
         $cities = [
-            ['name' => 'Tangier', 'region' => 'Tanger-Tetouan-Al Hoceima', 'country' => 'Morocco', 'is_active' => true],
-            ['name' => 'Casablanca', 'region' => 'Casablanca-Settat', 'country' => 'Morocco', 'is_active' => true],
-            ['name' => 'Rabat', 'region' => 'Rabat-Sale-Kenitra', 'country' => 'Morocco', 'is_active' => true],
-            ['name' => 'Marrakech', 'region' => 'Marrakech-Safi', 'country' => 'Morocco', 'is_active' => true],
-            ['name' => 'Fes', 'region' => 'Fes-Meknes', 'country' => 'Morocco', 'is_active' => false],
+            ['name' => 'Casablanca',  'region' => 'Casablanca-Settat'],
+            ['name' => 'Rabat',       'region' => 'Rabat-Salé-Kénitra'],
+            ['name' => 'Marrakech',   'region' => 'Marrakech-Safi'],
+            ['name' => 'Agadir',      'region' => 'Souss-Massa'],
+            ['name' => 'Tanger',      'region' => 'Tanger-Tétouan-Al Hoceïma'],
         ];
-
         foreach ($cities as $city) {
-            // Seed by city/country so repeat seeding updates the catalog instead of duplicating it.
-            City::updateOrCreate(
-                ['name' => $city['name'], 'country' => $city['country']],
-                array_merge($city, [
-                    'id' => City::where('name', $city['name'])->where('country', $city['country'])->value('id') ?? (string) Str::uuid(),
-                ])
-            );
+            City::create([
+                'id'        => Str::uuid(),
+                'name'      => $city['name'],
+                'region'    => $city['region'],
+                'country'   => 'Morocco',
+                'is_active' => true,
+            ]);
         }
     }
 }

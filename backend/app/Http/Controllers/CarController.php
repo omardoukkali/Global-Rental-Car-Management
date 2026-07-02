@@ -1,337 +1,197 @@
 <?php
 
 namespace App\Http\Controllers;
-
 use App\Http\Resources\CarResource;
+use App\Http\Resources\CarImageResource;
 use App\Models\Car;
 use App\Models\CarImage;
-use App\Models\CarMaintenancePeriod;
-use App\Models\Reservation;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class CarController extends Controller
 {
-    // -------------------------------------------------------------------------
-    // PUBLIC: List cars with optional filters
-    // Anyone (even unauthenticated) can browse the car catalog.
-    // -------------------------------------------------------------------------
+    // ── GET /api/cars — public
     public function index(Request $request)
     {
-        // 'agency' is intentionally not eager-loaded here — CarResource hides it from
-        // the public listing. Loading it would waste a JOIN on every car listing request.
-        $query = Car::with(['images', 'city'])
-            ->whereHas('agency', fn($q) => $q->where('status', 'approved'));
-
-        // Filter by city if the caller wants cars in a specific location.
-        if ($request->filled('city_id')) {
-            $query->where('city_id', $request->city_id);
-        }
-
-        // Filter by vehicle type (sedan, suv, van).
-        if ($request->filled('type')) {
-            $query->where('type', $request->type);
-        }
-
-        // Filter by transmission preference (automatic, manual).
-        if ($request->filled('transmission')) {
-            $query->where('transmission', $request->transmission);
-        }
-
-        // Filter by price range (either bound is optional).
-        if ($request->filled('min_price')) {
-            $query->where('price_per_day', '>=', $request->min_price);
-        }
-        if ($request->filled('max_price')) {
-            $query->where('price_per_day', '<=', $request->max_price);
-        }
-
-        // Filter by availability: exclude cars that have a confirmed/pending reservation
-        // or a scheduled maintenance period overlapping the requested dates.
-        if ($request->filled('start_date') && $request->filled('end_date')) {
-            $start = $request->start_date;
-            $end   = $request->end_date;
-
-            // Exclude cars with active reservations in this window.
-            $query->whereDoesntHave('reservations', function ($q) use ($start, $end) {
-                $q->whereIn('status', ['pending', 'confirmed'])
-                  ->where('start_date', '<', $end)
-                  ->where('end_date', '>', $start);
-            });
-
-            // Exclude cars under scheduled maintenance in this window.
-            $query->whereDoesntHave('maintenancePeriods', function ($q) use ($start, $end) {
-                $q->where('status', 'scheduled')
-                  ->where('start_date', '<', $end)
-                  ->where('end_date', '>', $start);
-            });
-        }
-
-        $cars = $query->latest()->paginate(15);
+        $cars = Car::where('status', 'available')
+            ->whereHas('agency', fn($q) => $q->where('status', 'approved'))
+            ->with(['agency', 'city', 'images'])
+            ->when($request->city_id,     fn($q) => $q->where('city_id', $request->city_id))
+            ->when($request->brand,       fn($q) => $q->where('brand', $request->brand))
+            ->when($request->type,        fn($q) => $q->where('type', $request->type))
+            ->when($request->transmission,fn($q) => $q->where('transmission', $request->transmission))
+            ->when($request->seats,       fn($q) => $q->where('seats', $request->seats))
+            ->when($request->min_price,   fn($q) => $q->where('price_per_day', '>=', $request->min_price))
+            ->when($request->max_price,   fn($q) => $q->where('price_per_day', '<=', $request->max_price))
+            ->orderBy('price_per_day', 'asc')
+            ->paginate(12);
 
         return CarResource::collection($cars);
     }
 
-    // -------------------------------------------------------------------------
-    // PUBLIC: Show a single car with full details
-    // -------------------------------------------------------------------------
-    public function show($id)
+    // ── GET /api/cars/{car} — public
+    public function show(Car $car)
     {
-        // Load all relationships needed to build the full car detail page.
-        $car = Car::with(['images', 'agency.city', 'city', 'maintenancePeriods'])
-            ->findOrFail($id);
+        $car->load('agency');
+
+        if ($car->status !== 'available' || $car->agency?->status !== 'approved') {
+            abort(404);
+        }
+
+        $car->load(['agency.city', 'city', 'images']);
 
         return new CarResource($car);
     }
 
-    // -------------------------------------------------------------------------
-    // AGENCY OWNER: Create a new car under their agency
-    // The agency must be approved before new cars can be listed.
-    // -------------------------------------------------------------------------
+    // ── GET /api/agency/cars — agency owner
+    public function agencyIndex(Request $request)
+    {
+        $cars = Car::where('agency_id', $request->user()->agency->id)
+            ->with(['city', 'images'])
+            ->orderBy('created_at', 'desc')
+            ->paginate(12);
+
+        return CarResource::collection($cars);
+    }
+
+    // ── POST /api/agency/cars — agency owner
     public function store(Request $request)
     {
-        $user = auth()->user();
-
-        // Only agency owners can add cars to the platform.
-        if ($user->role !== 'agency_owner') {
-            return response()->json(['message' => 'Only agency owners can create cars'], 403);
-        }
-
-        $agency = $user->agency;
-
-        // The owner must have an existing agency before adding cars.
-        if (!$agency) {
-            return response()->json(['message' => 'You must create an agency first'], 400);
-        }
-
-        // Unapproved agencies cannot list cars — wait for admin approval.
-        if ($agency->status !== 'approved') {
-            return response()->json(['message' => 'Your agency must be approved before adding cars'], 403);
-        }
-
-        $data = $request->validate([
-            'brand'         => 'required|string|max:100',
-            'model'         => 'required|string|max:100',
-            'year'          => 'required|integer|min:1990|max:' . (date('Y') + 1),
-            'color'         => 'required|string|max:50',
-            // plate_number must be unique across the entire fleet.
+        $validated = $request->validate([
+            'city_id'       => 'required|uuid|exists:cities,id',
+            'brand'         => 'required|string|max:255',
+            'model'         => 'required|string|max:255',
+            'year'          => 'required|integer|min:2000|max:2026',
+            'color'         => 'required|string|max:255',
             'plate_number'  => 'required|string|unique:cars,plate_number',
-            'type'          => 'required|in:sedan,suv,van',
+            'type'          => 'required|in:sedan,suv,hatchback,coupe,van,truck',
             'transmission'  => 'required|in:automatic,manual',
-            'seats'         => 'required|integer|min:1|max:20',
-            'price_per_day' => 'required|numeric|min:1',
+            'seats'         => 'required|integer|min:2|max:12',
+            'price_per_day' => 'required|numeric|min:0',
             'description'   => 'nullable|string',
         ]);
 
-        // Inherit city from the agency so cars are always discoverable in the right city.
-        $car = Car::create(array_merge($data, [
-            'id'        => Str::uuid(),
-            'agency_id' => $agency->id,
-            'city_id'   => $agency->city_id,
-            'status'    => 'available',
-        ]));
-
-        return response()->json([
-            'message' => 'Car created successfully',
-            'data'    => new CarResource($car->load(['images', 'agency', 'city'])),
-        ], 201);
-    }
-
-    // -------------------------------------------------------------------------
-    // AGENCY OWNER: Update car details (only their own cars via CarPolicy)
-    // -------------------------------------------------------------------------
-    public function update(Request $request, $id)
-    {
-        $car = Car::findOrFail($id);
-
-        // CarPolicy checks that the authenticated user owns the agency this car belongs to.
-        $this->authorize('update', $car);
-
-        $data = $request->validate([
-            'brand'         => 'sometimes|string|max:100',
-            'model'         => 'sometimes|string|max:100',
-            'year'          => 'sometimes|integer|min:1990|max:' . (date('Y') + 1),
-            'color'         => 'sometimes|string|max:50',
-            // Ignore the current car's own plate so the unique rule doesn't reject it.
-            'plate_number'  => 'sometimes|string|unique:cars,plate_number,' . $car->id,
-            'type'          => 'sometimes|in:sedan,suv,van',
-            'transmission'  => 'sometimes|in:automatic,manual',
-            'seats'         => 'sometimes|integer|min:1|max:20',
-            'price_per_day' => 'sometimes|numeric|min:1',
-            'description'   => 'nullable|string',
-            'status'        => 'sometimes|in:available,rented,maintenance',
+        $car = Car::create([
+            'id'            => Str::uuid(),
+            'agency_id'     => $request->user()->agency->id,
+            'city_id'       => $validated['city_id'],
+            'brand'         => $validated['brand'],
+            'model'         => $validated['model'],
+            'year'          => $validated['year'],
+            'color'         => $validated['color'],
+            'plate_number'  => $validated['plate_number'],
+            'type'          => $validated['type'],
+            'transmission'  => $validated['transmission'],
+            'seats'         => $validated['seats'],
+            'price_per_day' => $validated['price_per_day'],
+            'description'   => $validated['description'],
+            'status'        => 'available',
         ]);
 
-        $car->update($data);
-
-        return response()->json([
-            'message' => 'Car updated successfully',
-            'data'    => new CarResource($car->load(['images', 'agency', 'city'])),
-        ]);
+        return new CarResource($car->load(['city', 'images']));
     }
 
-    // -------------------------------------------------------------------------
-    // AGENCY OWNER: Soft-delete a car (only their own cars via CarPolicy)
-    // Blocked if the car has active (pending/confirmed) reservations.
-    // -------------------------------------------------------------------------
-    public function destroy($id)
+    // ── PUT /api/agency/cars/{car} — agency owner
+    public function update(Request $request, Car $car)
     {
-        $car = Car::findOrFail($id);
-
-        // CarPolicy checks agency ownership before we touch anything.
-        $this->authorize('delete', $car);
-
-        // Prevent deleting a car that clients are currently relying on.
-        $hasActiveReservations = Reservation::where('car_id', $car->id)
-            ->whereIn('status', ['pending', 'confirmed'])
-            ->exists();
-
-        if ($hasActiveReservations) {
+        // Make sure agency owns this car
+        if ($car->agency_id !== $request->user()->agency->id) {
             return response()->json([
-                'message' => 'Cannot delete a car with active reservations',
-            ], 400);
+                'message' => 'Unauthorized — this car does not belong to your agency'
+            ], 403);
         }
 
-        // Soft delete preserves the car record for historical reservation data.
+        $validated = $request->validate([
+            'city_id'       => 'sometimes|uuid|exists:cities,id',
+            'brand'         => 'sometimes|string|max:255',
+            'model'         => 'sometimes|string|max:255',
+            'year'          => 'sometimes|integer|min:2000|max:2026',
+            'color'         => 'sometimes|string|max:255',
+            'plate_number'  => 'sometimes|string|unique:cars,plate_number,' . $car->id,
+            'type'          => 'sometimes|in:sedan,suv,hatchback,coupe,van,truck',
+            'transmission'  => 'sometimes|in:automatic,manual',
+            'seats'         => 'sometimes|integer|min:2|max:12',
+            'price_per_day' => 'sometimes|numeric|min:0',
+            'description'   => 'nullable|string',
+            'status'        => 'sometimes|in:available,maintenance,inactive',
+        ]);
+
+        $car->update($validated);
+
+        return new CarResource($car->load(['city', 'images']));
+    }
+
+    // ── DELETE /api/agency/cars/{car} — agency owner
+    public function destroy(Request $request, Car $car)
+    {
+        if ($car->agency_id !== $request->user()->agency->id) {
+            return response()->json([
+                'message' => 'Unauthorized — this car does not belong to your agency'
+            ], 403);
+        }
+
         $car->delete();
 
-        return response()->json(['message' => 'Car deleted successfully']);
+        return response()->json([
+            'message' => 'Car deleted successfully'
+        ]);
     }
 
-    // -------------------------------------------------------------------------
-    // AGENCY OWNER: Add an image to one of their cars
-    // If is_primary is true, all other images for this car are demoted first.
-    // -------------------------------------------------------------------------
-    public function addImage(Request $request, $id)
+    // ── POST /api/agency/cars/{car}/images — agency owner
+    public function uploadImage(Request $request, Car $car)
     {
-        $car = Car::findOrFail($id);
+        if ($car->agency_id !== $request->user()->agency->id) {
+            return response()->json([
+                'message' => 'Unauthorized'
+            ], 403);
+        }
 
-        // CarPolicy checks agency ownership.
-        $this->authorize('addImage', $car);
-
-        $data = $request->validate([
-            'image_url'  => 'required|url',
+        $request->validate([
+            'url'        => 'required|string|url',
             'is_primary' => 'boolean',
+            'sort_order' => 'integer',
         ]);
 
-        // Wrap in a transaction so the demotion and insert are atomic.
-        $image = DB::transaction(function () use ($car, $data) {
-            // If the new image is set as primary, demote all existing primary images first.
-            if (!empty($data['is_primary'])) {
-                CarImage::where('car_id', $car->id)
-                    ->where('is_primary', true)
-                    ->update(['is_primary' => false]);
-            }
+        // If new image is primary, unset others
+        if ($request->is_primary) {
+            $car->images()->update(['is_primary' => false]);
+        }
 
-            return CarImage::create([
-                'id'         => Str::uuid(),
-                'car_id'     => $car->id,
-                'image_url'  => $data['image_url'],
-                'is_primary' => $data['is_primary'] ?? false,
-            ]);
-        });
+        $image = CarImage::create([
+            'id'         => Str::uuid(),
+            'car_id'     => $car->id,
+            'url'        => $request->url,
+            'is_primary' => $request->is_primary ?? false,
+            'sort_order' => $request->sort_order ?? 0,
+        ]);
 
-        return response()->json([
-            'message' => 'Image added successfully',
-            'data'    => [
-                'id'         => $image->id,
-                'image_url'  => $image->image_url,
-                'is_primary' => $image->is_primary,
-            ],
-        ], 201);
+        return new CarImageResource($image);
     }
 
-    // -------------------------------------------------------------------------
-    // AGENCY OWNER: Remove an image from one of their cars
-    // -------------------------------------------------------------------------
-    public function removeImage($id, $imageId)
+    // ── DELETE /api/agency/cars/{car}/images/{image} — agency owner
+    public function deleteImage(Request $request, Car $car, CarImage $image)
     {
-        $car = Car::findOrFail($id);
-
-        // CarPolicy checks agency ownership.
-        $this->authorize('removeImage', $car);
-
-        // Confirm the image actually belongs to this car before deleting.
-        $image = CarImage::where('id', $imageId)
-            ->where('car_id', $car->id)
-            ->firstOrFail();
+        if ($car->agency_id !== $request->user()->agency->id) {
+            return response()->json([
+                'message' => 'Unauthorized'
+            ], 403);
+        }
 
         $image->delete();
 
-        return response()->json(['message' => 'Image removed successfully']);
-    }
-
-    // -------------------------------------------------------------------------
-    // AGENCY OWNER: Schedule a maintenance period for one of their cars
-    // Blocked if an active reservation already covers those dates.
-    // -------------------------------------------------------------------------
-    public function addMaintenance(Request $request, $id)
-    {
-        $car = Car::findOrFail($id);
-
-        // CarPolicy checks agency ownership.
-        $this->authorize('addMaintenance', $car);
-
-        $data = $request->validate([
-            // Maintenance is scheduled by calendar day (no time component needed).
-            'start_date' => 'required|date_format:Y-m-d|after_or_equal:today',
-            'end_date'   => 'required|date_format:Y-m-d|after:start_date',
-            'reason'     => 'nullable|string|max:500',
+        return response()->json([
+            'message' => 'Image deleted successfully'
         ]);
-
-        // Wrap the overlap check and insert in a transaction so a concurrent reservation
-        // request cannot slip in between the check and the maintenance period creation.
-        return DB::transaction(function () use ($car, $data) {
-            // Lock the car row to block concurrent reservation and maintenance inserts.
-            Car::whereKey($car->id)->lockForUpdate()->first();
-
-            // Prevent scheduling maintenance over dates a client has already booked.
-            $reservationOverlap = Reservation::where('car_id', $car->id)
-                ->whereIn('status', ['pending', 'confirmed'])
-                ->where('start_date', '<', $data['end_date'])
-                ->where('end_date', '>', $data['start_date'])
-                ->exists();
-
-            if ($reservationOverlap) {
-                return response()->json([
-                    'message' => 'Cannot schedule maintenance during an active reservation',
-                ], 400);
-            }
-
-            $period = CarMaintenancePeriod::create([
-                'id'         => Str::uuid(),
-                'car_id'     => $car->id,
-                'start_date' => $data['start_date'],
-                'end_date'   => $data['end_date'],
-                'reason'     => $data['reason'] ?? null,
-                'status'     => 'scheduled',
-            ]);
-
-            return response()->json([
-                'message' => 'Maintenance period scheduled',
-                'data'    => $period,
-            ], 201);
-        });
     }
 
-    // -------------------------------------------------------------------------
-    // AGENCY OWNER: Remove a scheduled maintenance period from one of their cars
-    // -------------------------------------------------------------------------
-    public function removeMaintenance($id, $periodId)
+    // ── GET /api/admin/cars — admin
+    public function adminIndex(Request $request)
     {
-        $car = Car::findOrFail($id);
+        $cars = Car::with(['agency', 'city', 'images'])
+            ->when($request->status, fn($q) => $q->where('status', $request->status))
+            ->orderBy('created_at', 'desc')
+            ->paginate(15);
 
-        // CarPolicy checks agency ownership.
-        $this->authorize('removeMaintenance', $car);
-
-        // Confirm the period actually belongs to this car before deleting.
-        $period = CarMaintenancePeriod::where('id', $periodId)
-            ->where('car_id', $car->id)
-            ->firstOrFail();
-
-        $period->delete();
-
-        return response()->json(['message' => 'Maintenance period removed']);
+        return CarResource::collection($cars);
     }
 }

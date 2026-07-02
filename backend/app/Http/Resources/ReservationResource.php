@@ -12,47 +12,30 @@ class ReservationResource extends JsonResource
      *
      * @return array<string, mixed>
      */
-    public function toArray($request)
+    public function toArray(Request $request): array
     {
-        $showAgency = in_array($this->status, ['confirmed', 'completed']);
-
         return [
-            'id'           => $this->id,
-            'status'       => $this->status,
-            'start_date'   => $this->start_date,
-            'end_date'     => $this->end_date,
-            'total_amount' => $this->total_amount,
+            'id'                     => $this->id,
+            'reference_number'       => $this->reference_number,
+            'start_date'             => $this->start_date,
+            'end_date'               => $this->end_date,
+            'total_days'             => $this->getTotalDays(),
+            'price_per_day_snapshot' => $this->price_per_day_snapshot,
+            'total_amount'           => $this->total_amount,
+            'commission_amount'      => $this->commission_amount,
+            'agency_earning'         => $this->agency_earning,
+            'status'                 => $this->status,
+            'cancellation_reason'    => $this->cancellation_reason,
+            'cancelled_at'           => $this->cancelled_at,
+            'completed_at'           => $this->completed_at,
+            'created_at'             => $this->created_at,
 
-            // Lifecycle timestamps — clients need these to know their reservation state.
-            'confirmed_at' => $this->confirmed_at,
-            // Pending reservations expire if not confirmed within one hour.
-            'expires_at'   => $this->expires_at,
-            // Set when the client physically collects the car.
-            'picked_up_at' => $this->picked_up_at,
-            'completed_at' => $this->completed_at,
-            'cancelled_at' => $this->cancelled_at,
-            // Who cancelled and why — clients need this to understand what happened.
-            'cancelled_by'         => $this->cancelled_by,
-            'cancellation_reason'  => $this->cancellation_reason,
-
-            'car' => [
-                'brand'         => $this->car?->brand,
-                'model'         => $this->car?->model,
-                'price_per_day' => $this->car?->price_per_day,
-                'image'         => $this->car?->images
-                    ?->where('is_primary', true)
-                    ->first()?->image_url,
-            ],
-
-            'city' => $this->agency?->city?->name,
-
-            // Agency contact details are hidden until the reservation is confirmed or completed.
-            // This prevents clients from bypassing the platform to book directly.
-            'agency' => $showAgency ? [
-                'name'    => $this->agency?->name,
-                'phone'   => $this->agency?->phone,
-                'address' => $this->agency?->address,
-            ] : null,
+            // Relations
+            'client'  => new UserResource($this->whenLoaded('client')),
+            'car'     => new CarResource($this->whenLoaded('car')),
+            'agency'  => new AgencyResource($this->whenLoaded('agency')),
+            'payment' => new PaymentResource($this->whenLoaded('payment')),
+            'review'  => new ReviewResource($this->whenLoaded('review')),
         ];
     }
 }
