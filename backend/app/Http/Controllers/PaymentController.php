@@ -175,23 +175,25 @@ class PaymentController extends Controller
     // ── PUT /api/admin/payments/{payment}/release — admin
     public function release(Payment $payment)
     {
-        if ($payment->status !== 'paid') {
-            return response()->json([
-                'message' => 'Payment cannot be released'
-            ], 422);
-        }
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($payment) {
+            $locked = Payment::lockForUpdate()->findOrFail($payment->id);
+            
+            if ($locked->status !== 'paid') {
+                abort(422, 'Payment cannot be released');
+            }
 
-        $payment->update([
-            'status'      => 'released',
-            'released_at' => now(),
-        ]);
+            $locked->update([
+                'status'      => 'released',
+                'released_at' => now(),
+            ]);
 
-        // Update reservation status
-        $payment->reservation->update([
-            'status'       => 'completed',
-            'completed_at' => now(),
-        ]);
+            // Update reservation status
+            $locked->reservation->update([
+                'status'       => 'completed',
+                'completed_at' => now(),
+            ]);
 
-        return new PaymentResource($payment);
+            return new PaymentResource($locked);
+        });
     }
 }

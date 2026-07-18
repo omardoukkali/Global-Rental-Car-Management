@@ -86,11 +86,21 @@ class CarImageController extends Controller
             ], 403);
         }
 
+        $wasPrimary = $image->is_primary;
+
         // Delete file from storage
         $path = str_replace('/storage/', '', $image->url);
         Storage::disk('public')->delete($path);
 
         $image->delete();
+
+        // Repromote oldest remaining image if the deleted one was primary
+        if ($wasPrimary) {
+            $nextImage = $car->images()->oldest()->first();
+            if ($nextImage) {
+                $nextImage->update(['is_primary' => true]);
+            }
+        }
 
         return response()->json([
             'message' => 'Image deleted successfully'

@@ -20,6 +20,8 @@ class CitySeeder extends Seeder
             ['name' => 'Marrakech',   'region' => 'Marrakech-Safi'],
             ['name' => 'Agadir',      'region' => 'Souss-Massa'],
             ['name' => 'Tanger',      'region' => 'Tanger-Tétouan-Al Hoceïma'],
+            ['name' => 'Fes',         'region' => 'Fès-Meknès'],
+            ['name' => 'Oujda',       'region' => 'Oriental'],
         ];
         foreach ($cities as $city) {
             City::create([

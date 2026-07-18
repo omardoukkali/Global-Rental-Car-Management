@@ -28,8 +28,19 @@ class AgencyResource extends JsonResource
             'total_reviews' => $this->total_reviews,
             'created_at'    => $this->created_at,
 
-            // Load relations only if eager loaded
-            'owner' => new UserResource($this->whenLoaded('owner')),
+            // Load relations only if eager loaded (and prevent circular recursion)
+            'owner' => $this->when(
+                $this->relationLoaded('owner') && $this->owner,
+                function () {
+                    // Break circular dependency if Laravel auto-assigned the inverse relation
+                    if ($this->owner->relationLoaded('agency')) {
+                        $ownerClone = clone $this->owner;
+                        $ownerClone->unsetRelation('agency');
+                        return new UserResource($ownerClone);
+                    }
+                    return new UserResource($this->owner);
+                }
+            ),
             'city'  => new CityResource($this->whenLoaded('city')),
             'cars'  => CarResource::collection($this->whenLoaded('cars')),
         ];

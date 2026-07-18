@@ -14,18 +14,19 @@ class UserSeeder extends Seeder
      */
     public function run(): void
     {
-        //admin
+        // Admin
         User::create([
             'id' => Str::uuid(),
-            'first_name' => 'ahmad',
-            'last_name' => 'zaidi',
+            'first_name' => 'Ahmad',
+            'last_name' => 'Zaidi',
             'email' => 'admin@email.com',
             'password' => '123456',
             'phone' => '0656565656',
             'role' => 'admin',
             'status' => 'active'
         ]);
-        // Client 1
+
+        // ── Clients ──────────────────────────────────
         User::create([
             'id'         => Str::uuid(),
             'first_name' => 'John',
@@ -37,7 +38,6 @@ class UserSeeder extends Seeder
             'status'     => 'active',
         ]);
 
-        // Client 2
         User::create([
             'id'         => Str::uuid(),
             'first_name' => 'Sara',
@@ -49,7 +49,29 @@ class UserSeeder extends Seeder
             'status'     => 'active',
         ]);
 
-        // Agency owner 1
+        User::create([
+            'id'         => Str::uuid(),
+            'first_name' => 'Karim',
+            'last_name'  => 'Bennani',
+            'email'      => 'karim@test.ma',
+            'password'   => '123456',
+            'phone'      => '0633000111',
+            'role'       => 'client',
+            'status'     => 'active',
+        ]);
+
+        User::create([
+            'id'         => Str::uuid(),
+            'first_name' => 'Fatima',
+            'last_name'  => 'Zidane',
+            'email'      => 'fatima@test.ma',
+            'password'   => '123456',
+            'phone'      => '0644000222',
+            'role'       => 'client',
+            'status'     => 'active',
+        ]);
+
+        // ── Agency Owners ────────────────────────────
         User::create([
             'id'         => Str::uuid(),
             'first_name' => 'Hassan',
@@ -61,7 +83,6 @@ class UserSeeder extends Seeder
             'status'     => 'active',
         ]);
 
-        // Agency owner 2
         User::create([
             'id'         => Str::uuid(),
             'first_name' => 'Youssef',
@@ -72,11 +93,22 @@ class UserSeeder extends Seeder
             'role'       => 'agency_owner',
             'status'     => 'active',
         ]);
-        // Agency owner 3
+
         User::create([
             'id'         => Str::uuid(),
-            'first_name' => 'salim',
-            'last_name'  => 'akali',
+            'first_name' => 'Nadia',
+            'last_name'  => 'El Fassi',
+            'email'      => 'nadia@agency.ma',
+            'password'   => '123456',
+            'phone'      => '0655500333',
+            'role'       => 'agency_owner',
+            'status'     => 'active',
+        ]);
+
+        User::create([
+            'id'         => Str::uuid(),
+            'first_name' => 'Salim',
+            'last_name'  => 'Akali',
             'email'      => 'pending@agency.ma',
             'password'   => '123456',
             'phone'      => '0645555444',

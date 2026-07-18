@@ -25,9 +25,6 @@ class Agency extends Model
         'avg_rating',
         'total_reviews',
     ];
-    public function user(){
-        return $this->belongsTo(User::class, 'owner_id');
-    }
     public function owner(){
         return $this->belongsTo(User::class, 'owner_id');
     }

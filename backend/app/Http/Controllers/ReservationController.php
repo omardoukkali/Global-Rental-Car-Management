@@ -6,6 +6,7 @@ use App\Http\Resources\ReservationResource;
 use App\Models\Car;
 use App\Models\Reservation;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class ReservationController extends Controller
@@ -19,56 +20,56 @@ class ReservationController extends Controller
             'end_date'   => 'required|date|after:start_date',
         ]);
 
-        $car = Car::findOrFail($validated['car_id']);
+        $reservation = DB::transaction(function () use ($validated, $request) {
+            // Lock the car row for the duration of this transaction so that
+            // two concurrent requests cannot both pass the overlap check and
+            // both commit a booking for the same dates.
+            $car = Car::lockForUpdate()->findOrFail($validated['car_id']);
 
-        // Check car is available
-        if ($car->status !== 'available') {
-            return response()->json([
-                'message' => 'Car is not available'
-            ], 422);
-        }
+            // Check car is available
+            if ($car->status !== 'available') {
+                abort(422, 'Car is not available');
+            }
 
-        // Check no overlapping reservations
-        $overlap = Reservation::where('car_id', $car->id)
-            ->whereIn('status', ['confirmed', 'pending'])
-            ->where(function ($query) use ($validated) {
-                $query->whereBetween('start_date', [$validated['start_date'], $validated['end_date']])
-                      ->orWhereBetween('end_date', [$validated['start_date'], $validated['end_date']])
-                      ->orWhere(function ($q) use ($validated) {
-                          $q->where('start_date', '<=', $validated['start_date'])
-                            ->where('end_date', '>=', $validated['end_date']);
-                      });
-            })->exists();
+            // Check no overlapping reservations (inside the lock — safe)
+            $overlap = Reservation::where('car_id', $car->id)
+                ->whereIn('status', ['confirmed', 'pending'])
+                ->where(function ($query) use ($validated) {
+                    $query->whereBetween('start_date', [$validated['start_date'], $validated['end_date']])
+                          ->orWhereBetween('end_date', [$validated['start_date'], $validated['end_date']])
+                          ->orWhere(function ($q) use ($validated) {
+                              $q->where('start_date', '<=', $validated['start_date'])
+                                ->where('end_date', '>=', $validated['end_date']);
+                          });
+                })->exists();
 
-        if ($overlap) {
-            return response()->json([
-                'message' => 'Car is already reserved for these dates'
-            ], 422);
-        }
+            if ($overlap) {
+                abort(422, 'Car is already reserved for these dates');
+            }
 
-        // Calculate amounts
-        $start          = \Carbon\Carbon::parse($validated['start_date']);
-        $end            = \Carbon\Carbon::parse($validated['end_date']);
-        $totalDays      = $start->diffInDays($end);
-        $totalAmount    = $totalDays * $car->price_per_day;
-        $commission     = $totalAmount * 0.15;
-        $agencyEarning  = $totalAmount - $commission;
+            // Calculate amounts
+            $start         = \Carbon\Carbon::parse($validated['start_date']);
+            $end           = \Carbon\Carbon::parse($validated['end_date']);
+            $totalDays     = $start->diffInDays($end);
+            $totalAmount   = $totalDays * $car->price_per_day;
+            $commission    = $totalAmount * 0.15;
+            $agencyEarning = $totalAmount - $commission;
 
-        // Create reservation
-        $reservation = Reservation::create([
-            'id'                     => Str::uuid(),
-            'client_id'              => $request->user()->id,
-            'car_id'                 => $car->id,
-            'agency_id'              => $car->agency_id,
-            'reference_number'       => 'RES-' . strtoupper(Str::random(8)),
-            'start_date'             => $validated['start_date'],
-            'end_date'               => $validated['end_date'],
-            'price_per_day_snapshot' => $car->price_per_day,
-            'total_amount'           => $totalAmount,
-            'commission_amount'      => $commission,
-            'agency_earning'         => $agencyEarning,
-            'status'                 => 'confirmed',
-        ]);
+            return Reservation::create([
+                'id'                     => Str::uuid(),
+                'client_id'              => $request->user()->id,
+                'car_id'                 => $car->id,
+                'agency_id'              => $car->agency_id,
+                'reference_number'       => 'RES-' . strtoupper(Str::random(8)),
+                'start_date'             => $validated['start_date'],
+                'end_date'               => $validated['end_date'],
+                'price_per_day_snapshot' => $car->price_per_day,
+                'total_amount'           => $totalAmount,
+                'commission_amount'      => $commission,
+                'agency_earning'         => $agencyEarning,
+                'status'                 => 'confirmed',
+            ]);
+        });
 
         return new ReservationResource(
             $reservation->load(['car.images', 'car.city', 'agency', 'client'])
@@ -123,6 +124,15 @@ class ReservationController extends Controller
         if (now()->greaterThanOrEqualTo($reservation->start_date)) {
             return response()->json([
                 'message' => 'Cannot cancel — trip has already started'
+            ], 422);
+        }
+
+        // Block cancellation if a paid payment exists — client must request a
+        // refund first so the money is not silently voided.
+        $reservation->loadMissing('payment');
+        if ($reservation->payment && $reservation->payment->status === 'paid') {
+            return response()->json([
+                'message' => 'This reservation has been paid. Please request a refund before cancelling.',
             ], 422);
         }
 

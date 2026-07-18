@@ -26,10 +26,21 @@ class UserResource extends JsonResource
             'email_verified_at' => $this->email_verified_at,
             'created_at'        => $this->created_at,
 
-            // Load agency only if user is agency_owner
+            // Load agency only if user is agency_owner (and prevent circular recursion)
             'agency' => $this->when(
                 $this->role === 'agency_owner',
-                fn() => new AgencyResource($this->whenLoaded('agency'))
+                function () {
+                    if ($this->relationLoaded('agency') && $this->agency) {
+                        // Break circular dependency if Laravel auto-assigned the inverse relation
+                        if ($this->agency->relationLoaded('owner')) {
+                            $agencyClone = clone $this->agency;
+                            $agencyClone->unsetRelation('owner');
+                            return new AgencyResource($agencyClone);
+                        }
+                        return new AgencyResource($this->agency);
+                    }
+                    return null;
+                }
             ),
         ];
     }
