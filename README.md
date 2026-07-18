@@ -1,45 +1,44 @@
-# Car Rental API
+# Global Rental Car Management
 
-A REST API backend for a car rental platform built with **Laravel 11** and **PostgreSQL**.  
-Frontend team: the API runs at `http://localhost:8000/api` after one command — see [Quick Start](#quick-start).
-
----
-
-## Tech Stack
-
-| Layer | Technology |
-|---|---|
-| Language | PHP 8.2 |
-| Framework | Laravel 11 |
-| Auth | Laravel Sanctum (Bearer token) |
-| Database | PostgreSQL 15 |
-| Containerization | Docker + Docker Compose |
-| Tests | PHPUnit (77 tests) |
+A complete, full-stack car rental platform built with **Laravel 11 (API)**, **Vue.js 3 (SPA)**, and **PostgreSQL**.  
+The entire stack is fully containerized with Docker, serving a highly optimized production build of the frontend through Nginx.
 
 ---
 
-## Quick Start
+## 🌟 Key Features
 
-You only need **Docker Desktop** installed. No PHP or PostgreSQL required on your machine.
+*   **Vue 3 SPA Frontend:** Fast, reactive user interface using Vue Router and Pinia for state management.
+*   **Internationalization (i18n):** Full multilingual support in **English, French, and Arabic** (including dynamic RTL layout and translated database values).
+*   **Dynamic Theming:** Premium CSS-variable based design system with 3 switchable themes: Calm, Majestic (Royal), and Dark (Night).
+*   **Robust Backend:** Secure REST API powered by Laravel Sanctum with strict role-based access control.
+*   **Zero-Setup Docker:** A multi-stage Docker setup that compiles the frontend with Vite and serves it alongside the PHP-FPM backend via Nginx.
+
+---
+
+## 🚀 Quick Start
+
+You only need **Docker Desktop** installed. No PHP, Node.js, or PostgreSQL required on your local machine.
 
 ```bash
 # 1. Clone the repo
-git clone <repo-url>
-cd car-rental
+git clone https://github.com/omardoukkali/Global-Rental-Car-Management.git
+cd Global-Rental-Car-Management
 
 # 2. Create your local env file
-cp .env.example .env
+cp backend/.env.example backend/.env
 
-# 3. Generate the app key
-docker compose run --rm app php artisan key:generate
+# 3. Start everything (builds Vite SPA, runs migrations, seeds DB, starts Nginx/PHP)
+docker compose up --build -d
 
-# 4. Start everything (builds image, runs migrations, seeds DB, starts server)
-docker compose up --build
+# 4. Generate the app key (first time only)
+docker compose exec app php artisan key:generate
 ```
 
-API is live at **http://localhost:8000/api**
+That's it! 
+*   **Frontend SPA** is live at: **http://localhost:8000**
+*   **Backend API** is live at: **http://localhost:8000/api**
 
-To stop: `docker compose down`
+To stop the containers: `docker compose down`
 
 ---
 
