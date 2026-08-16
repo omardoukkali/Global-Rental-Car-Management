@@ -44,8 +44,66 @@ jobs:
           echo "Waiting for services to boot..."
           sleep 30
           docker compose ps
+          echo "Probing backend health endpoint..."
+          curl --fail --silent --show-error --retry 10 --retry-delay 5 --retry-all-errors http://localhost:8000/up
+          echo "Probing AI service..."
+          curl --fail --silent --show-error --retry 5 --retry-delay 3 --retry-all-errors http://localhost:5000/docs
+          echo "All services healthy."
 
-          if docker compose ps --status restarting --quiet | grep -q .; then
-            echo "::error::One or more containers are crash-looping"
-            docker compose logs
-            exit 1
+      - name: Validate Composer dependencies
+        run: |
+          docker compose exec -T backend composer validate --strict
+
+      - name: Verify Vite manifest was built into the image
+        run: |
+          docker compose exec -T backend test -f public/build/manifest.json
+          echo "Vite manifest present."
+
+      # --- TRIVY SECURITY SCANS ---
+      - name: Run Trivy vulnerability scanner on Backend Image
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: 'global-rental-backend:latest'
+          format: 'table'
+          exit-code: '0'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Run Trivy vulnerability scanner on Frontend Image
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: 'global-rental-car-management-frontend:latest'
+          format: 'table'
+          exit-code: '0'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Run Trivy vulnerability scanner on AI Service Image
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: 'global-rental-car-management-ai_service:latest'
+          format: 'table'
+          exit-code: '0'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Run Trivy File System Scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'table'
+          exit-code: '0'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Dump container logs on failure
+        if: failure()
+        run: docker compose logs
+
+      - name: Bring down services
+        if: always()
+        run: |
+          docker compose down --volumes --remove-orphans
