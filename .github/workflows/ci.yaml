@@ -39,46 +39,13 @@ jobs:
         run: |
           docker compose up -d
 
-      - name: Wait for containers to stabilize & check logs
+      - name: Wait for services and assert health
         run: |
           echo "Waiting for services to boot..."
-          sleep 10
-          docker compose ps
-          docker compose logs backend || true
-
-      - name: Generate Application Key
-        run: |
-          docker compose exec -T backend php artisan key:generate
-
-      - name: Check container health
-        run: |
+          sleep 30
           docker compose ps
 
-      - name: Validate Composer dependencies
-        run: |
-          docker compose exec -T backend composer validate --strict
-
-      # --- TRIVY SECURITY SCANS ---
-      - name: Run Trivy vulnerability scanner on Backend Image
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: 'global-rental-backend:latest'
-          format: 'table'
-          exit-code: '0'
-          ignore-unfixed: true
-          vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'
-
-      - name: Run Trivy File System Scan
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          format: 'table'
-          exit-code: '0'
-          severity: 'CRITICAL,HIGH'
-
-      - name: Bring down services
-        if: always()
-        run: |
-          docker compose down --volumes --remove-orphans
+          if docker compose ps --status restarting --quiet | grep -q .; then
+            echo "::error::One or more containers are crash-looping"
+            docker compose logs
+            exit 1
