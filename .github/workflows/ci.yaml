@@ -127,6 +127,10 @@ jobs:
 
       # --- Trivy: JSON reports saved as a downloadable artifact ---
 
+      # Trivy won't create the output directory itself
+      - name: Create reports directory
+        run: mkdir -p trivy-reports
+
       - name: Trivy JSON report — filesystem
         uses: aquasecurity/trivy-action@v0.35.0
         with:
