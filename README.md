@@ -1,56 +1,122 @@
 # Global Rental Car Management
 
-A complete, full-stack car rental platform built with **Laravel 11 (API)**, **Vue.js 3 (SPA)**, and **PostgreSQL**.  
-The entire stack is fully containerized with Docker, serving a highly optimized production build of the frontend through Nginx.
+A multi-tier car rental management platform built as a containerized monorepo.
+
+| Service | Technology | Port |
+|---|---|---|
+| Backend | Laravel 11 / PHP 8.2-FPM (Alpine) + Inertia | 8000 |
+| Frontend | Vue 3 SPA (Vite dev server) | 3000 |
+| AI Service | Python FastAPI | 5000 |
+| Database | PostgreSQL 15 (Alpine) | 5432 |
+
+All four services run as Docker containers on a shared bridge network (`app_network`),
+orchestrated with Docker Compose. Nothing needs to be installed on the host except Docker.
 
 ---
 
-## 🌟 Key Features
+## Prerequisites
 
-*   **Vue 3 SPA Frontend:** Fast, reactive user interface using Vue Router and Pinia for state management.
-*   **Internationalization (i18n):** Full multilingual support in **English, French, and Arabic** (including dynamic RTL layout and translated database values).
-*   **Dynamic Theming:** Premium CSS-variable based design system with 3 switchable themes: Calm, Majestic (Royal), and Dark (Night).
-*   **Robust Backend:** Secure REST API powered by Laravel Sanctum with strict role-based access control.
-*   **Zero-Setup Docker:** A multi-stage Docker setup that compiles the frontend with Vite and serves it alongside the PHP-FPM backend via Nginx.
+| Requirement | Minimum | Notes |
+|---|---|---|
+| Docker Desktop | 4.30+ | Includes Docker Engine and Compose v2 |
+| RAM | 8 GB | 16 GB recommended; the stack allocates ~4 GB under load |
+| Disk space | 10 GB free | Images total roughly 1.5 GB plus build cache |
+| Git | 2.40+ | — |
+| OS | Windows 10/11, macOS 12+, or any modern Linux | WSL 2 backend required on Windows |
+
+PHP, Node.js, Composer, and PostgreSQL are **not** required on the host — every
+build step runs inside a container.
 
 ---
 
-## 🚀 Quick Start
-
-You only need **Docker Desktop** installed. No PHP, Node.js, or PostgreSQL required on your local machine.
+## Quick start
 
 ```bash
-# 1. Clone the repo
+# 1. Clone the repository
 git clone https://github.com/omardoukkali/Global-Rental-Car-Management.git
 cd Global-Rental-Car-Management
 
-# 2. Create your local env file
-cp backend/.env.example backend/.env
+# 2. Create your environment file from the template
+cp .env.example .env
 
-# 3. Start everything (builds Vite SPA, runs migrations, seeds DB, starts Nginx/PHP)
-docker compose up --build -d
+# 3. Build and start all four services
+docker compose up -d --build
 
-# 4. Generate the app key (first time only)
-docker compose exec app php artisan key:generate
+# 4. Confirm everything is healthy
+docker compose ps
 ```
 
-That's it! 
-*   **Frontend SPA** is live at: **http://localhost:8000**
-*   **Backend API** is live at: **http://localhost:8000/api**
+The first build takes 5–10 minutes: it pulls the PHP, Node, Python, and Postgres
+base images, installs Composer and npm dependencies, and compiles the frontend
+assets with Vite.
 
-To stop the containers: `docker compose down`
+You should see four containers with status `Up`, and `app_database` marked
+`(healthy)`.
+
+### Service URLs
+
+| What | URL |
+|---|---|
+| Backend application (Inertia UI) | http://localhost:8000 |
+| Backend health check | http://localhost:8000/up |
+| REST API | http://localhost:8000/api |
+| Frontend SPA (Vite dev server) | http://localhost:3000 |
+| AI service (Swagger UI) | http://localhost:5000/docs |
+| PostgreSQL | localhost:5432 |
+
+To stop everything: `docker compose down`
 
 ---
 
-## Roles
+## What happens automatically on first boot
 
-| Role | What they can do |
-|---|---|
-| `client` | Browse cars, make reservations, confirm pickup, leave reviews |
-| `agency_owner` | Manage their agency, cars, images, maintenance windows, confirm/cancel reservations |
-| `admin` | Approve agencies, manage users, top up balances, view platform stats |
+The backend container's entrypoint (`backend/docker-entrypoint.sh`) handles setup
+so no manual steps are needed:
 
-Default seeded accounts (password: `123456`):
+1. Fixes storage directory permissions
+2. Creates the `public/storage` symlink
+3. Generates an `APP_KEY` if none is set in `.env`
+4. Waits for PostgreSQL, then runs migrations
+5. Seeds the database on first boot only (guarded by a lock file)
+6. Starts the application server
+
+Because of step 3, the app boots successfully even with a blank `APP_KEY`.
+The generated key is **ephemeral** — it is regenerated whenever the container is
+recreated, which invalidates existing sessions and any encrypted column values.
+For any persistent or production deployment, set a fixed `APP_KEY` in `.env`:
+
+```bash
+docker compose exec backend php artisan key:generate --show
+# paste the output into APP_KEY= in your .env, then:
+docker compose restart backend
+```
+
+---
+
+## Important: refreshing frontend assets
+
+The backend's compiled Vite assets live in a named Docker volume
+(`backend_public_build`) so that the host's empty `public/build` directory cannot
+shadow the assets baked into the image.
+
+Docker only populates a named volume from the image **the first time the volume is
+created**. This means that after changing any file under `backend/resources/js/`,
+a plain rebuild will **not** update what the container serves. To pick up asset
+changes:
+
+```bash
+docker compose down -v
+docker compose up -d --build
+```
+
+Note that `-v` also destroys the `db_data` volume, so migrations and seeders will
+re-run from scratch.
+
+---
+
+## Seeded development accounts
+
+The seeder creates test users. Password for all three: `123456`
 
 | Email | Role |
 |---|---|
@@ -58,196 +124,243 @@ Default seeded accounts (password: `123456`):
 | owner@test.com | agency_owner |
 | client@test.com | client |
 
----
-
-## API Reference
-
-All endpoints are prefixed with `/api`. Protected routes require:
-```
-Authorization: Bearer <token>
-```
-
-### Authentication
-
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| POST | `/register` | No | Register a new user |
-| POST | `/login` | No | Login and receive a Bearer token |
-| POST | `/logout` | Yes | Revoke the current token |
-| GET | `/me` | Yes | Get the authenticated user's profile |
-
-**Register body:**
-```json
-{
-  "first_name": "John",
-  "last_name": "Doe",
-  "email": "john@example.com",
-  "password": "12345678",
-  "password_confirmation": "12345678",
-  "role": "client"
-}
-```
-`role` can be `client` or `agency_owner`.
-
-**Login body:**
-```json
-{ "email": "client@test.com", "password": "123456" }
-```
-
-**Login response:**
-```json
-{ "token": "1|abc123...", "user": { ... } }
-```
+These are **development credentials only** and must never be used in a deployed
+environment.
 
 ---
 
-### Cities
+## Environment variables
 
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| GET | `/cities` | No | List all active cities |
-
----
-
-### Cars
-
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| GET | `/cars` | No | List cars with optional filters |
-| GET | `/cars/{id}` | No | Get full car details |
-| POST | `/cars` | agency_owner | Add a car to your agency |
-| PUT | `/cars/{id}` | agency_owner | Update your car |
-| DELETE | `/cars/{id}` | agency_owner | Soft-delete your car |
-| POST | `/cars/{id}/images` | agency_owner | Add an image to a car |
-| DELETE | `/cars/{id}/images/{imageId}` | agency_owner | Remove a car image |
-| POST | `/cars/{id}/maintenance` | agency_owner | Schedule a maintenance period |
-| DELETE | `/cars/{id}/maintenance/{periodId}` | agency_owner | Remove a maintenance period |
-| GET | `/cars/{id}/reviews` | No | List reviews for a car |
-
-**Car filters (query params):**
-```
-GET /api/cars?city_id=...&type=sedan&transmission=automatic&min_price=100&max_price=500&start_date=2027-07-01&end_date=2027-07-05
-```
-When `start_date` + `end_date` are provided, only available cars are returned (no overlapping reservations or maintenance).
-
----
-
-### Agencies
-
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| GET | `/agencies` | No | List all approved agencies |
-| GET | `/agencies/{id}` | No | Get agency details + available cars |
-| POST | `/agencies` | agency_owner | Register a new agency (starts as `pending`) |
-| PUT | `/agencies/{id}` | agency_owner | Submit a profile update (goes to `pending_changes` for admin review) |
-| GET | `/agencies/{id}/reviews` | No | List reviews for an agency |
-
----
-
-### Reservations
-
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| GET | `/reservations` | Yes | List reservations (filtered by role) |
-| POST | `/reservations` | client | Create a reservation |
-| GET | `/reservations/{id}` | Yes | Get reservation details |
-| POST | `/reservations/{id}/confirm` | agency_owner | Confirm a pending reservation |
-| POST | `/reservations/{id}/cancel` | client / agency_owner | Cancel a reservation |
-| POST | `/reservations/{id}/pickup` | client | Confirm physical car pickup |
-| POST | `/reservations/{id}/review` | client | Post a review (reservation must be completed) |
-
-**Create reservation body:**
-```json
-{
-  "car_id": "uuid",
-  "start_date": "2027-07-01 17:00",
-  "end_date": "2027-07-03 17:00"
-}
-```
-Dates use `YYYY-MM-DD HH:MM` format. Billing is `ceil(hours / 24) × price_per_day`.  
-Pending reservations expire automatically after 1 hour if not confirmed.
-
-**Reservation lifecycle:**
-```
-pending → confirmed → (picked up) → completed
-       ↘           ↘
-      cancelled   cancelled
-```
-
-**Cancellation rules:**
-- Clients and agencies are each limited to **2 cancellations per day**. Exceeding this blocks the account for 24 hours.
-- Cannot cancel after pickup.
-
----
-
-### Payments
-
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| GET | `/payments` | Yes | List payments (admin sees all, agency_owner sees own) |
-
----
-
-### Admin
-
-All admin endpoints require `role = admin`.
-
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/admin/users` | List all users (paginated) |
-| PATCH | `/admin/users/{id}/status` | Set user status: `active` / `blocked` |
-| GET | `/admin/agencies` | List all agencies (any status) |
-| PATCH | `/admin/agencies/{id}/status` | Set agency status: `approved` / `rejected` / `pending` |
-| POST | `/admin/agencies/{id}/top-up` | Add funds to agency balance |
-| POST | `/admin/agencies/{id}/approve-changes` | Apply a pending profile update |
-| POST | `/admin/agencies/{id}/reject-changes` | Discard a pending profile update |
-| GET | `/admin/stats` | Platform stats (users, agencies, cars, reservations, revenue) |
-
----
-
-## Scheduled Commands
-
-Three commands run automatically via Laravel Scheduler:
-
-| Command | Schedule | What it does |
-|---|---|---|
-| `reservations:expire` | Every minute | Cancels pending reservations older than 1 hour |
-| `reservations:complete` | Daily 01:00 | Marks confirmed+picked-up reservations as completed after end_date passes |
-| `users:reset-cancel-counts` | Daily 00:00 | Resets the daily cancellation counter for all users |
-
-To run the scheduler inside Docker:
-```bash
-docker compose exec app php artisan schedule:run
-```
-
----
-
-## Useful Commands
-
-```bash
-# Run all tests
-docker compose exec app php artisan test
-
-# Fresh database with seed data
-docker compose exec app php artisan migrate:fresh --seed
-
-# Open a shell inside the container
-docker compose exec app bash
-
-# View live logs
-docker compose logs -f app
-```
-
----
-
-## Environment Variables
-
-Copy `.env.example` to `.env`. Key variables:
+Copy `.env.example` to `.env` and adjust as needed. `APP_KEY` and `DB_PASSWORD`
+are intentionally left blank in the template.
 
 | Variable | Description | Default |
 |---|---|---|
-| `DB_HOST` | Database host (`db` when using Docker) | `db` |
-| `DB_DATABASE` | Database name | `car_rental` |
-| `DB_USERNAME` | PostgreSQL user | `postgres` |
-| `DB_PASSWORD` | PostgreSQL password | `secret` |
-| `APP_KEY` | Laravel encryption key (generate with `key:generate`) | — |
+| `APP_NAME` | Application display name | Global Rental Car |
+| `APP_ENV` | Environment | local |
+| `APP_KEY` | Laravel encryption key | generated at boot if blank |
+| `APP_DEBUG` | Verbose error pages | true |
+| `APP_URL` | Base URL | http://localhost:8000 |
+| `FRONTEND_PORT` | Host port for the Vue SPA | 3000 |
+| `BACKEND_PORT` | Host port for Laravel | 8000 |
+| `AI_PORT` | Host port for FastAPI | 5000 |
+| `DB_PORT` | Host port for PostgreSQL | 5432 |
+| `DB_CONNECTION` | Laravel database driver | pgsql |
+| `DB_HOST` | Database hostname (compose service name) | database |
+| `DB_DATABASE` | Database name | globalrental |
+| `DB_USERNAME` | Database user | grader |
+| `DB_PASSWORD` | Database password | — |
+| `AI_SERVICE_URL` | Internal AI service address | http://ai_service:5000 |
+
+`.env` is gitignored and must never be committed.
+
+---
+
+## Useful commands
+
+```bash
+# View logs for one service (follow mode)
+docker compose logs -f backend
+
+# Open a shell inside a container
+docker compose exec backend sh
+
+# Run the test suite
+docker compose exec backend php artisan test
+
+# List all registered routes
+docker compose exec backend php artisan route:list
+
+# Rebuild the database from scratch with seed data
+docker compose exec backend php artisan migrate:fresh --seed
+
+# Rebuild a single service
+docker compose build --no-cache backend
+
+# Full reset (destroys database and volumes)
+docker compose down -v && docker compose up -d --build
+```
+
+---
+
+## Troubleshooting
+
+**`ViteManifestNotFoundException`**
+The compiled assets are missing from the `backend_public_build` volume. Run
+`docker compose down -v && docker compose up -d --build`.
+
+**Backend logs loop on "Database not ready, retrying in 2s"**
+Normal for the first 10–20 seconds while PostgreSQL initialises. If it persists
+beyond a minute, check `docker compose logs database`.
+
+**`ERR_EMPTY_RESPONSE` on port 8000**
+The container is still booting — migrations and seeding run before the server
+starts. Wait for `Server running on [http://0.0.0.0:8000]` in the logs.
+
+**Composer install times out (Windows)**
+Dependencies are installed during the Docker build into a named volume rather
+than across the host filesystem, so this should not occur. If you install
+manually, run it inside the container rather than on the host.
+
+**Port already in use**
+Change the relevant `*_PORT` value in `.env` and restart.
+
+---
+
+## Repository structure
+
+```
+.
+├── .github/workflows/     CI and CD pipeline definitions
+├── AI/                    Python FastAPI service
+├── backend/               Laravel 11 API and Inertia application
+├── frontend/              Vue 3 SPA
+├── UML/                   Design and modelling artefacts
+├── docker-compose.yml     Four-service orchestration
+├── .env.example           Environment variable template
+├── .dockerignore          Root build-context exclusions
+├── .gitignore             Excludes .env and node_modules
+└── README.md
+```
+
+---
+
+## Branching and contribution workflow
+
+Two permanent branches, plus short-lived topic branches.
+
+| Branch | Role |
+|---|---|
+| `main` | Validated, deployable version. Receives merges only from `develop`. |
+| `develop` | Integration branch. Accumulates reviewed work. |
+| `feature/**` | New functionality |
+| `infra/**` | Infrastructure, Docker, CI/CD |
+| `refactor/**` | Restructuring without behavioural change |
+| `hotfix/**` | Urgent corrections |
+
+`main` and `develop` are protected by GitHub Rulesets: direct pushes are blocked,
+one approving review is required, and the CI pipeline must pass before merge.
+
+### Naming and commit conventions
+
+Branch names include the Jira issue key so the integration links them
+automatically:
+
+```
+infra/SCRUM-24-dockerize-monorepo-services
+feature/SCRUM-31-reservation-payment-flow
+```
+
+Commit messages begin with the Jira issue key, followed by a Conventional Commits
+type prefix:
+
+```
+SCRUM-24 infra: add multi-stage Node build for Vite assets
+SCRUM-21 ci: assert container health with curl probes
+SCRUM-27 fix: untrack .env and add example template
+```
+
+Recognised prefixes: `feat:`, `fix:`, `infra:`, `ci:`, `refactor:`, `docs:`,
+`test:`.
+
+### Opening a pull request
+
+1. Branch from `develop`
+2. Commit and push — CI runs on every push
+3. Open a pull request into `develop`, with the issue key(s) in the title
+4. Wait for CI to pass and for one approving review
+5. The project manager merges
+
+---
+
+## Continuous Integration and security scanning
+
+A single pipeline (`.github/workflows/ci.yaml`) handles both build verification
+and security scanning. It runs on every push to `develop`, `main`, or a prefixed
+topic branch, and on every pull request into `develop` or `main`.
+
+**Build verification**
+
+1. Builds all three application images
+2. Starts the full stack
+3. Asserts the backend (`/up`) and AI service (`/docs`) respond to HTTP probes
+4. Validates `composer.lock` consistency with `composer validate --strict`
+5. Confirms the Vite manifest was built into the image
+
+**Security scanning (DevSecOps)**
+
+6. TruffleHog scans the code and full git history for verified live credentials
+7. Trivy scans all three built images for CVEs (`CRITICAL,HIGH`, unfixed excluded)
+8. Trivy scans the filesystem with `vuln,secret,misconfig` scanners enabled
+9. Two JSON reports are generated and uploaded as a downloadable artifact
+
+### Retrieving a scan report
+
+Scan results appear in two places:
+
+- **Readable tables** — expand any `Trivy scan —` step in the job log
+- **JSON reports** — at the bottom of the run summary page, under **Artifacts**,
+  named `trivy-reports-<timestamp>`. Retained for 14 days.
+
+### Scanner behaviour
+
+TruffleHog **will fail the build** if it finds a verified live credential. Trivy
+is configured with `exit-code: 0`, so it reports findings without blocking
+merges — Alpine and PHP base images routinely carry unfixable CVEs that would
+otherwise prevent all merges. The `ignore-unfixed` flag filters that category on
+image scans.
+
+---
+
+## Known security findings
+
+The most recent filesystem scan reported the following. These are tracked, not
+silently ignored.
+
+**Container configuration** — all three Dockerfiles fail Trivy check DS-0002
+("Image user should not be 'root'"). Each passes the other 19 checks. Adding
+non-root `USER` directives is the outstanding hardening task.
+
+**Dependencies with available fixes**
+
+| Package | Installed | Fixed in | Status |
+|---|---|---|---|
+| symfony/http-foundation | 7.4.8 | 7.4.13 | patch available |
+| symfony/http-kernel | 7.4.11 | 7.4.12 | patch available |
+| symfony/mailer | 7.4.8 | 7.4.12 | patch available |
+| symfony/mime | 7.4.9 | 7.4.12 | patch available |
+| guzzlehttp/guzzle | 7.10.0 | 7.15.2 | patch available |
+| league/commonmark | 2.8.2 | 2.9.0 | patch available |
+| nanoid | 3.3.15 | 3.3.18 | patch available |
+| postcss | 8.5.16 | 8.5.18 | patch available |
+| laravel/framework | 11.51.0 | 12.60.0 | **major upgrade — deferred** |
+
+The Laravel finding (CRLF injection in email validation, CVSS 8.9) requires a
+major version upgrade and is deferred pending a planned migration. Several of the
+Symfony findings concern the same class of issue in the mail path.
+
+To apply the available patches:
+
+```bash
+docker compose exec backend composer update symfony/http-foundation \
+  symfony/http-kernel symfony/mailer symfony/mime guzzlehttp/guzzle \
+  league/commonmark
+docker compose exec backend npm update postcss nanoid
+docker compose exec frontend npm update postcss nanoid
+```
+
+---
+
+## Deployment
+
+`.github/workflows/cd.yaml` deploys to a target server on pushes to `main`, or
+manually via `workflow_dispatch`. It connects over SSH, resets to the pushed
+commit, rebuilds, refreshes the asset volume, verifies the health endpoint, and
+rolls back to the previous commit if the check fails within 60 seconds.
+
+Required repository secrets: `SERVER_HOST`, `SERVER_USER`, `SERVER_SSH_KEY`, and
+optionally `SERVER_PORT`.
+
+This pipeline has not yet executed — no target server has been provisioned.
+`php artisan serve` is also a single-threaded development server; a production
+deployment requires nginx or Apache in front of PHP-FPM.
