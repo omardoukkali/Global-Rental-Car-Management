@@ -1,21 +1,3 @@
-# ---------- Stage 1: Build frontend assets ----------
-FROM node:20-alpine AS assets
-
-WORKDIR /app
-
-# Copy package manifests first for better layer caching
-COPY package.json package-lock.json* ./
-RUN npm install
-
-# Copy the source files Vite needs
-COPY vite.config.js ./
-COPY resources ./resources
-COPY tailwind.config.js* postcss.config.js* ./
-
-RUN npm run build
-
-
-# ---------- Stage 2: PHP application ----------
 FROM php:8.2-fpm-alpine
 
 WORKDIR /var/www/html
@@ -36,9 +18,6 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Copy Laravel backend code
 COPY . .
 
-# Bring in the compiled Vite assets from the build stage
-COPY --from=assets /app/public/build ./public/build
-
 # Install PHP dependencies
 RUN COMPOSER_MEMORY_LIMIT=-1 composer install --no-interaction --prefer-dist --optimize-autoloader
 
@@ -53,7 +32,7 @@ RUN if [ -f docker-entrypoint.sh ]; then \
 
 EXPOSE 8000
 
-# Execute the entrypoint script to run migrations/caching before starting the server
+# Execute the entrypoint script to run migrations before starting the server
 ENTRYPOINT ["docker-entrypoint.sh"]
 
 # Start artisan development server

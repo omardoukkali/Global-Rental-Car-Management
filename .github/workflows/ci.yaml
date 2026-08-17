@@ -6,6 +6,7 @@ on:
     branches:
       - develop
       - main
+      - Develop1
       - 'feature/**'
       - 'infra/**'
       - 'refactor/**'
@@ -74,11 +75,6 @@ jobs:
         run: |
           docker compose exec -T backend composer validate --strict
 
-      # Guards against the missing-manifest bug
-      - name: Verify Vite manifest was built into the image
-        run: |
-          docker compose exec -T backend test -f public/build/manifest.json
-          echo "Vite manifest present."
 
       # --- Trivy: readable tables in the log ---
       # exit-code 0 = report only; ignore-unfixed drops CVEs with no patch

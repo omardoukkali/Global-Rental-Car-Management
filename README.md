@@ -32,7 +32,7 @@ build step runs inside a container.
 ## Quick start
 
 ```bash
-# 1. Clone the repository
+# 1. Clone the repository 1223
 git clone https://github.com/omardoukkali/Global-Rental-Car-Management.git
 cd Global-Rental-Car-Management
 
