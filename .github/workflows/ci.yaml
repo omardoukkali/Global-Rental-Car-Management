@@ -43,7 +43,7 @@ jobs:
 
       # Scans code and history for live credentials. CAN fail the build
       - name: TruffleHog secret scan
-        uses: trufflesecurity/trufflehog-action@main
+        uses: trufflesecurity/trufflehog@main
         with:
           extra_args: --only-verified
 
