@@ -1,45 +1,101 @@
-version: '3.8'
-
 services:
-  app:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: car-rental-app
-    restart: unless-stopped
-    ports:
-      - "3000:8000"
-    volumes:
-      - ./backend:/var/www
-    depends_on:
-      db:
-        condition: service_healthy
-    networks:
-      - car-rental-network
-
-  db:
+  # 1. Database Service (PostgreSQL)
+  database:
     image: postgres:15-alpine
-    container_name: car-rental-db
+    container_name: app_database
     restart: unless-stopped
-    ports:
-      - "5432:5432"
     environment:
-      POSTGRES_DB: car_rental
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: ${DB_DATABASE:-globalrental}
+      POSTGRES_USER: ${DB_USERNAME:-grader}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
+    ports:
+      - "${DB_PORT:-5432}:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - app_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d car_rental"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-grader} -d ${DB_DATABASE:-globalrental}"]
       interval: 5s
       timeout: 5s
       retries: 5
+
+  # 2. Backend Service (Laravel / PHP API)
+  backend:
+    image: global-rental-backend:latest
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: app_backend
+    restart: unless-stopped
+    environment:
+      APP_NAME: "${APP_NAME:-Global Rental Car}"
+      APP_ENV: ${APP_ENV:-local}
+      APP_KEY: ${APP_KEY}
+      APP_DEBUG: ${APP_DEBUG:-true}
+      APP_URL: ${APP_URL:-http://localhost:8000}
+      DB_CONNECTION: ${DB_CONNECTION:-pgsql}
+      DB_HOST: database
+      DB_PORT: 5432
+      DB_DATABASE: ${DB_DATABASE:-globalrental}
+      DB_USERNAME: ${DB_USERNAME:-grader}
+      DB_PASSWORD: ${DB_PASSWORD:-secret}
+      AI_SERVICE_URL: ${AI_SERVICE_URL:-http://ai_service:5000}
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    volumes:
+      - ./backend:/var/www/html
+      - backend_vendor:/var/www/html/vendor
+      - backend_public_build:/var/www/html/public/build
+    depends_on:
+      database:
+        condition: service_healthy
     networks:
-      - car-rental-network
+      - app_network
+
+  # 3. Frontend Service (Vue 3 / Vite)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: app_frontend
+    restart: unless-stopped
+    environment:
+      VITE_API_URL: http://localhost:${BACKEND_PORT:-8000}
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - app_network
+
+  # 4. AI Service (Python / FastAPI)
+  ai_service:
+    build:
+      context: ./AI
+      dockerfile: Dockerfile
+    container_name: app_ai_service
+    restart: unless-stopped
+    environment:
+      PORT: 5000
+    ports:
+      - "${AI_PORT:-5000}:5000"
+    volumes:
+      - ./AI:/app
+    networks:
+      - app_network
 
 networks:
-  car-rental-network:
+  app_network:
     driver: bridge
 
 volumes:
-  pgdata:
+  db_data:
+    driver: local
+  backend_vendor:
+    driver: local
+  backend_public_build:
+    driver: local
