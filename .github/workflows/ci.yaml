@@ -60,8 +60,9 @@ jobs:
           echo "Vite manifest present."
 
       # --- TRIVY SECURITY SCANS ---
+      # NOTE: pinned to @master pending selection of a valid release tag.
       - name: Run Trivy vulnerability scanner on Backend Image
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@master
         with:
           image-ref: 'global-rental-backend:latest'
           format: 'table'
@@ -71,7 +72,7 @@ jobs:
           severity: 'CRITICAL,HIGH'
 
       - name: Run Trivy vulnerability scanner on Frontend Image
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@master
         with:
           image-ref: 'global-rental-car-management-frontend:latest'
           format: 'table'
@@ -81,7 +82,7 @@ jobs:
           severity: 'CRITICAL,HIGH'
 
       - name: Run Trivy vulnerability scanner on AI Service Image
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@master
         with:
           image-ref: 'global-rental-car-management-ai_service:latest'
           format: 'table'
@@ -91,7 +92,7 @@ jobs:
           severity: 'CRITICAL,HIGH'
 
       - name: Run Trivy File System Scan
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@master
         with:
           scan-type: 'fs'
           scan-ref: '.'
