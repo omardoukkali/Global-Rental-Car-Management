@@ -20,7 +20,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # 2. Backend Service (Laravel / PHP API)
+  # 2. Backend Service (Laravel API)
   backend:
     image: global-rental-backend:latest
     build:
@@ -46,22 +46,19 @@ services:
     volumes:
       - ./backend:/var/www/html
       - backend_vendor:/var/www/html/vendor
-      - backend_public_build:/var/www/html/public/build
     depends_on:
       database:
         condition: service_healthy
     networks:
       - app_network
 
-  # 3. Frontend Service (Vue 3 / Vite)
+  # 3. Frontend Service (Vue 3 SPA / Vite)
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: app_frontend
     restart: unless-stopped
-    environment:
-      VITE_API_URL: http://localhost:${BACKEND_PORT:-8000}
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
     volumes:
@@ -96,6 +93,4 @@ volumes:
   db_data:
     driver: local
   backend_vendor:
-    driver: local
-  backend_public_build:
     driver: local
