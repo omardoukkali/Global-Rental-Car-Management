@@ -1,5 +1,6 @@
 name: CI Pipeline
 
+# Runs on the permanent branches, the four agreed prefixes, and PRs
 on:
   push:
     branches:
@@ -21,24 +22,42 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # fetch-depth: 0 gives TruffleHog the full git history to scan
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
+      # Unique suffix for report filenames
+      - name: Set date stamp
+        run: echo "TIMESTAMP=$(date +'%Y-%m-%d-%H%M')" >> $GITHUB_ENV
+
+      # Enables BuildKit for multi-stage builds
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      # .env is gitignored, so build one from the template
       - name: Create .env file
         run: |
           cp .env.example .env
 
+      # Scans code and history for live credentials. CAN fail the build
+      - name: TruffleHog secret scan
+        uses: trufflesecurity/trufflehog-action@main
+        with:
+          extra_args: --only-verified
+
+      # Builds all three images
       - name: Build Docker images
         run: |
           docker compose build
 
+      # Starts the stack; backend waits for a healthy database
       - name: Start services
         run: |
           docker compose up -d
 
+      # The real gate: curl --fail proves the app responds, not just that it started
       - name: Wait for services and assert health
         run: |
           echo "Waiting for services to boot..."
@@ -50,19 +69,22 @@ jobs:
           curl --fail --silent --show-error --retry 5 --retry-delay 3 --retry-all-errors http://localhost:5000/docs
           echo "All services healthy."
 
+      # Fails if composer.json and composer.lock have drifted
       - name: Validate Composer dependencies
         run: |
           docker compose exec -T backend composer validate --strict
 
+      # Guards against the missing-manifest bug
       - name: Verify Vite manifest was built into the image
         run: |
           docker compose exec -T backend test -f public/build/manifest.json
           echo "Vite manifest present."
 
-      # --- TRIVY SECURITY SCANS ---
-      # NOTE: pinned to @master pending selection of a valid release tag.
-      - name: Run Trivy vulnerability scanner on Backend Image
-        uses: aquasecurity/trivy-action@master
+      # --- Trivy: readable tables in the log ---
+      # exit-code 0 = report only; ignore-unfixed drops CVEs with no patch
+
+      - name: Trivy scan — backend image
+        uses: aquasecurity/trivy-action@v0.35.0
         with:
           image-ref: 'global-rental-backend:latest'
           format: 'table'
@@ -71,8 +93,8 @@ jobs:
           vuln-type: 'os,library'
           severity: 'CRITICAL,HIGH'
 
-      - name: Run Trivy vulnerability scanner on Frontend Image
-        uses: aquasecurity/trivy-action@master
+      - name: Trivy scan — frontend image
+        uses: aquasecurity/trivy-action@v0.35.0
         with:
           image-ref: 'global-rental-car-management-frontend:latest'
           format: 'table'
@@ -81,8 +103,8 @@ jobs:
           vuln-type: 'os,library'
           severity: 'CRITICAL,HIGH'
 
-      - name: Run Trivy vulnerability scanner on AI Service Image
-        uses: aquasecurity/trivy-action@master
+      - name: Trivy scan — AI service image
+        uses: aquasecurity/trivy-action@v0.35.0
         with:
           image-ref: 'global-rental-car-management-ai_service:latest'
           format: 'table'
@@ -91,19 +113,56 @@ jobs:
           vuln-type: 'os,library'
           severity: 'CRITICAL,HIGH'
 
-      - name: Run Trivy File System Scan
-        uses: aquasecurity/trivy-action@master
+      # scanners set explicitly so coverage doesn't depend on defaults
+      - name: Trivy scan — filesystem
+        uses: aquasecurity/trivy-action@v0.35.0
         with:
           scan-type: 'fs'
           scan-ref: '.'
+          scanners: 'vuln,secret,misconfig'
           format: 'table'
+          exit-code: '0'
+          ignore-unfixed: true
+          severity: 'CRITICAL,HIGH'
+
+      # --- Trivy: JSON reports saved as a downloadable artifact ---
+
+      - name: Trivy JSON report — filesystem
+        uses: aquasecurity/trivy-action@v0.35.0
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          scanners: 'vuln,secret,misconfig'
+          format: 'json'
+          output: 'trivy-reports/report-fs-${{ env.TIMESTAMP }}.json'
           exit-code: '0'
           severity: 'CRITICAL,HIGH'
 
+      - name: Trivy JSON report — backend image
+        uses: aquasecurity/trivy-action@v0.35.0
+        with:
+          image-ref: 'global-rental-backend:latest'
+          format: 'json'
+          output: 'trivy-reports/report-backend-${{ env.TIMESTAMP }}.json'
+          exit-code: '0'
+          ignore-unfixed: true
+          severity: 'CRITICAL,HIGH'
+
+      # Download from the Artifacts box at the bottom of the run page
+      - name: Upload Trivy reports as artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: trivy-reports-${{ env.TIMESTAMP }}
+          path: trivy-reports/
+          retention-days: 14
+
+      # Makes a red run explain itself without re-running
       - name: Dump container logs on failure
         if: failure()
         run: docker compose logs
 
+      # --volumes gives the next run a clean slate
       - name: Bring down services
         if: always()
         run: |

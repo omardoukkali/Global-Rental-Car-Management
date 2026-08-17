@@ -1,66 +1,240 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Global Rental Car Management
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+A multi-tier car rental management platform built as a containerized monorepo.
 
-## About Laravel
+| Service | Technology | Port |
+|---|---|---|
+| Backend | Laravel 11 / PHP 8.2-FPM (Alpine) + Inertia | 8000 |
+| Frontend | Vue 3 SPA (Vite dev server) | 3000 |
+| AI Service | Python FastAPI | 5000 |
+| Database | PostgreSQL 15 (Alpine) | 5432 |
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+All four services run as Docker containers on a shared bridge network (`app_network`),
+orchestrated with Docker Compose. Nothing needs to be installed on the host except Docker.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+---
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Prerequisites
 
-## Learning Laravel
+| Requirement | Minimum | Notes |
+|---|---|---|
+| Docker Desktop | 4.30+ | Includes Docker Engine and Compose v2 |
+| RAM | 8 GB | 16 GB recommended; the stack allocates ~4 GB under load |
+| Disk space | 10 GB free | Images total roughly 1.5 GB plus build cache |
+| Git | 2.40+ | — |
+| OS | Windows 10/11, macOS 12+, or any modern Linux | WSL 2 backend required on Windows |
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+PHP, Node.js, Composer, and PostgreSQL are **not** required on the host — every
+build step runs inside a container.
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+---
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## Quick start
 
-## Laravel Sponsors
+```bash
+# 1. Clone the repository
+git clone https://github.com/omardoukkali/Global-Rental-Car-Management.git
+cd Global-Rental-Car-Management
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+# 2. Create your environment file from the template
+cp .env.example .env
 
-### Premium Partners
+# 3. Build and start all four services
+docker compose up -d --build
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+# 4. Confirm everything is healthy
+docker compose ps
+```
 
-## Contributing
+The first build takes 5–10 minutes: it pulls the PHP, Node, Python, and Postgres
+base images, installs Composer and npm dependencies, and compiles the frontend
+assets with Vite.
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+You should see four containers with status `Up`, and `app_database` marked
+`(healthy)`.
 
-## Code of Conduct
+### Service URLs
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+| What | URL |
+|---|---|
+| Backend application (Inertia UI) | http://localhost:8000 |
+| Backend health check | http://localhost:8000/up |
+| REST API | http://localhost:8000/api |
+| Frontend SPA (Vite dev server) | http://localhost:3000 |
+| AI service (Swagger UI) | http://localhost:5000/docs |
+| PostgreSQL | localhost:5432 |
 
-## Security Vulnerabilities
+To stop everything: `docker compose down`
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+---
 
-## License
+## What happens automatically on first boot
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+The backend container's entrypoint (`backend/docker-entrypoint.sh`) handles setup
+so no manual steps are needed:
+
+1. Fixes storage directory permissions
+2. Creates the `public/storage` symlink
+3. Generates an `APP_KEY` if none is set in `.env`
+4. Waits for PostgreSQL, then runs migrations
+5. Seeds the database on first boot only (guarded by a lock file)
+6. Starts the application server
+
+Because of step 3, the app boots successfully even with a blank `APP_KEY`.
+The generated key is **ephemeral** — it is regenerated whenever the container is
+recreated, which invalidates existing sessions and any encrypted column values.
+For any persistent or production deployment, set a fixed `APP_KEY` in `.env`:
+
+```bash
+docker compose exec backend php artisan key:generate --show
+# paste the output into APP_KEY= in your .env, then:
+docker compose restart backend
+```
+
+---
+
+## Important: refreshing frontend assets
+
+The backend's compiled Vite assets live in a named Docker volume
+(`backend_public_build`) so that the host's empty `public/build` directory cannot
+shadow the assets baked into the image.
+
+Docker only populates a named volume from the image **the first time the volume is
+created**. This means that after changing any file under `backend/resources/js/`,
+a plain rebuild will **not** update what the container serves. To pick up asset
+changes:
+
+```bash
+docker compose down -v
+docker compose up -d --build
+```
+
+Note that `-v` also destroys the `db_data` volume, so migrations and seeders will
+re-run from scratch.
+
+---
+
+## Seeded development accounts
+
+The seeder creates test users. Password for all three: `123456`
+
+| Email | Role |
+|---|---|
+| admin@test.com | admin |
+| owner@test.com | agency_owner |
+| client@test.com | client |
+
+These are **development credentials only** and must never be used in a deployed
+environment.
+
+---
+
+## Environment variables
+
+Copy `.env.example` to `.env` and adjust as needed. `APP_KEY` and `DB_PASSWORD`
+are intentionally left blank in the template.
+
+| Variable | Description | Default |
+|---|---|---|
+| `APP_NAME` | Application display name | Global Rental Car |
+| `APP_ENV` | Environment | local |
+| `APP_KEY` | Laravel encryption key | generated at boot if blank |
+| `APP_DEBUG` | Verbose error pages | true |
+| `APP_URL` | Base URL | http://localhost:8000 |
+| `FRONTEND_PORT` | Host port for the Vue SPA | 3000 |
+| `BACKEND_PORT` | Host port for Laravel | 8000 |
+| `AI_PORT` | Host port for FastAPI | 5000 |
+| `DB_PORT` | Host port for PostgreSQL | 5432 |
+| `DB_CONNECTION` | Laravel database driver | pgsql |
+| `DB_HOST` | Database hostname (compose service name) | database |
+| `DB_DATABASE` | Database name | globalrental |
+| `DB_USERNAME` | Database user | grader |
+| `DB_PASSWORD` | Database password | — |
+| `AI_SERVICE_URL` | Internal AI service address | http://ai_service:5000 |
+
+`.env` is gitignored and must never be committed.
+
+---
+
+## Useful commands
+
+```bash
+# View logs for one service (follow mode)
+docker compose logs -f backend
+
+# Open a shell inside a container
+docker compose exec backend sh
+
+# Run the test suite
+docker compose exec backend php artisan test
+
+# List all registered routes
+docker compose exec backend php artisan route:list
+
+# Rebuild the database from scratch with seed data
+docker compose exec backend php artisan migrate:fresh --seed
+
+# Rebuild a single service
+docker compose build --no-cache backend
+
+# Full reset (destroys database and volumes)
+docker compose down -v && docker compose up -d --build
+```
+
+---
+
+## Troubleshooting
+
+**`ViteManifestNotFoundException`**
+The compiled assets are missing from the `backend_public_build` volume. Run
+`docker compose down -v && docker compose up -d --build`.
+
+**Backend logs loop on "Database not ready, retrying in 2s"**
+Normal for the first 10–20 seconds while PostgreSQL initialises. If it persists
+beyond a minute, check `docker compose logs database`.
+
+**`ERR_EMPTY_RESPONSE` on port 8000**
+The container is still booting — migrations and seeding run before the server
+starts. Wait for `Server running on [http://0.0.0.0:8000]` in the logs.
+
+**Composer install times out (Windows)**
+Dependencies are installed during the Docker build into a named volume rather
+than across the host filesystem, so this should not occur. If you install
+manually, run it inside the container rather than on the host.
+
+**Port already in use**
+Change the relevant `*_PORT` value in `.env` and restart.
+
+---
+
+## Repository structure
+
+```
+.
+├── .github/workflows/     CI and CD pipeline definitions
+├── AI/                    Python FastAPI service
+├── backend/               Laravel 11 API and Inertia application
+├── frontend/              Vue 3 SPA
+├── docker-compose.yml     Four-service orchestration
+├── .env.example           Environment variable template
+├── .dockerignore          Root build-context exclusions
+├── .gitignore             Excludes .env and node_modules
+└── README.md
+```
+
+---
+
+## Continuous Integration
+
+Every push to `develop`, `main`, `feature/**`, `infra/**`, `refactor/**`, or
+`hotfix/**` triggers the CI pipeline, which:
+
+1. Builds all three application images
+2. Starts the full stack
+3. Asserts the backend and AI service respond to HTTP health probes
+4. Validates `composer.lock` consistency
+5. Confirms the Vite manifest was built into the image
+6. Runs Trivy vulnerability scans on all three images and on the filesystem
+
+`main` and `develop` are protected: direct pushes are blocked, and merges require
+one approving review plus a passing pipeline.
