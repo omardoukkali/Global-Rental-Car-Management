@@ -66,4 +66,11 @@ class User extends Authenticatable
     public function reservations(){
         return $this->hasMany(Reservation::class, 'client_id') ;
     }
+
+    public function setNameAttribute(string $value): void
+    {
+        $nameParts = preg_split('/\s+/', trim($value), 2);
+        $this->attributes['first_name'] = $nameParts[0] ?? '';
+        $this->attributes['last_name'] = $nameParts[1] ?? '';
+    }
 }
