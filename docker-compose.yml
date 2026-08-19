@@ -31,7 +31,7 @@ services:
     environment:
       APP_NAME: "${APP_NAME:-Global Rental Car}"
       APP_ENV: ${APP_ENV:-local}
-      APP_KEY: ${APP_KEY}
+      APP_KEY: ${APP_KEY:-base64:YARdn/q9W0xKw0hF9hLUVk/ImrfeRGR+06Y1fEEV6/A=}
       APP_DEBUG: ${APP_DEBUG:-true}
       APP_URL: ${APP_URL:-http://localhost:8000}
       DB_CONNECTION: ${DB_CONNECTION:-pgsql}
