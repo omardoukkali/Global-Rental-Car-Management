@@ -18,7 +18,6 @@ return new class extends Migration
 
             $table->string('name');
             $table->string('slug')->unique();
-            $table->text('description')->nullable();
             $table->string('logo_url')->nullable();
 
             $table->string('address');
@@ -26,8 +25,9 @@ return new class extends Migration
             $table->string('email')->unique()->nullable();
 
             $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
-            $table->decimal('avg_rating', 3, 2)->nullable();
+            $table->decimal('avg_rating', 3, 2)->nullable(); // 3 is total numbers like 4,50 and 2 before ","
             $table->integer('total_reviews')->default(0);
+            $table->decimal('commission_rate', 5, 2)->default(15.00);
 
             $table->softDeletes();
             $table->timestamps();

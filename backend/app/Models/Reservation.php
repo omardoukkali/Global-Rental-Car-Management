@@ -2,65 +2,80 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use Carbon\Carbon;
-
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class Reservation extends Model
 {
-    use HasUuids;
+    use HasFactory, HasUuids;
+
     protected $fillable = [
-        'id',
         'client_id',
         'car_id',
         'agency_id',
-        'reference_number',
-        'start_date',
-        'end_date',
-        'price_per_day_snapshot',
+        'pickup_point_id',
+        'return_point_id',
+        'reference',
+        'start_at',
+        'end_at',
+        'daily_price_snapshot',
         'total_amount',
-        'commission_amount',
-        'agency_earning',
         'status',
-        'cancellation_reason',
-        'cancelled_at',
-        'completed_at',
+        'picked_up_at',
+        'returned_at',
     ];
 
     protected function casts(): array
     {
         return [
-            'start_date' => 'datetime',
-            'end_date' => 'datetime',
-            'price_per_day_snapshot' => 'decimal:2',
+            'start_at' => 'datetime',
+            'end_at' => 'datetime',
+            'daily_price_snapshot' => 'decimal:2',
             'total_amount' => 'decimal:2',
-            'commission_amount' => 'decimal:2',
-            'agency_earning' => 'decimal:2',
-            'cancelled_at' => 'datetime',
-            'completed_at' => 'datetime',
+            'picked_up_at' => 'datetime',
+            'returned_at' => 'datetime',
         ];
     }
-    public function car(){
+
+    public function client()
+    {
+        return $this->belongsTo(User::class, 'client_id');
+    }
+
+    public function car()
+    {
         return $this->belongsTo(Car::class);
     }
-    public function user(){
-        return $this->belongsTo(User::class, 'client_id');
-    }
-    public function client(){
-        return $this->belongsTo(User::class, 'client_id');
-    }
-    public function agency(){
+
+    public function agency()
+    {
         return $this->belongsTo(Agency::class);
     }
-    public function payment(){
+
+    public function pickupPoint()
+    {
+        return $this->belongsTo(
+            AgencyPoint::class,
+            'pickup_point_id'
+        );
+    }
+
+    public function returnPoint()
+    {
+        return $this->belongsTo(
+            AgencyPoint::class,
+            'return_point_id'
+        );
+    }
+
+    public function payment()
+    {
         return $this->hasOne(Payment::class);
     }
-    public function review(){
-        return $this->hasOne(Review::class);
-    }
-    public function getTotalDays(): int
+
+    public function review()
     {
-        return Carbon::parse($this->start_date)->diffInDays(Carbon::parse($this->end_date));
+        return $this->hasOne(Review::class);
     }
 }

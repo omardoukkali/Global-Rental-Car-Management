@@ -13,10 +13,17 @@ return new class extends Migration
     {
         Schema::create('car_images', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->foreignUuid('car_id')->constrained()->onDelete('cascade');
+
+            $table->foreignUuid('car_id')
+                ->constrained('cars')
+                ->onDelete('cascade');
+
             $table->string('url');
+
             $table->boolean('is_primary')->default(false);
-            $table->integer('sort_order')->default(0);
+
+            $table->unsignedInteger('display_order')->default(0); //unsignedInteger = only positive numbers 
+
             $table->timestamps();
         });
     }

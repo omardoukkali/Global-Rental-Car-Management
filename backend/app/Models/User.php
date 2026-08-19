@@ -3,18 +3,16 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use Laravel\Sanctum\HasApiTokens;
-
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable , SoftDeletes , HasUuids , HasApiTokens;
+    use HasFactory, Notifiable, HasUuids, SoftDeletes;
 
     /**
      * The attributes that are mass assignable.
@@ -22,7 +20,6 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
-        'id',
         'first_name',
         'last_name',
         'email',
@@ -38,8 +35,7 @@ class User extends Authenticatable
      *
      * @var list<string>
      */
-    //hide it from requests
-    protected $hidden = [
+    protected $hidden = [ // Hide sensitive attributes from JSON and array responses.
         'password',
         'remember_token',
     ];
@@ -49,7 +45,6 @@ class User extends Authenticatable
      *
      * @return array<string, string>
      */
-    //casting from string → Carbon datetime
     protected function casts(): array
     {
         return [
@@ -57,13 +52,19 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
-    public function agency(){
-        return $this->hasOne(Agency::class, 'owner_id') ;
+
+    public function agency()
+    {
+        return $this->hasOne(Agency::class, 'owner_id');
     }
-    public function reviews(){
-        return $this->hasMany(Review::class, 'client_id') ;
+
+    public function reservations()
+    {
+        return $this->hasMany(Reservation::class, 'client_id');
     }
-    public function reservations(){
-        return $this->hasMany(Reservation::class, 'client_id') ;
+
+    public function reviews()
+    {
+        return $this->hasMany(Review::class);
     }
 }

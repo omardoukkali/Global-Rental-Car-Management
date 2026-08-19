@@ -13,16 +13,32 @@ return new class extends Migration
     {
         Schema::create('payments', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->foreignUuid('reservation_id')->constrained()->onDelete('restrict')->unique();
+
+            $table->foreignUuid('reservation_id')
+                ->unique()
+                ->constrained('reservations')
+                ->onDelete('restrict');
+
             $table->decimal('amount', 10, 2);
-            $table->decimal('commission_amount', 10, 2);
+
+            $table->decimal('commission_rate', 5, 2);
+            $table->decimal('platform_commission', 10, 2);
             $table->decimal('agency_amount', 10, 2);
-            $table->enum('payment_method', ['card', 'cash'])->default('card');
-            $table->enum('status', ['pending', 'paid', 'released', 'failed', 'refunded', 'partially_refunded'])->default('pending');
+
+            $table->string('transaction_id')->nullable()->unique();
+
+            $table->enum('status', [
+                'pending',
+                'paid',
+                'failed',
+                'refunded',
+            ])->default('pending');
+
             $table->timestamp('paid_at')->nullable();
             $table->timestamp('released_at')->nullable();
+
             $table->timestamps();
-        });
+                });
     }
 
     /**

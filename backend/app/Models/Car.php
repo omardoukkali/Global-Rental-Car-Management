@@ -2,17 +2,16 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
-
 
 class Car extends Model
 {
+    use HasFactory, HasUuids, SoftDeletes;
 
-    use SoftDeletes,HasUuids;
     protected $fillable = [
-        'id',
         'agency_id',
         'city_id',
         'brand',
@@ -23,33 +22,51 @@ class Car extends Model
         'type',
         'transmission',
         'seats',
-        'price_per_day',
-        'description',
+        'daily_price',
+        'energy_type',
+        'fuel_consumption',
+        'electric_range',
         'status',
-        'avg_rating',
-        'total_reviews',
     ];
+
     protected function casts(): array
     {
         return [
-            'price_per_day' => 'decimal:2',
-            'avg_rating' => 'float',
-            'total_reviews' => 'integer',
             'year' => 'integer',
             'seats' => 'integer',
-            'deleted_at' => 'datetime',
+            'daily_price' => 'decimal:2',
+            'fuel_consumption' => 'decimal:2',
+            'electric_range' => 'integer',
         ];
     }
-    public function agency(){
+
+    public function agency()
+    {
         return $this->belongsTo(Agency::class);
     }
-    public function city(){
+
+    public function city()
+    {
         return $this->belongsTo(City::class);
     }
-    public function images(){
+
+    public function images()
+    {
         return $this->hasMany(CarImage::class);
     }
-    public function reservations(){
+
+    public function reservations()
+    {
         return $this->hasMany(Reservation::class);
+    }
+
+    public function reviews()
+    {
+        return $this->hasManyThrough(
+            Review::class,
+            Reservation::class,
+            'car_id',
+            'reservation_id'
+        );
     }
 }
