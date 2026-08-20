@@ -15,3 +15,8 @@ Route::prefix('register')->group(function () {
         'registerAgency'
     ]);
 });
+Route::post('/login', [
+    AuthController::class,
+    'login'
+]);
+

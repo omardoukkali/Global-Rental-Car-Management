@@ -1,0 +1,131 @@
+{
+  "info": {
+    "_postman_id": "28d9e6fb-d423-459d-90fe-cadccf3aa547",
+    "name": "Global car management API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "51931746",
+    "_collection_link": "https://go.postman.co/collection/51931746-28d9e6fb-d423-459d-90fe-cadccf3aa547?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register Client",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{client_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"first_name\": \"Omar\",\r\n    \"last_name\": \"Agency Owner\",\r\n    \"email\": \"owner@agency.com\",\r\n    \"password\": \"Password123!\",\r\n    \"password_confirmation\": \"Password123!\",\r\n    \"phone\": \"+212611111111\",\r\n\r\n    \"agency_name\": \"Tangier Rent Cars\",\r\n    \"agency_city\": \"a28c2cb6-9049-42d3-946c-67074073bae3\",\r\n    \"address\": \"Tangier, Morocco\",\r\n    \"agency_phone\": \"+212622222222\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/register/client",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "register",
+                "client"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Register Agency",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{client_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"first_name\": \"Omar\",\r\n    \"last_name\": \"Agency Owner\",\r\n    \"email\": \"owner@agency.com\",\r\n    \"password\": \"Password123!\",\r\n    \"password_confirmation\": \"Password123!\",\r\n    \"phone\": \"+212611111111\",\r\n\r\n    \"agency_name\": \"Tangier Rent Cars\",\r\n    \"agency_city\": \"a28c2cb6-9049-42d3-946c-67074073bae3\",\r\n    \"address\": \"Tangier, Morocco\",\r\n    \"agency_phone\": \"+212622222222\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/register/client",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "register",
+                "client"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"ahmed@xample.com\",\n    \"password\": \"Password123!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "login"
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "Authentication endpoints for client and agency accounts using Laravel Sanctum.\n\n### Client Registration\n\n`POST /api/register/client`\n\nCreates a new client account.\n\nRequired fields:\n\n- first_name\n    \n- last_name\n    \n- email\n    \n- password\n    \n- password_confirmation\n    \n\nOptional fields:\n\n- phone\n    \n\nThe created user receives:\n\n- role: client\n    \n- status: active\n    \n\n### Agency Registration\n\n`POST /api/register/agency`\n\nCreates an agency owner account and the associated agency profile.\n\nRequired fields:\n\n- first_name\n    \n- last_name\n    \n- email\n    \n- password\n    \n- password_confirmation\n    \n- phone\n    \n- agency_name\n    \n- agency_city\n    \n- address\n    \n- agency_phone\n    \n\nThe created user receives:\n\n- role: agency\n    \n- status: active\n    \n\nThe created agency receives:\n\n- status: pending\n    \n\nOptional fields:\n\n- phone\n    \n\nAgency registration is executed inside a database transaction to ensure data consistency.\n\n### Login\n\n`POST /api/login`\n\nAuthenticates a user using email and password.\n\nOn successful authentication, the API returns:\n\n- User information\n    \n- Sanctum access token\n    \n\nSuspended accounts are not allowed to log in."
+    }
+  ]
+}
