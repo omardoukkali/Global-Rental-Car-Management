@@ -3,9 +3,10 @@
 namespace App\Http\Requests\Auth;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 
-class RegisterRequest extends FormRequest
+
+class RegisterClientRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -14,7 +15,12 @@ class RegisterRequest extends FormRequest
     {
         return true;
     }
-
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'email' => strtolower(trim($this->email)),
+        ]);
+    }
     /**
      * Get the validation rules that apply to the request.
      *
@@ -23,8 +29,17 @@ class RegisterRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'first_name' => ['required', 'string', 'max:100'],
-            'last_name' => ['required', 'string', 'max:100'],
+            'first_name' => [
+                'required',
+                'string',
+                'max:255',
+            ],
+
+            'last_name' => [
+                'required',
+                'string',
+                'max:255',
+            ],
 
             'email' => [
                 'required',
@@ -35,20 +50,16 @@ class RegisterRequest extends FormRequest
 
             'password' => [
                 'required',
-                'string',
-                'min:8',
                 'confirmed',
+                Password::min(8)
+                    ->letters()
+                    ->numbers(),
             ],
 
             'phone' => [
                 'nullable',
                 'string',
                 'max:20',
-            ],
-
-            'role' => [
-                'required',
-                Rule::in(['client', 'agency']),
             ],
         ];
     }

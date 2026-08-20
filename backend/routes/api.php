@@ -1,8 +1,17 @@
 <?php
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\AuthController;
+use Illuminate\Support\Facades\Route;
 
+Route::prefix('register')->group(function () {
 
-Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/client', [
+        AuthController::class,
+        'registerClient'
+    ]);
+
+    Route::post('/agency', [
+        AuthController::class,
+        'registerAgency'
+    ]);
+});
