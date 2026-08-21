@@ -10,15 +10,16 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Http\Request;
+use App\Http\Requests\Auth\LoginRequest;
+use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
     /**
      * Register a new client.
      */
-    public function registerClient(
-        RegisterClientRequest $request
-    ): JsonResponse {
+    public function registerClient(RegisterClientRequest $request): JsonResponse {
         $validated = $request->validated();
 
         $user = User::create([
@@ -90,5 +91,34 @@ class AuthController extends Controller
             'user' => $result['user'],
             'agency' => $result['agency'],
         ], 201);
+    }
+    public function login(LoginRequest $request): JsonResponse
+    {
+        $validated = $request->validated();
+        $user = User::where('email', $validated['email'])->first();
+        if (!$user || !Hash::check($validated['password'], $user->password)) {
+            return response()->json([
+                'message' => 'Invalid email or password.',
+            ], 401);
+        }
+        if ($user->status === 'suspended') {
+            return response()->json([
+                'message' => 'Your account has been suspended.',
+            ], 403);
+        }
+        $token = $user->createToken('auth_token')->plainTextToken;
+        return response()->json([
+            'message' => 'Login successful.',
+            'token' => $token,
+            'user' => $user,
+        ]);
+    }
+    public function logout(Request $request): JsonResponse
+    {
+        $request->user()->currentAccessToken()->delete();
+
+        return response()->json([
+            'message' => 'Logout successful.',
+        ]);
     }
 }
