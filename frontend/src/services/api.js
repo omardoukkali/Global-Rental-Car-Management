@@ -17,10 +17,21 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
     (res) => res.data,
     (err) => {
+        const status = err.response?.status
+        const responseMessage = err.response?.data?.message
+        let message = responseMessage || 'Une erreur est survenue.'
+
+        if (!responseMessage) {
+            if (!err.response) message = 'Le serveur est indisponible. Vérifiez votre connexion.'
+            else if (status === 401) message = 'Identifiants invalides.'
+            else if (status === 403) message = 'Vous n’êtes pas autorisé à effectuer cette action.'
+            else if (status >= 500) message = 'Le serveur rencontre un problème. Réessayez plus tard.'
+        }
+
         return Promise.reject({
-            message: err.response?.data?.message || 'Une erreur est survenue.',
+            message,
             errors: err.response?.data?.errors || null,
-            status: err.response?.status,
+            status,
         })
     }
 )

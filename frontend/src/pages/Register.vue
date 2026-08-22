@@ -202,7 +202,6 @@
 import { reactive, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import api from '@/services/api'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -257,7 +256,7 @@ async function handleSubmit() {
   loading.value = true
   try {
     if (form.role === 'client') {
-      await api.post('/register/client', {
+      await auth.registerClient({
         first_name: form.first_name,
         last_name: form.last_name,
         email: form.email,
@@ -265,12 +264,10 @@ async function handleSubmit() {
         password: form.password,
         password_confirmation: form.password_confirmation,
       })
-      // Login auto (le backend register/client ne renvoie pas de token)
-      const data = await api.post('/login', { email: form.email, password: form.password })
-      auth.setSession(data.token, data.user)
+      await auth.login({ email: form.email, password: form.password })
       router.push('/')
     } else {
-      await api.post('/register/agency', {
+      await auth.registerAgency({
         first_name: form.first_name,
         last_name: form.last_name,
         email: form.email,
@@ -286,10 +283,12 @@ async function handleSubmit() {
       setTimeout(() => router.push('/login'), 3000)
     }
   } catch (e) {
-    if (e.errors) Object.assign(errors, e.errors)
+    if (e.status === 422 && e.errors) Object.assign(errors, e.errors)
     else globalError.value = e.message
   } finally {
     loading.value = false
   }
 }
 </script>
+
+//test oussama

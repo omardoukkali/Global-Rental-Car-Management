@@ -98,7 +98,7 @@ async function handleSubmit() {
     await auth.login(form)
     router.push('/')
   } catch (e) {
-    if (e.errors) Object.assign(errors, e.errors)
+    if (e.status === 422 && e.errors) Object.assign(errors, e.errors)
     else globalError.value = e.message
   } finally {
     loading.value = false
