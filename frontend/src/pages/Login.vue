@@ -1,67 +1,102 @@
 <template>
-  <div class="auth-wrap fade-in">
-    <div class="glass-card auth-card">
-      <div class="auth-logo">
-        <CarIcon class="auth-logo-icon" />
-        <span>GlobalRental</span>
+  <div class="min-h-screen flex flex-col md:flex-row">
+    <!-- LEFT PANEL -->
+    <div class="hidden md:flex w-[45%] lg:w-1/2 left-panel-bg relative text-white flex-col justify-between p-10 lg:p-14">
+      <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/20"></div>
+      <div class="relative z-10 flex flex-col h-full justify-between">
+        <RouterLink to="/" class="gr-logo text-white hover:opacity-80 transition-opacity">
+          <span class="gr-logo-dot bg-white"></span>GlobalRental
+        </RouterLink>
+        <div class="mt-auto pb-10 fade-up">
+          <h1 class="font-bricolage text-4xl lg:text-5xl leading-tight mb-8">
+            Bon retour parmi nous.
+          </h1>
+          <p class="text-lg opacity-90">Connectez-vous pour accéder à votre espace et gérer vos réservations.</p>
+        </div>
       </div>
-      <h2 class="auth-title">{{ t('auth.welcomeBack') }}</h2>
-      <p class="auth-sub">{{ t('auth.signInSub') }}</p>
+    </div>
 
-      <form @submit.prevent="handleSubmit">
-        <div class="form-group">
-          <label class="form-label">{{ t('auth.email') }}</label>
-          <input v-model="form.email" type="email" class="form-input" placeholder="you@email.com" required />
-          <span v-if="errors.email" class="form-error">{{ errors.email }}</span>
+    <!-- RIGHT PANEL -->
+    <div class="flex-1 flex flex-col min-h-screen bg-white relative">
+      <header class="p-6 flex justify-between items-center w-full">
+        <div class="md:hidden">
+          <RouterLink to="/" class="gr-logo" style="color: var(--ink);">
+            <span class="gr-logo-dot" style="background: var(--ink);"></span>GlobalRental
+          </RouterLink>
         </div>
-        <div class="form-group">
-          <label class="form-label">{{ t('auth.password') }}</label>
-          <input v-model="form.password" type="password" class="form-input" placeholder="••••••••" required />
+        <div class="ml-auto">
+          <RouterLink to="/" class="text-sm font-semibold flex items-center gap-2" style="color: var(--ink-muted);">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+            Retour à l'accueil
+          </RouterLink>
         </div>
+      </header>
 
-        <div v-if="globalError" class="error-banner">{{ globalError }}</div>
+      <div class="flex-1 flex items-center justify-center p-6 lg:p-12">
+        <div class="w-full max-w-[440px] fade-up fade-up-1">
+          <div class="flex border-b mb-8" style="border-color: var(--border);">
+            <button type="button" class="tab-btn active flex-1 text-center">Se connecter</button>
+            <RouterLink to="/register" class="tab-btn flex-1 text-center">S'inscrire</RouterLink>
+          </div>
 
-        <button type="submit" class="btn btn-primary btn-full" :disabled="loading">
-          <span v-if="loading" class="spinner" style="width:16px;height:16px;border-width:2px"></span>
-          <span v-else>{{ t('auth.loginButton') }}</span>
-        </button>
-      </form>
+          <div class="mb-8">
+            <h2 class="font-bricolage text-3xl mb-2">Bon retour parmi nous</h2>
+            <p style="color: var(--ink-muted);">Connectez-vous pour accéder à votre espace</p>
+          </div>
 
-      <p class="auth-footer">
-        {{ t('auth.noAccount') }}
-        <RouterLink to="/register" style="color:var(--accent);font-weight:600">{{ t('auth.register') }}</RouterLink>
-      </p>
+          <form @submit.prevent="handleSubmit" class="space-y-5" novalidate>
+            <div>
+              <label class="form-label" for="login-email">Adresse e-mail</label>
+              <input v-model="form.email" type="email" id="login-email" class="form-input" :class="{ 'is-invalid': errors.email }" placeholder="vous@exemple.com" required />
+              <p v-if="errors.email" class="text-xs mt-1" style="color: #EF4444;">{{ errors.email[0] }}</p>
+            </div>
+
+            <div>
+              <div class="flex justify-between items-center mb-1">
+                <label class="form-label mb-0" for="login-password">Mot de passe</label>
+                <a href="#" class="text-sm font-medium hover:underline" style="color: var(--ink);" @click.prevent>Mot de passe oublié ?</a>
+              </div>
+              <input v-model="form.password" type="password" id="login-password" class="form-input" placeholder="••••••••" required />
+            </div>
+
+            <div v-if="globalError" class="p-3 rounded-lg text-sm" style="background: rgba(239,68,68,0.08); color: #EF4444; border: 1px solid rgba(239,68,68,0.25);">{{ globalError }}</div>
+
+            <button type="submit" class="btn-primary mt-6" :disabled="loading">
+              <span v-if="loading">Chargement…</span>
+              <span v-else>Se connecter</span>
+            </button>
+          </form>
+
+          <p class="text-center mt-8 text-sm" style="color: var(--ink-secondary);">
+            Pas encore de compte ?
+            <RouterLink to="/register" class="font-bold hover:underline" style="color: var(--ink);">S'inscrire &rarr;</RouterLink>
+          </p>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
-import { RouterLink, useRouter, useRoute } from 'vue-router'
-import { useI18n } from 'vue-i18n'
-import { Car as CarIcon } from 'lucide-vue-next'
+import { reactive, ref } from 'vue'
+import { RouterLink, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
-const { t } = useI18n()
-const auth   = useAuthStore()
+const auth = useAuthStore()
 const router = useRouter()
-const route  = useRoute()
 
-const form        = reactive({ email: '', password: '' })
-const errors      = reactive({})
+const form = reactive({ email: '', password: '' })
+const errors = reactive({})
 const globalError = ref('')
-const loading     = ref(false)
+const loading = ref(false)
 
 async function handleSubmit() {
-  globalError.value = ''
   Object.keys(errors).forEach(k => delete errors[k])
+  globalError.value = ''
   loading.value = true
   try {
-    const user = await auth.login(form)
-    const redirect = route.query.redirect || '/'
-    if (user.role === 'admin')         router.push('/admin/dashboard')
-    else if (user.role === 'agency_owner') router.push('/owner/dashboard')
-    else                               router.push(redirect)
+    await auth.login(form)
+    router.push('/')
   } catch (e) {
     if (e.errors) Object.assign(errors, e.errors)
     else globalError.value = e.message
@@ -70,14 +105,3 @@ async function handleSubmit() {
   }
 }
 </script>
-
-<style scoped>
-.auth-wrap { display: flex; align-items: center; justify-content: center; min-height: 70vh; }
-.auth-card { width: 100%; max-width: 420px; padding: 40px; }
-.auth-logo { display: flex; align-items: center; gap: 10px; font-family: 'Outfit', sans-serif; font-size: 1.4rem; font-weight: 800; margin-bottom: 28px; }
-.auth-logo-icon { width: 28px; height: 28px; color: var(--accent); }
-.auth-title { font-size: 1.6rem; margin-bottom: 4px; }
-.auth-sub { color: var(--muted); margin-bottom: 28px; }
-.auth-footer { text-align: center; margin-top: 20px; font-size: 0.9rem; color: var(--muted); }
-.error-banner { background: var(--danger-bg); border: 1px solid rgba(239,68,68,0.3); color: var(--danger); padding: 10px 14px; border-radius: var(--radius-sm); font-size: 0.88rem; margin-bottom: 16px; }
-</style>
