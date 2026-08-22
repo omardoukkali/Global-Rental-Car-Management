@@ -27,7 +27,11 @@ api.interceptors.response.use(
             else if (status === 403) message = 'Vous n’êtes pas autorisé à effectuer cette action.'
             else if (status >= 500) message = 'Le serveur rencontre un problème. Réessayez plus tard.'
         }
-
+        // If we have a token and get 401, it means the token is invalid/expired
+        if (status === 401 && localStorage.getItem('token')) {
+            localStorage.removeItem('token')
+            localStorage.removeItem('user')
+        }
         return Promise.reject({
             message,
             errors: err.response?.data?.errors || null,
