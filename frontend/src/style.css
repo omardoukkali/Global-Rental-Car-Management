@@ -1,0 +1,176 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #FAFAF9;
+  --surface: #FFFFFF;
+  --ink: #0A0A0B;
+  --ink-secondary: #3D3D3F;
+  --ink-muted: #7A7A7D;
+  --border: #E8E8EA;
+  --border-soft: #F2F2F3;
+  --accent: #1A1A1C;
+  --accent-subtle: #F2F2F3;
+}
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background-color: var(--surface);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6, .font-bricolage {
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fade-up { animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
+.fade-up-1 { animation-delay: 0.1s; }
+
+/* Form elements */
+.form-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background-color: var(--surface);
+  color: var(--ink);
+  font-family: 'DM Sans', sans-serif;
+  transition: all 0.2s ease;
+  outline: none;
+}
+.form-input:focus { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
+.form-input::placeholder { color: var(--ink-muted); }
+.form-input.is-invalid { border-color: #EF4444; }
+
+.form-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--ink-secondary);
+  margin-bottom: 0.375rem;
+}
+
+.btn-primary {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  padding: 0.75rem 1.5rem;
+  background-color: var(--accent);
+  color: var(--surface);
+  font-weight: 600;
+  border-radius: 0.5rem;
+  transition: background-color 0.2s ease;
+  cursor: pointer;
+  border: none;
+}
+.btn-primary:hover { background-color: var(--ink-secondary); }
+.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.btn-outline {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  padding: 0.75rem 1.5rem;
+  background-color: var(--surface);
+  color: var(--ink);
+  font-weight: 600;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  transition: background-color 0.2s ease;
+  cursor: pointer;
+}
+.btn-outline:hover { background-color: var(--bg); }
+
+.checkbox {
+  appearance: none;
+  width: 1.125rem;
+  height: 1.125rem;
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
+  background-color: var(--surface);
+  cursor: pointer;
+  position: relative;
+  display: inline-block;
+  vertical-align: middle;
+  transition: all 0.2s ease;
+}
+.checkbox:checked { background-color: var(--ink); border-color: var(--ink); }
+.checkbox:checked::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 2px;
+  width: 5px;
+  height: 10px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.tab-btn {
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+  color: var(--ink-muted);
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s ease;
+  background: none;
+  cursor: pointer;
+}
+.tab-btn.active { color: var(--ink); border-bottom-color: var(--ink); }
+
+.role-card {
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background-color: var(--surface);
+  text-align: left;
+}
+.role-card:hover { border-color: var(--ink-muted); }
+.role-card.selected {
+  border-color: var(--ink);
+  background-color: var(--accent-subtle);
+  box-shadow: 0 0 0 1px var(--ink);
+}
+
+.left-panel-bg {
+  background-image: url('https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&w=800&q=90');
+  background-size: cover;
+  background-position: center;
+}
+
+.gr-logo {
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: currentColor;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.gr-logo-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  background: currentColor;
+  border-radius: 50%;
+}
+
+@media (min-height: 700px) {
+  .form-input { padding: 0.55rem 0.85rem; font-size: 0.9rem; }
+  .btn-primary { padding: 0.6rem 1.5rem; }
+  .form-label { font-size: 0.8rem; margin-bottom: 0.25rem; }
+}
