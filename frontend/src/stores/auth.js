@@ -40,5 +40,26 @@ export const useAuthStore = defineStore('auth', () => {
         finally { clearSession() }
     }
 
-    return { token, user, isAuthenticated, setSession, clearSession, login, registerClient, registerAgency, logout }
+    async function restoreSession() {
+        const storedToken = localStorage.getItem('token')
+        if (!storedToken) {
+            clearSession()
+            return false
+        }
+
+        try {
+            const data = await api.get('/me')
+            if (data.user) {
+                setSession(storedToken, data.user)
+                return true
+            }
+        } catch (err) {
+            if (err.status === 401) {
+                clearSession()
+            }
+        }
+        return false
+    }
+
+    return { token, user, isAuthenticated, setSession, clearSession, login, registerClient, registerAgency, logout, restoreSession }
 })
