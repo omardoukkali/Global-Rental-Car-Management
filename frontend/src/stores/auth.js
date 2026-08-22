@@ -27,10 +27,18 @@ export const useAuthStore = defineStore('auth', () => {
         return data.user
     }
 
-    async function logout() {
-        try { await api.post('/logout') } catch {}
-        clearSession()
+    async function registerClient(payload) {
+        return api.post('/register/client', payload)
     }
 
-    return { token, user, isAuthenticated, setSession, clearSession, login, logout }
+    async function registerAgency(payload) {
+        return api.post('/register/agency', payload)
+    }
+
+    async function logout() {
+        try { await api.post('/logout') } catch {}
+        finally { clearSession() }
+    }
+
+    return { token, user, isAuthenticated, setSession, clearSession, login, registerClient, registerAgency, logout }
 })

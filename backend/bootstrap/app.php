@@ -12,7 +12,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        //
+        $middleware->alias([
+            'role' => \App\Http\Middleware\RoleMiddleware::class,
+            'agency.approved' => \App\Http\Middleware\EnsureAgencyIsApproved::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //
