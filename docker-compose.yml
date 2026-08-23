@@ -19,7 +19,26 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-
+  # 1b. Database Service for Testing (PostgreSQL isolated)
+  database_test:
+    image: postgres:15-alpine
+    container_name: app_database_test
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_DATABASE_TEST:-globalrental_test}
+      POSTGRES_USER: ${DB_USERNAME:-grader}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
+    ports:
+      - "${DB_PORT_TEST:-5434}:5432"
+    volumes:
+      - db_test_data:/var/lib/postgresql/data
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-grader} -d ${DB_DATABASE_TEST:-globalrental_test}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
   # 2. Backend Service (Laravel API)
   backend:
     image: global-rental-backend:latest
@@ -92,5 +111,7 @@ networks:
 volumes:
   db_data:
     driver: local
+  db_test_data:      # ← NOUVEAU
+    driver: local    # ← NOUVEAU
   backend_vendor:
     driver: local

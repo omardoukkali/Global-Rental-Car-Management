@@ -238,3 +238,41 @@ Every push to `develop`, `main`, `feature/**`, `infra/**`, `refactor/**`, or
 
 `main` and `develop` are protected: direct pushes are blocked, and merges require
 one approving review plus a passing pipeline.
+## Testing environment
+
+The project uses an **isolated PostgreSQL container** (`app_database_test`) on port `5434` for tests, keeping your development data safe.
+
+### Initial setup (one time)
+
+Start the test database container:
+```bash
+docker compose up -d database_test
+```
+
+Run migrations on the test database:
+```bash
+docker exec -it -e DB_HOST=database_test -e DB_DATABASE=globalrental_test app_backend php artisan migrate --env=testing
+```
+
+### Running tests
+
+Once set up, simply run:
+```bash
+docker exec -it app_backend php artisan test
+```
+
+Run a specific test class:
+```bash
+docker exec -it app_backend php artisan test --filter=AuthTest
+```
+
+Reset the test database (if migrations change):
+```bash
+docker exec -it -e DB_HOST=database_test -e DB_DATABASE=globalrental_test app_backend php artisan migrate:fresh --env=testing
+```
+
+### Configuration files
+
+- `docker-compose.yml` — `database_test` service (port 5434, DB: `globalrental_test`)
+- `backend/.env.testing` — Laravel testing environment variables
+- `backend/phpunit.xml` — PHPUnit config with forced DB variables
