@@ -1,11 +1,40 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import AgencySettings from '@/pages/AgencySettings.vue'
 
-const routes = [
-    { path: '/', name: 'home', component: () => import('@/pages/Logout.vue') },
-    { path: '/login', name: 'login', component: () => import('@/pages/Login.vue'), meta: { guestOnly: true } },
-    { path: '/register', name: 'register', component: () => import('@/pages/Register.vue'), meta: { guestOnly: true } },
-    { path: '/logout', name: 'logout', component: () => import('@/pages/Logout.vue'), meta: { requiresAuth: true } },
+const routes = [{
+        path: '/',
+        name: 'home',
+        component: () =>
+            import ('@/pages/Logout.vue')
+    },
+    {
+        path: '/login',
+        name: 'login',
+        component: () =>
+            import ('@/pages/Login.vue'),
+        meta: { guestOnly: true }
+    },
+    {
+        path: '/register',
+        name: 'register',
+        component: () =>
+            import ('@/pages/Register.vue'),
+        meta: { guestOnly: true }
+    },
+    {
+        path: '/logout',
+        name: 'logout',
+        component: () =>
+            import ('@/pages/Logout.vue'),
+        meta: { requiresAuth: true }
+    },
+    {
+        path: '/agency/settings',
+        name: 'AgencySettings',
+        component: AgencySettings,
+        //  meta: { requiresAuth: true }
+    },
 ]
 
 const router = createRouter({
