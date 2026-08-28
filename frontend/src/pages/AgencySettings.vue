@@ -78,12 +78,17 @@ const formData = ref({
 const isSubmitting = ref(false)
 const globalError = ref('')
 const successMessage = ref('')
-const agencyId = 1
 
 onMounted(async () => {
     try {
-        const response = await agencyService.getAgency(agencyId)
-        formData.value = response.data || response
+        const response = await agencyService.getProfile()
+        const data = response.agency || response
+        formData.value = {
+            name: data.name || '',
+            email: data.email || '',
+            phone: data.phone || '',
+            address: data.address || ''
+        }
     } catch (error) {
         console.error('Erreur lors du chargement des données:', error)
     }
@@ -94,7 +99,7 @@ const handleUpdate = async () => {
     globalError.value = ''
     successMessage.value = ''
     try {
-        await agencyService.updateAgency(agencyId, formData.value)
+        await agencyService.updateProfile(formData.value)
         successMessage.value = 'Les informations ont été mises à jour avec succès!'
     } catch (error) {
         globalError.value = error.message || 'Une erreur est survenue.'

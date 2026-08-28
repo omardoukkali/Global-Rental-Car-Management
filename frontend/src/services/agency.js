@@ -1,6 +1,14 @@
 import api from '@/services/api'
 
 export default {
+    getProfile() {
+        return api.get('/agency/profile')
+    },
+
+    updateProfile(payload) {
+        return api.put('/agency/profile', payload)
+    },
+
     getAgencies(params = {}) {
         return api.get('/agencies', { params })
     },
