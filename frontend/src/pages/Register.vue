@@ -242,32 +242,41 @@ function resetErrors() {
 }
 
 async function handleSubmit() {
+  console.log('1. handleSubmit called, role =', form.role)
   resetErrors()
 
   if (!form.terms) {
+    console.log('2. STOP - CGU not accepted')
     globalError.value = 'Vous devez accepter les CGU pour continuer.'
     return
   }
   if (form.password !== form.password_confirmation) {
+    console.log('3. STOP - passwords do not match')
     errors.password = ['Les deux mots de passe ne correspondent pas.']
     return
   }
 
   loading.value = true
+  console.log('4. Local validation OK, about to call the store')
+
   try {
     if (form.role === 'client') {
-      await auth.registerClient({
+      const payload = {
         first_name: form.first_name,
         last_name: form.last_name,
         email: form.email,
         phone: form.phone ? normalizePhone(form.phone) : null,
         password: form.password,
         password_confirmation: form.password_confirmation,
-      })
+      }
+      console.log('5a. Calling auth.registerClient with:', payload)
+      await auth.registerClient(payload)
+      console.log('6a. registerClient SUCCESS, now calling login...')
       await auth.login({ email: form.email, password: form.password })
+      console.log('7a. login SUCCESS, redirecting to /')
       router.push('/')
     } else {
-      await auth.registerAgency({
+      const payload = {
         first_name: form.first_name,
         last_name: form.last_name,
         email: form.email,
@@ -278,15 +287,21 @@ async function handleSubmit() {
         agency_city: form.agency_city,
         address: form.address,
         agency_phone: normalizePhone(form.agency_phone),
-      })
+      }
+      console.log('5b. Calling auth.registerAgency with:', payload)
+      await auth.registerAgency(payload)
+      console.log('6b. registerAgency SUCCESS')
       success.value = 'Demande enregistrée. Votre agence est en attente de validation.'
       setTimeout(() => router.push('/login'), 3000)
     }
   } catch (e) {
+    console.log('8. ERROR caught:', e)
+    console.log('   status:', e?.status, '| message:', e?.message, '| errors:', e?.errors)
     if (e.status === 422 && e.errors) Object.assign(errors, e.errors)
     else globalError.value = e.message
   } finally {
     loading.value = false
+    console.log('9. handleSubmit finished')
   }
 }
 </script>
