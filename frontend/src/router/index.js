@@ -34,11 +34,13 @@ const routes = [{
         path: '/agency/settings',
         name: 'AgencySettings',
         component: AgencySettings,
+        meta: { requiresAuth: true }
     },
     {
         path: '/agency/profile',
         name: 'AgencyProfile',
         component: AgencyProfile,
+        meta: { requiresAuth: true }
     },
 ]
 
