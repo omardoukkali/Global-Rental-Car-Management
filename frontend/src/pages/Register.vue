@@ -199,23 +199,27 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
+import { reactive, ref, onMounted } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
 const router = useRouter()
 
-// Villes hardcodées (UUIDs de la base globalrental)
-const cities = [
-  { id: '0bb9936b-e4c3-47c8-9e87-d04008b75155', name: 'Agadir' },
-  { id: '155d2c6a-3b8d-407e-8c31-f68fd5195b01', name: 'Casablanca' },
-  { id: '93be8953-221f-403a-b047-dbbba0fac6f1', name: 'Fes' },
-  { id: '97c810d2-4993-4670-82ed-6678baa9acb1', name: 'Marrakech' },
-  { id: '769f553f-a4b2-45f2-8889-5354ee7eaeb6', name: 'Oujda' },
-  { id: '71441af3-48e6-4c59-ae6c-0d6ed13be6a1', name: 'Rabat' },
-  { id: '7c16c6fa-ce3e-407d-a70f-66a0ce5b27f7', name: 'Tanger' },
-]
+
+const cities = ref([])
+
+// On récupère les villes depuis l'API au chargement de la page
+onMounted(async () => {
+  try {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/cities`)
+    const data = await response.json()
+    // Selon comment votre CityController est fait, ce sera "data" ou "data.data"
+    cities.value = data.data || data
+  } catch (error) {
+    console.error("Erreur lors de la récupération des villes :", error)
+  }
+})
 
 const form = reactive({
   role: 'client',
@@ -306,4 +310,5 @@ async function handleSubmit() {
 }
 </script>
 
-//test oussama
+// test oussama
+// test Avatar
