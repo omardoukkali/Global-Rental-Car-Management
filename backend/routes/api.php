@@ -4,6 +4,7 @@ use App\Http\Controllers\Auth\AuthController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CityController;
+use App\Http\Controllers\AgencyController;
 
 // Public routes
 
@@ -73,6 +74,9 @@ Route::middleware([
         ]);
     });
 
+    Route::get('/agency/profile', [AgencyController::class, 'show']);
+    Route::put('/agency/profile', [AgencyController::class, 'update']);
+
 });
 
 
@@ -90,7 +94,6 @@ Route::middleware([
     });
 
 });
-
 
 
 Route::get('/cities', [CityController::class, 'index']);
