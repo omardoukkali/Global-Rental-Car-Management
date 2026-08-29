@@ -310,4 +310,5 @@ async function handleSubmit() {
 }
 </script>
 
-//test oussama
+// test oussama
+// test Avatar
