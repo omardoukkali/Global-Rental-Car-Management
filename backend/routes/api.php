@@ -75,6 +75,7 @@ Route::middleware([
     });
 
     Route::get('/agency/profile', [AgencyController::class, 'show']);
+    Route::put('/agency/profile', [AgencyController::class, 'update']);
 
 });
 
