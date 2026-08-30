@@ -202,20 +202,19 @@
 import { reactive, ref, onMounted } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import api from '@/services/api'
 
 const auth = useAuthStore()
 const router = useRouter()
-
 
 const cities = ref([])
 
 // On récupère les villes depuis l'API au chargement de la page
 onMounted(async () => {
   try {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/cities`)
-    const data = await response.json()
-    // Selon comment votre CityController est fait, ce sera "data" ou "data.data"
-    cities.value = data.data || data
+    const response = await api.get('/cities')
+    const data = response.data !== undefined ? response.data : response
+    cities.value = Array.isArray(data) ? data : (data.data || [])
   } catch (error) {
     console.error("Erreur lors de la récupération des villes :", error)
   }
