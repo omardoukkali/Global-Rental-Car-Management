@@ -18,9 +18,12 @@ class DatabaseSeeder extends Seeder
         User::factory()->create([
             'first_name' => 'Test',
             'last_name' => 'User',
-            'email' => '...',
+            'email' => 'emailtest@ex.com',
             'role' => 'client',
             'status' => 'active',
+        ]);
+        $this->call([
+            AdminUserSeeder::class,
         ]);
     }
 }

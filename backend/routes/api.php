@@ -3,8 +3,9 @@
 use App\Http\Controllers\Auth\AuthController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\CityController;
-use App\Http\Controllers\AgencyController;
+use App\Http\Controllers\City\CityController;
+use App\Http\Controllers\Agency\AgencyController;
+use App\Http\Controllers\Admin\AgencyApprovalController;
 
 // Public routes
 
@@ -65,6 +66,18 @@ Route::middleware([
 Route::middleware([
     'auth:sanctum',
     'role:agency',
+])->group(function () {
+
+    Route::get('/agency/profile', [AgencyController::class, 'show']);
+    Route::put('/agency/profile', [AgencyController::class, 'update']);
+
+});
+
+// Approved agencies routes
+
+Route::middleware([
+    'auth:sanctum',
+    'role:agency',
     'agency.approved',
 ])->group(function () {
 
@@ -74,11 +87,7 @@ Route::middleware([
         ]);
     });
 
-    Route::get('/agency/profile', [AgencyController::class, 'show']);
-    Route::put('/agency/profile', [AgencyController::class, 'update']);
-
 });
-
 
 // Admin routes
 
@@ -87,12 +96,15 @@ Route::middleware([
     'role:admin'
 ])->group(function () {
 
-    Route::get('/admin/test', function () {
-        return response()->json([
-            'message' => 'Admin access granted.',
-        ]);
-    });
+    Route::patch(
+        '/admin/agencies/{agency}/approve',
+        [AgencyApprovalController::class, 'approve']
+    );
 
+    Route::patch(
+        '/admin/agencies/{agency}/reject',
+        [AgencyApprovalController::class, 'reject']
+    );
 });
 
 
