@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import AgencySettings from '@/pages/AgencySettings.vue'
+import AgencyProfile from '@/pages/AgencyProfile.vue'
 
 const routes = [{
         path: '/',
@@ -33,7 +34,13 @@ const routes = [{
         path: '/agency/settings',
         name: 'AgencySettings',
         component: AgencySettings,
-        //  meta: { requiresAuth: true }
+        meta: { requiresAuth: true }
+    },
+    {
+        path: '/agency/profile',
+        name: 'AgencyProfile',
+        component: AgencyProfile,
+        meta: { requiresAuth: true }
     },
 ]
 
