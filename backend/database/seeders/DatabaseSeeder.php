@@ -57,5 +57,10 @@ class DatabaseSeeder extends Seeder
                 'total_reviews' => 24,
             ]
         );
+
+        $this->call([
+            AdminUserSeeder::class,
+            CitySeeder::class,
+        ]);
     }
 }

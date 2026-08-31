@@ -1,9 +1,11 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\city;
 use Illuminate\Http\JsonResponse;
 use App\Models\City;
 use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+
 
 class CityController extends Controller
 {
