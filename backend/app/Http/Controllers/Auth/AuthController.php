@@ -19,7 +19,8 @@ class AuthController extends Controller
     /**
      * Register a new client.
      */
-    public function registerClient(RegisterClientRequest $request): JsonResponse {
+    public function registerClient(RegisterClientRequest $request): JsonResponse // Specify that this method returns a JSON response.
+    {
         $validated = $request->validated();
 
         $user = User::create([
