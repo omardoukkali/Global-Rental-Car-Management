@@ -171,14 +171,6 @@
             "header": []
           },
           "response": []
-        },
-        {
-          "name": "Authorization test",
-          "request": {
-            "method": "GET",
-            "header": []
-          },
-          "response": []
         }
       ],
       "description": "Authentication endpoints for client and agency accounts using Laravel Sanctum.\n\n### Client Registration\n\n`POST /api/register/client`\n\nCreates a new client account.\n\nRequired fields:\n\n- first_name\n    \n- last_name\n    \n- email\n    \n- password\n    \n- password_confirmation\n    \n\nOptional fields:\n\n- phone\n    \n\nThe created user receives:\n\n- role: client\n    \n- status: active\n    \n\n### Agency Registration\n\n`POST /api/register/agency`\n\nCreates an agency owner account and the associated agency profile.\n\nRequired fields:\n\n- first_name\n    \n- last_name\n    \n- email\n    \n- password\n    \n- password_confirmation\n    \n- phone\n    \n- agency_name\n    \n- agency_city\n    \n- address\n    \n- agency_phone\n    \n\nThe created user receives:\n\n- role: agency\n    \n- status: active\n    \n\nThe created agency receives:\n\n- status: pending\n    \n\nOptional fields:\n\n- phone\n    \n\nAgency registration is executed inside a database transaction to ensure data consistency.\n\n### Login\n\n`POST /api/login`\n\nAuthenticates a user using email and password.\n\nOn successful authentication, the API returns:\n\n- User information\n    \n- Sanctum access token\n    \n\nSuspended accounts are not allowed to log in.\n\n### Logout\n\n`POST /api/logout`\n\nRequires authentication using a Bearer token.\n\nRevokes the user's current Sanctum access token.\n\n### Authentication\n\nProtected endpoints must include:\n\n`Authorization: Bearer {token}`  \n  \n\n### Status Codes\n\n- `200` Successful request\n    \n- `201` Resource created successfully\n    \n- `401` Invalid credentials or unauthenticated\n    \n- `403` Account suspended or access forbidden\n    \n- `422` Validation error"
@@ -265,18 +257,259 @@
       "name": "Agency",
       "item": [
         {
+          "name": "Agency Points",
+          "item": [
+            {
+              "name": "Activate/Deactivate point",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/agency/points/{{point_id}}/toggle-status",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "agency",
+                    "points",
+                    "{{point_id}}",
+                    "toggle-status"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Update point",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"name\": \"Tangier Airport Updateed\",\n    \"allows_pickup\": false,\n    \"allows_return\": true\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/agency/points/{{point_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "agency",
+                    "points",
+                    "{{point_id}}"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Show point",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/agency/points/{{point_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "agency",
+                    "points",
+                    "{{point_id}}"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "List points",
+              "protocolProfileBehavior": {
+                "disableBodyPruning": true
+              },
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"city_id\": \"{{city_id}}\",\r\n    \"name\": \"Tangier Airport\",\r\n    \"address\": \"Ibn Battouta Airport, Tangier\",\r\n    \"latitude\": 35.7269,\r\n    \"longitude\": -5.9169,\r\n    \"allows_pickup\": true,\r\n    \"allows_return\": true,\r\n    \"opening_hours\": {\r\n        \"monday\": \"09:00-18:00\",\r\n        \"tuesday\": \"09:00-18:00\"\r\n    },\r\n    \"instructions\": \"Meet at the main entrance.\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/agency/points",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "agency",
+                    "points"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Create point",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"city_id\": \"{{city_id}}\",\r\n    \"name\": \"Tangier Airport\",\r\n    \"address\": \"Ibn Battouta Airport, Tangier\",\r\n    \"latitude\": 35.7269,\r\n    \"longitude\": -5.9169,\r\n    \"allows_pickup\": true,\r\n    \"allows_return\": true,\r\n    \"opening_hours\": {\r\n        \"monday\": \"09:00-18:00\",\r\n        \"tuesday\": \"09:00-18:00\"\r\n    },\r\n    \"instructions\": \"Meet at the main entrance.\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/agency/points",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "agency",
+                    "points"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
           "name": "Get Agency Profile",
           "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
             "method": "GET",
-            "header": []
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/agency/profile",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "agency",
+                "profile"
+              ]
+            }
           },
           "response": []
         },
         {
           "name": "Update Agency Profile",
           "request": {
-            "method": "GET",
-            "header": []
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"name\": \"Updated Agency Name\",\r\n  \"email\": \"updated@agency.com\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/agency/profile",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "agency",
+                "profile"
+              ]
+            }
           },
           "response": []
         }
