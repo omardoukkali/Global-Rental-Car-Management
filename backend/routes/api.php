@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Agency\AgencyPointController;
 use App\Http\Controllers\Auth\AuthController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -81,12 +82,26 @@ Route::middleware([
     'agency.approved',
 ])->group(function () {
 
-    Route::get('/agency/test', function () {
-        return response()->json([
-            'message' => 'Approved agency access granted.',
-        ]);
-    });
-
+    Route::post('/agency/points', [
+        AgencyPointController::class,
+        'store',
+    ]);
+    Route::get('/agency/points', [
+        AgencyPointController::class,
+        'index',
+    ]);
+    Route::get('/agency/points/{agencyPoint}', [
+        AgencyPointController::class,
+        'show',
+    ]);
+    Route::put('/agency/points/{agencyPoint}', [
+        AgencyPointController::class,
+        'update',
+    ]);
+    Route::patch('/agency/points/{agencyPoint}/toggle-status', [
+        AgencyPointController::class,
+        'toggleStatus',
+    ]);
 });
 
 // Admin routes
