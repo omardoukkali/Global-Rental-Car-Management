@@ -16,4 +16,8 @@ export default defineConfig({
       usePolling: true, // nécessaire pour le hot reload dans Docker sur Windows
     },
   },
+  test: {
+    globals: true,           // describe/it/expect sans import
+    environment: 'jsdom',    // simule un navigateur pour Vue
+  },
 })
