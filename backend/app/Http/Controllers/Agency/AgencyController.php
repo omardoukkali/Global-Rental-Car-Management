@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Agency;
 
-use App\Http\Requests\UpdateAgencyRequest;
+use App\Http\Requests\Agency\UpdateAgencyRequest;
 use App\Http\Controllers\Controller;
 
 use Illuminate\Http\Request;
@@ -34,7 +34,7 @@ class AgencyController extends Controller
             ], 404);
         }
 
-        
+
 
         $agency->update($request->validated());
 
