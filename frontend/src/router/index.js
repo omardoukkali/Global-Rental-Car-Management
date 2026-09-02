@@ -3,6 +3,7 @@ import { useAuthStore } from '@/stores/auth'
 import AgencySettings from '@/pages/AgencySettings.vue'
 import AgencyProfile from '@/pages/AgencyProfile.vue'
 import AgencyLocations from '@/pages/AgencyLocations.vue'
+import AdminAgencyValidation from '@/pages/AdminAgencyValidation.vue'
 
 const routes = [{
         path: '/',
@@ -47,6 +48,12 @@ const routes = [{
         path: '/agency/locations',
         name: 'AgencyLocations',
         component: AgencyLocations,
+        meta: { requiresAuth: true }
+    },
+    {
+        path: '/admin/agencies/validation',
+        name: 'AdminAgencyValidation',
+        component: AdminAgencyValidation,
         meta: { requiresAuth: true }
     },
 ]
