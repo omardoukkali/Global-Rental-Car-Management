@@ -2,11 +2,13 @@
 
 use App\Http\Controllers\Agency\AgencyPointController;
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Car\CarImageController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\City\CityController;
 use App\Http\Controllers\Agency\AgencyController;
 use App\Http\Controllers\Admin\AgencyApprovalController;
+use App\Http\Controllers\Car\CarController;
 
 // Public routes
 
@@ -102,6 +104,19 @@ Route::middleware([
         AgencyPointController::class,
         'toggleStatus',
     ]);
+
+
+    Route::post('/agency/cars', [CarController::class, 'store']);
+    Route::get('/agency/cars', [CarController::class, 'index']);
+    Route::get('/agency/cars/{car}', [CarController::class, 'show']);
+    Route::put('/agency/cars/{car}', [CarController::class, 'update']);
+    Route::patch('/agency/cars/{car}/disable', [CarController::class, 'disable']);
+
+    Route::post('/agency/cars/{car}/images', [CarImageController::class, 'store']);
+    Route::get('/agency/cars/{car}/images', [CarImageController::class, 'index']);
+    Route::patch('/agency/cars/{car}/images/{image}/primary',[CarImageController::class, 'setPrimary']);
+    Route::delete('/agency/cars/{car}/images/{image}',[CarImageController::class, 'destroy']);
+
 });
 
 // Admin routes
