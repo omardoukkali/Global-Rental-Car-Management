@@ -9,20 +9,29 @@ rm -f /var/www/html/public/storage
 ln -sf /var/www/html/storage/app/public /var/www/html/public/storage
 echo "Storage symlink created."
 
-# 3. Generate the application key if it is missing or empty
+# 3. Laravel's `artisan serve` spawns a child php -S process that does NOT
+#    inherit the container environment, so the app cannot read the variables
+#    docker-compose.yml injects. This .env is therefore required, not
+#    redundant. Keep its DB values in sync with docker-compose.yml.
+if [ ! -f /var/www/html/.env ] && [ -f /var/www/html/.env.example ]; then
+    cp /var/www/html/.env.example /var/www/html/.env
+    echo "Created .env from .env.example."
+fi
+
+# 4. Generate the application key if it is missing or empty
 if [ -z "$APP_KEY" ]; then
     echo "APP_KEY not set — generating an ephemeral key for this container."
     export APP_KEY=$(php artisan key:generate --show)
 fi
 
-# 4. Wait for Postgres & Run Migrations natively
+# 5. Wait for Postgres & Run Migrations natively
 echo "Waiting for database and running migrations..."
 until php artisan migrate --force; do
   echo "Database not ready, retrying in 2s..."
   sleep 2
 done
 
-# 5. Conditional Seeding (Lockfile lives in persistent /storage/app volume)
+# 6. Conditional Seeding (Lockfile lives in persistent /storage/app volume)
 if [ ! -f /var/www/html/storage/app/seeder.lock ]; then
     echo "First boot detected. Seeding the database..."
     php artisan db:seed --force
@@ -32,5 +41,5 @@ else
     echo "Database already seeded. Skipping."
 fi
 
-# 6. Hand off execution to CMD (php artisan serve)
+# 7. Hand off execution to CMD (php artisan serve)
 exec "$@"
