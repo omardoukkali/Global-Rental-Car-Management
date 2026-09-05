@@ -4,13 +4,17 @@ A multi-tier car rental management platform built as a containerized monorepo.
 
 | Service | Technology | Port |
 |---|---|---|
-| Backend | Laravel 11 / PHP 8.2-FPM (Alpine) + Inertia | 8000 |
+| Backend | Laravel 11 / PHP 8.2-FPM (Alpine) — REST API | 8000 |
 | Frontend | Vue 3 SPA (Vite dev server) | 3000 |
 | AI Service | Python FastAPI | 5000 |
 | Database | PostgreSQL 15 (Alpine) | 5432 |
+| Test database | PostgreSQL 15 (Alpine) — isolated, used by PHPUnit only | 5434 |
 
-All four services run as Docker containers on a shared bridge network (`app_network`),
+All five services run as Docker containers on a shared bridge network (`app_network`),
 orchestrated with Docker Compose. Nothing needs to be installed on the host except Docker.
+
+The backend is **API-only**. The Inertia layer was removed — the Vue SPA consumes the
+REST API at `/api` and authenticates with Sanctum bearer tokens.
 
 ---
 
@@ -32,14 +36,14 @@ build step runs inside a container.
 ## Quick start
 
 ```bash
-# 1. Clone the repository 1223
+# 1. Clone the repository
 git clone https://github.com/omardoukkali/Global-Rental-Car-Management.git
 cd Global-Rental-Car-Management
 
 # 2. Create your environment file from the template
 cp .env.example .env
 
-# 3. Build and start all four services
+# 3. Build and start all services
 docker compose up -d --build
 
 # 4. Confirm everything is healthy
@@ -47,24 +51,44 @@ docker compose ps
 ```
 
 The first build takes 5–10 minutes: it pulls the PHP, Node, Python, and Postgres
-base images, installs Composer and npm dependencies, and compiles the frontend
-assets with Vite.
+base images and installs Composer and npm dependencies.
 
-You should see four containers with status `Up`, and `app_database` marked
-`(healthy)`.
+You should see five containers with status `Up`, with `app_database` and
+`app_database_test` marked `(healthy)`.
 
 ### Service URLs
 
 | What | URL |
 |---|---|
-| Backend application (Inertia UI) | http://localhost:8000 |
-| Backend health check | http://localhost:8000/up |
 | REST API | http://localhost:8000/api |
-| Frontend SPA (Vite dev server) | http://localhost:3000 |
+| Backend health check | http://localhost:8000/up |
+| Frontend SPA | http://localhost:3000 |
 | AI service (Swagger UI) | http://localhost:5000/docs |
 | PostgreSQL | localhost:5432 |
+| PostgreSQL (test) | localhost:5434 |
 
 To stop everything: `docker compose down`
+
+---
+
+## Why there are two databases
+
+`app_database` holds development data. `app_database_test` is a separate,
+disposable database used only by the PHPUnit suite.
+
+Laravel feature tests use `RefreshDatabase`, which drops every table and re-runs
+migrations on each test run. Without the split, running the test suite would wipe
+all development data — registered agencies, cars, and the seeded admin account.
+
+The routing is configured in `backend/phpunit.xml`:
+
+```xml
+<env name="DB_HOST" value="database_test" force="true"/>
+<env name="DB_DATABASE" value="globalrental_test" force="true"/>
+```
+
+`force="true"` means these override `.env`. So `php artisan serve` reaches
+`database`, and `php artisan test` reaches `database_test`. No manual switching.
 
 ---
 
@@ -75,84 +99,84 @@ so no manual steps are needed:
 
 1. Fixes storage directory permissions
 2. Creates the `public/storage` symlink
-3. Generates an `APP_KEY` if none is set in `.env`
+3. Generates an `APP_KEY` if none is set
 4. Waits for PostgreSQL, then runs migrations
 5. Seeds the database on first boot only (guarded by a lock file)
 6. Starts the application server
 
-Because of step 3, the app boots successfully even with a blank `APP_KEY`.
-The generated key is **ephemeral** — it is regenerated whenever the container is
-recreated, which invalidates existing sessions and any encrypted column values.
-For any persistent or production deployment, set a fixed `APP_KEY` in `.env`:
-
-```bash
-docker compose exec backend php artisan key:generate --show
-# paste the output into APP_KEY= in your .env, then:
-docker compose restart backend
-```
-
----
-
-## Important: refreshing frontend assets
-
-The backend's compiled Vite assets live in a named Docker volume
-(`backend_public_build`) so that the host's empty `public/build` directory cannot
-shadow the assets baked into the image.
-
-Docker only populates a named volume from the image **the first time the volume is
-created**. This means that after changing any file under `backend/resources/js/`,
-a plain rebuild will **not** update what the container serves. To pick up asset
-changes:
-
-```bash
-docker compose down -v
-docker compose up -d --build
-```
-
-Note that `-v` also destroys the `db_data` volume, so migrations and seeders will
-re-run from scratch.
+> **Note on `APP_KEY`.** `docker-compose.yml` currently supplies a hardcoded
+> fallback key when `APP_KEY` is unset in `.env`. The app therefore boots with a
+> shared, publicly visible key — acceptable for local development, never for a
+> deployed environment. Set a real key:
+>
+> ```bash
+> docker compose exec backend php artisan key:generate --show
+> # paste the output into APP_KEY= in your .env, then:
+> docker compose restart backend
+> ```
 
 ---
 
 ## Seeded development accounts
 
-The seeder creates test users. Password for all three: `123456`
+The seeder creates test users for local development.
 
 | Email | Role |
 |---|---|
 | admin@test.com | admin |
-| owner@test.com | agency_owner |
+| owner@test.com | agency |
 | client@test.com | client |
 
-These are **development credentials only** and must never be used in a deployed
-environment.
+These are **development credentials only** and must never exist in a deployed
+environment. The seeder is guarded by a lock file and runs on first boot only.
 
 ---
 
 ## Environment variables
 
-Copy `.env.example` to `.env` and adjust as needed. `APP_KEY` and `DB_PASSWORD`
-are intentionally left blank in the template.
+Copy `.env.example` to `.env` and adjust as needed.
 
 | Variable | Description | Default |
 |---|---|---|
 | `APP_NAME` | Application display name | Global Rental Car |
 | `APP_ENV` | Environment | local |
-| `APP_KEY` | Laravel encryption key | generated at boot if blank |
+| `APP_KEY` | Laravel encryption key | see note above |
 | `APP_DEBUG` | Verbose error pages | true |
 | `APP_URL` | Base URL | http://localhost:8000 |
 | `FRONTEND_PORT` | Host port for the Vue SPA | 3000 |
 | `BACKEND_PORT` | Host port for Laravel | 8000 |
 | `AI_PORT` | Host port for FastAPI | 5000 |
 | `DB_PORT` | Host port for PostgreSQL | 5432 |
+| `DB_PORT_TEST` | Host port for the test database | 5434 |
 | `DB_CONNECTION` | Laravel database driver | pgsql |
 | `DB_HOST` | Database hostname (compose service name) | database |
 | `DB_DATABASE` | Database name | globalrental |
+| `DB_DATABASE_TEST` | Test database name | globalrental_test |
 | `DB_USERNAME` | Database user | grader |
 | `DB_PASSWORD` | Database password | — |
 | `AI_SERVICE_URL` | Internal AI service address | http://ai_service:5000 |
 
 `.env` is gitignored and must never be committed.
+
+---
+
+## Running the tests
+
+Both suites run in CI as blocking gates. Run them locally before pushing.
+
+```bash
+# Backend — PHPUnit, 73 tests
+docker compose exec backend php artisan test
+
+# Backend — a single suite
+docker compose exec backend php artisan test --filter=Auth
+
+# Frontend — Vitest, 51 tests
+docker compose exec frontend npm run test:run
+```
+
+Use `npm run test:run`, not `npm test` — the latter starts watch mode and will
+never exit.
 
 ---
 
@@ -165,9 +189,6 @@ docker compose logs -f backend
 # Open a shell inside a container
 docker compose exec backend sh
 
-# Run the test suite
-docker compose exec backend php artisan test
-
 # List all registered routes
 docker compose exec backend php artisan route:list
 
@@ -177,17 +198,13 @@ docker compose exec backend php artisan migrate:fresh --seed
 # Rebuild a single service
 docker compose build --no-cache backend
 
-# Full reset (destroys database and volumes)
+# Full reset (destroys both databases and all volumes)
 docker compose down -v && docker compose up -d --build
 ```
 
 ---
 
 ## Troubleshooting
-
-**`ViteManifestNotFoundException`**
-The compiled assets are missing from the `backend_public_build` volume. Run
-`docker compose down -v && docker compose up -d --build`.
 
 **Backend logs loop on "Database not ready, retrying in 2s"**
 Normal for the first 10–20 seconds while PostgreSQL initialises. If it persists
@@ -197,10 +214,15 @@ beyond a minute, check `docker compose logs database`.
 The container is still booting — migrations and seeding run before the server
 starts. Wait for `Server running on [http://0.0.0.0:8000]` in the logs.
 
-**Composer install times out (Windows)**
-Dependencies are installed during the Docker build into a named volume rather
-than across the host filesystem, so this should not occur. If you install
-manually, run it inside the container rather than on the host.
+**Frontend tests pass locally but fail in CI**
+The `node_modules` volume is stale. Run `docker compose down`, then
+`docker volume prune -f`, then `docker compose build --no-cache frontend`.
+The Dockerfile uses `npm ci` against the lockfile, so a clean build matches CI
+exactly.
+
+**Tests fail to connect to the database**
+Confirm `app_database_test` is running and healthy with `docker compose ps`.
+The test suite connects to the `database_test` service, not `database`.
 
 **Port already in use**
 Change the relevant `*_PORT` value in `.env` and restart.
@@ -213,10 +235,13 @@ Change the relevant `*_PORT` value in `.env` and restart.
 .
 ├── .github/workflows/     CI and CD pipeline definitions
 ├── AI/                    Python FastAPI service
-├── backend/               Laravel 11 API and Inertia application
+├── backend/               Laravel 11 REST API
 ├── frontend/              Vue 3 SPA
+├── docs/
+│   ├── postman/           API collection and environment
+│   └── security/          Security review, remediation, and reference docs
 ├── UML/                   Design and modelling artefacts
-├── docker-compose.yml     Four-service orchestration
+├── docker-compose.yml     Service orchestration
 ├── .env.example           Environment variable template
 ├── .dockerignore          Root build-context exclusions
 ├── .gitignore             Excludes .env and node_modules
@@ -238,8 +263,14 @@ Two permanent branches, plus short-lived topic branches.
 | `refactor/**` | Restructuring without behavioural change |
 | `hotfix/**` | Urgent corrections |
 
-`main` and `develop` are protected by GitHub Rulesets: direct pushes are blocked,
-one approving review is required, and the CI pipeline must pass before merge.
+`main` and `develop` are protected by GitHub Rulesets:
+
+- Direct pushes blocked — all changes arrive via pull request
+- One approving review required (two on `main`)
+- Stale approvals dismissed when new commits are pushed
+- `Build, Test & Security Scan` must pass before merge
+- Branches must be up to date before merging
+- Force pushes and branch deletions blocked
 
 ### Naming and commit conventions
 
@@ -256,12 +287,12 @@ type prefix:
 
 ```
 SCRUM-24 infra: add multi-stage Node build for Vite assets
-SCRUM-21 ci: assert container health with curl probes
+SCRUM-51 ci: run PHPUnit and Vitest as blocking gates
 SCRUM-27 fix: untrack .env and add example template
 ```
 
 Recognised prefixes: `feat:`, `fix:`, `infra:`, `ci:`, `refactor:`, `docs:`,
-`test:`.
+`test:`, `chore:`.
 
 ### Opening a pull request
 
@@ -269,15 +300,15 @@ Recognised prefixes: `feat:`, `fix:`, `infra:`, `ci:`, `refactor:`, `docs:`,
 2. Commit and push — CI runs on every push
 3. Open a pull request into `develop`, with the issue key(s) in the title
 4. Wait for CI to pass and for one approving review
-5. The project manager merges
+5. Merge
 
 ---
 
-## Continuous Integration and security scanning
+## Continuous Integration
 
-A single pipeline (`.github/workflows/ci.yaml`) handles both build verification
-and security scanning. It runs on every push to `develop`, `main`, or a prefixed
-topic branch, and on every pull request into `develop` or `main`.
+A single pipeline (`.github/workflows/ci.yaml`) handles build verification,
+testing, and security scanning. It runs on every push to `develop`, `main`, or a
+prefixed topic branch, and on every pull request into `develop` or `main`.
 
 **Build verification**
 
@@ -285,43 +316,71 @@ topic branch, and on every pull request into `develop` or `main`.
 2. Starts the full stack
 3. Asserts the backend (`/up`) and AI service (`/docs`) respond to HTTP probes
 4. Validates `composer.lock` consistency with `composer validate --strict`
-5. Confirms the Vite manifest was built into the image
 
-**Security scanning (DevSecOps)**
+**Testing**
 
-6. TruffleHog scans the code and full git history for verified live credentials
-7. Trivy scans all three built images for CVEs (`CRITICAL,HIGH`, unfixed excluded)
-8. Trivy scans the filesystem with `vuln,secret,misconfig` scanners enabled
-9. Two JSON reports are generated and uploaded as a downloadable artifact
+5. PHPUnit — 73 backend tests
+6. Vitest — 51 frontend tests
+
+**Security scanning**
+
+7. TruffleHog scans the code and full git history for verified live credentials
+8. Trivy scans all three built images for CVEs (`CRITICAL,HIGH`, unfixed excluded)
+9. Trivy scans the filesystem with `vuln,secret,misconfig` scanners enabled
+10. Two JSON reports are generated and uploaded as a downloadable artifact
+
+### What blocks a merge
+
+| Step | Blocking |
+|---|---|
+| Image build and stack startup | Yes |
+| Health probes | Yes |
+| `composer validate --strict` | Yes |
+| PHPUnit | Yes |
+| Vitest | Yes |
+| TruffleHog | Yes |
+| Trivy (all scans) | **No** — report only |
+
+Trivy runs with `exit-code: 0`, so findings are reported without blocking merges:
+Alpine and PHP base images routinely carry unfixable CVEs that would otherwise
+prevent every merge. The `ignore-unfixed` flag filters that category on image
+scans. **This is a deliberate trade-off, not an oversight** — making the image
+scans blocking is an open hardening task.
 
 ### Retrieving a scan report
-
-Scan results appear in two places:
 
 - **Readable tables** — expand any `Trivy scan —` step in the job log
 - **JSON reports** — at the bottom of the run summary page, under **Artifacts**,
   named `trivy-reports-<timestamp>`. Retained for 14 days.
 
-### Scanner behaviour
-
-TruffleHog **will fail the build** if it finds a verified live credential. Trivy
-is configured with `exit-code: 0`, so it reports findings without blocking
-merges — Alpine and PHP base images routinely carry unfixable CVEs that would
-otherwise prevent all merges. The `ignore-unfixed` flag filters that category on
-image scans.
-
 ---
 
-## Known security findings
+## Security
 
-The most recent filesystem scan reported the following. These are tracked, not
-silently ignored.
+Security documentation lives under `docs/security/`.
+
+| Document | Purpose |
+|---|---|
+| [`authentication-security.md`](docs/security/authentication-security.md) | **Start here.** How authentication and authorization work, what controls are in place, accepted risks, open items. |
+| [`owasp-auth-review.md`](docs/security/owasp-auth-review.md) | OWASP Top 10 (2021) review of the authentication module. 15 findings with severity and risk analysis. |
+| [`remediation/`](docs/security/remediation/) | Per-finding implementation instructions, split by component (backend / frontend / ai). |
+
+The authentication module has been reviewed. **The agency module, car module,
+frontend token storage, and the AI service have not.** See the "Open items"
+section of `authentication-security.md` for what is tracked and what has no ticket.
+
+### Known findings
+
+**Application** — three High-severity authentication findings are open and tracked
+in Jira (SCRUM-122, SCRUM-123, SCRUM-124). See `owasp-auth-review.md`.
 
 **Container configuration** — all three Dockerfiles fail Trivy check DS-0002
-("Image user should not be 'root'"). Each passes the other 19 checks. Adding
-non-root `USER` directives is the outstanding hardening task.
+("Image user should not be 'root'"), and all base images use floating tags rather
+than digest pins. Adding non-root `USER` directives and pinning digests is an
+outstanding hardening task with no ticket.
 
-**Dependencies with available fixes**
+**Dependencies with available fixes** — from the most recent filesystem scan.
+Re-run the pipeline for current figures; this table ages.
 
 | Package | Installed | Fixed in | Status |
 |---|---|---|---|
@@ -345,7 +404,6 @@ To apply the available patches:
 docker compose exec backend composer update symfony/http-foundation \
   symfony/http-kernel symfony/mailer symfony/mime guzzlehttp/guzzle \
   league/commonmark
-docker compose exec backend npm update postcss nanoid
 docker compose exec frontend npm update postcss nanoid
 ```
 
@@ -353,14 +411,21 @@ docker compose exec frontend npm update postcss nanoid
 
 ## Deployment
 
-`.github/workflows/cd.yaml` deploys to a target server on pushes to `main`, or
-manually via `workflow_dispatch`. It connects over SSH, resets to the pushed
-commit, rebuilds, refreshes the asset volume, verifies the health endpoint, and
-rolls back to the previous commit if the check fails within 60 seconds.
+`.github/workflows/cd.yaml` deploys to a target server on pushes to `main`. It
+connects over SSH, pulls the latest commit, rebuilds the stack, and prunes unused
+images.
 
-Required repository secrets: `SERVER_HOST`, `SERVER_USER`, `SERVER_SSH_KEY`, and
-optionally `SERVER_PORT`.
+Required repository secrets: `SERVER_HOST`, `SERVER_USER`, `SERVER_SSH_KEY`.
 
-This pipeline has not yet executed — no target server has been provisioned.
-`php artisan serve` is also a single-threaded development server; a production
-deployment requires nginx or Apache in front of PHP-FPM.
+**Current limitations:**
+
+- The pipeline has not yet executed — no target server has been provisioned
+- No rollback mechanism. A failed deploy leaves the server in a broken state
+- No post-deploy health check
+- Not gated on CI passing — a push to `main` deploys regardless of test results
+- `php artisan serve` is a single-threaded development server; production requires
+  nginx or Apache in front of PHP-FPM
+- The frontend image runs `npm run dev` (Vite dev server), not a production build
+
+None of these are suitable for a real deployment. Address them before provisioning
+a server.
