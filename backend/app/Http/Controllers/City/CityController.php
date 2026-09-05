@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\city;
+namespace App\Http\Controllers\City;
 use Illuminate\Http\JsonResponse;
 use App\Models\City;
 use Illuminate\Http\Request;
