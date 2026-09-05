@@ -75,6 +75,13 @@ jobs:
         run: |
           docker compose exec -T backend composer validate --strict
 
+      - name: Run backend tests (PHPUnit)
+        run: |
+          docker compose exec -T backend php artisan test
+
+      - name: Run frontend tests (Vitest)
+        run: |
+          docker compose exec -T frontend npm run test:run
 
       # --- Trivy: readable tables in the log ---
       # exit-code 0 = report only; ignore-unfixed drops CVEs with no patch

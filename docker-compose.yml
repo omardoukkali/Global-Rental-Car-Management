@@ -68,6 +68,8 @@ services:
     depends_on:
       database:
         condition: service_healthy
+      database_test:
+        condition: service_healthy
     networks:
       - app_network
 
