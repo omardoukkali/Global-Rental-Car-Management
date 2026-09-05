@@ -4,6 +4,7 @@ import AgencySettings from '@/pages/AgencySettings.vue'
 import AgencyProfile from '@/pages/AgencyProfile.vue'
 import AgencyLocations from '@/pages/AgencyLocations.vue'
 import AdminAgencyValidation from '@/pages/AdminAgencyValidation.vue'
+import AgencyCars from '@/pages/AgencyCars.vue'
 
 const routes = [{
         path: '/',
@@ -56,6 +57,12 @@ const routes = [{
         component: AdminAgencyValidation,
         meta: { requiresAuth: true }
     },
+    {
+        path: '/agency/cars',
+        name: 'AgencyCars',
+        component: AgencyCars,
+        meta: { requiresAuth: true }
+    }
 ]
 
 const router = createRouter({
