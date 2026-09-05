@@ -1,10 +1,9 @@
-FROM node:20-alpine
+FROM node:22-alpine
 
 WORKDIR /app
 
-# Copier les fichiers de dépendances et installer
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 
 # Copier le reste du code
 COPY . .
