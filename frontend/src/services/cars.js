@@ -1,18 +1,23 @@
 import api from '@/services/api'
 
 export default {
-    // Récupérer toutes les voitures de l'agence
-    getCars() {
-        return api.get('/agency/cars')
-    },
+  getCars() {
+    return api.get('/agency/cars')
+  },
 
-    // Récupérer une seule voiture par son ID
-    getCar(id) {
-        return api.get(`/agency/cars/${id}`)
-    },
+  getCar(id) {
+    return api.get(`/agency/cars/${id}`)
+  },
 
-    // Désactiver une voiture
-    disableCar(id) {
-        return api.patch(`/agency/cars/${id}/disable`)
-    }
+  createCar(payload) {
+    return api.post('/agency/cars', payload)
+  },
+
+  updateCar(id, payload) {
+    return api.put(`/agency/cars/${id}`, payload)
+  },
+
+  disableCar(id) {
+    return api.patch(`/agency/cars/${id}/disable`)
+  }
 }
