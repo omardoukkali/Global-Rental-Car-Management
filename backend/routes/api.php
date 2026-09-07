@@ -2,7 +2,9 @@
 
 use App\Http\Controllers\Agency\AgencyPointController;
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Car\CarAvailabilityController;
 use App\Http\Controllers\Car\CarImageController;
+use App\Http\Controllers\Reservation\ReservationController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\City\CityController;
@@ -139,3 +141,14 @@ Route::middleware([
 
 
 Route::get('/cities', [CityController::class, 'index']);
+Route::get('/cars/{car}/availability', [
+    CarAvailabilityController::class,
+    'check',
+]);
+
+Route::middleware(['auth:sanctum', 'role:client'])->group(function () {
+    Route::post('/reservations', [
+        ReservationController::class,
+        'store',
+    ]);
+});
