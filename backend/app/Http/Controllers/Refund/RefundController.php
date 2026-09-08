@@ -86,7 +86,7 @@ class RefundController extends Controller
 
             $refundedAmount = $payment->amount * ($percentage / 100);
 
-            return Refund::create([
+            $refund = Refund::create([
                 'payment_id' => $payment->id,
                 'agency_id' => $reservation->agency_id,
                 'percentage' => $percentage,
@@ -94,9 +94,15 @@ class RefundController extends Controller
                 'decision_source' => $decisionSource,
                 'status' => 'processed',
                 'reason' => $data['reason'] ?? null,
-                'decided_at' => now(),
-                'processed_at' => now(),
+                'decided_at' => $now,
+                'processed_at' => $now,
             ]);
+
+            $payment->update([
+                'status' => 'refunded',
+            ]);
+
+            return $refund;
         });
 
         return response()->json([
@@ -126,13 +132,15 @@ class RefundController extends Controller
             ], 422);
         }
 
+        $data = $request->validated();
+
         $refund->update([
-            'percentage' => $request->validated()['percentage'],
+            'percentage' => $data['percentage'],
             'refunded_amount' => $refund->payment->amount
-                * ($request->validated()['percentage'] / 100),
+                * ($data['percentage'] / 100),
             'decision_source' => 'agency',
             'status' => 'processed',
-            'reason' => $request->validated()['reason'] ?? $refund->reason,
+            'reason' => $data['reason'] ?? $refund->reason,
             'decided_at' => now(),
             'processed_at' => now(),
         ]);
