@@ -10,6 +10,7 @@ use App\Http\Controllers\Car\CarImageController;
 use App\Http\Controllers\City\CityController;
 use App\Http\Controllers\Payment\PaymentController;
 use App\Http\Controllers\Reservation\ReservationController;
+use App\Http\Controllers\Review\ReviewController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Refund\RefundController;
@@ -67,6 +68,30 @@ Route::middleware([
             'message' => 'Client access granted.',
         ]);
     });
+    Route::get('/reviews', [
+        ReviewController::class,
+        'index',
+    ]);
+
+    Route::post('/reviews', [
+        ReviewController::class,
+        'store',
+    ]);
+
+    Route::get('/reviews/{review}', [
+        ReviewController::class,
+        'show',
+    ]);
+
+    Route::put('/reviews/{review}', [
+        ReviewController::class,
+        'update',
+    ]);
+
+    Route::delete('/reviews/{review}', [
+        ReviewController::class,
+        'destroy',
+    ]);
 
 });
 
