@@ -9,13 +9,10 @@ use Illuminate\Http\JsonResponse;
 
 class CarAvailabilityController extends Controller
 {
-    public function check(
-        CheckCarAvailabilityRequest $request,
-        Car $car
-    ): JsonResponse {
+    public function check(CheckCarAvailabilityRequest $request, Car $car): JsonResponse
+    {
         $data = $request->validated();
 
-        // A car that is not available cannot be booked.
         if ($car->status !== 'available') {
             return response()->json([
                 'car_id' => $car->id,
@@ -35,7 +32,7 @@ class CarAvailabilityController extends Controller
 
         return response()->json([
             'car_id' => $car->id,
-            'available' => !$hasOverlap,
+            'available' => ! $hasOverlap,
         ]);
     }
 }
