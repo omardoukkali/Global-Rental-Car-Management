@@ -147,8 +147,28 @@ Route::get('/cars/{car}/availability', [
 ]);
 
 Route::middleware(['auth:sanctum', 'role:client'])->group(function () {
+    Route::get('/reservations', [
+        ReservationController::class,
+        'index',
+    ]);
+
     Route::post('/reservations', [
         ReservationController::class,
         'store',
+    ]);
+
+    Route::get('/reservations/{reservation}', [
+        ReservationController::class,
+        'show',
+    ]);
+
+    Route::put('/reservations/{reservation}', [
+        ReservationController::class,
+        'update',
+    ]);
+
+    Route::patch('/reservations/{reservation}/cancel', [
+        ReservationController::class,
+        'cancel',
     ]);
 });

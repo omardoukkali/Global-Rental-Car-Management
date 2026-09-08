@@ -4,7 +4,7 @@ namespace App\Http\Requests\Reservation;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class StoreReservationRequest extends FormRequest
+class UpdateReservationRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -14,31 +14,29 @@ class StoreReservationRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'car_id' => [
-                'required',
-                'uuid',
-                'exists:cars,id',
-            ],
-
             'pickup_point_id' => [
+                'sometimes',
                 'required',
                 'uuid',
                 'exists:agency_points,id',
             ],
 
             'return_point_id' => [
+                'sometimes',
                 'required',
                 'uuid',
                 'exists:agency_points,id',
             ],
 
             'start_at' => [
+                'sometimes',
                 'required',
                 'date',
                 'after_or_equal:now',
             ],
 
             'end_at' => [
+                'sometimes',
                 'required',
                 'date',
                 'after:start_at',
