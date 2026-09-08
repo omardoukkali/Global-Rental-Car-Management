@@ -12,6 +12,7 @@ use App\Http\Controllers\Payment\PaymentController;
 use App\Http\Controllers\Reservation\ReservationController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Refund\RefundController;
 
 
 // Public routes
@@ -85,6 +86,14 @@ Route::middleware([
     Route::put('/agency/profile', [
         AgencyController::class,
         'update'
+    ]);
+    Route::post('/refunds', [
+        RefundController::class,
+        'store',
+    ]);
+    Route::patch('/refunds/{refund}/decision', [
+        RefundController::class,
+        'decide',
     ]);
 
 });

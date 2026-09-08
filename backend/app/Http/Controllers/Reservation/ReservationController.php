@@ -13,6 +13,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use App\Models\Refund;
 
 class ReservationController extends Controller
 {
@@ -281,9 +282,63 @@ class ReservationController extends Controller
             ], 422);
         }
 
+        $payment = $reservation->payment;
+
+        if (!$payment) {
+            $reservation->update([
+                'status' => 'cancelled',
+            ]);
+
+            return response()->json([
+                'message' => 'Reservation cancelled successfully.',
+                'reservation' => $reservation->fresh()->load([
+                    'car',
+                    'agency',
+                    'pickupPoint',
+                    'returnPoint',
+                ]),
+            ]);
+        }
+
+        $hoursUntilPickup = now()->diffInHours(
+            Carbon::parse($reservation->start_at),
+            false
+        );
+
         $reservation->update([
             'status' => 'cancelled',
         ]);
+
+        if ($hoursUntilPickup >= 24) {
+            $refundedAmount = $payment->amount;
+
+            Refund::create([
+                'payment_id' => $payment->id,
+                'agency_id' => $reservation->agency_id,
+                'percentage' => 100,
+                'refunded_amount' => $refundedAmount,
+                'decision_source' => 'automatic',
+                'status' => 'processed',
+                'reason' => 'Cancellation at least 24 hours before pickup.',
+                'decided_at' => now(),
+                'processed_at' => now(),
+            ]);
+
+            $payment->update([
+                'status' => 'refunded',
+            ]);
+        } else {
+            Refund::create([
+                'payment_id' => $payment->id,
+                'agency_id' => $reservation->agency_id,
+                'percentage' => 50,
+                'refunded_amount' => $payment->amount * 0.50,
+                'decision_source' => 'automatic',
+                'status' => 'pending',
+                'reason' => 'Late cancellation. Waiting for agency decision.',
+                'decided_at' => now(),
+            ]);
+        }
 
         return response()->json([
             'message' => 'Reservation cancelled successfully.',
@@ -292,6 +347,7 @@ class ReservationController extends Controller
                 'agency',
                 'pickupPoint',
                 'returnPoint',
+                'payment.refund',
             ]),
         ]);
     }
