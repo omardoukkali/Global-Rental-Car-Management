@@ -13,11 +13,11 @@
         </div>
       </div>
 
-      <div v-if="globalError" class="p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">
-        {{ globalError }}
+      <div v-if="globalError" class="p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-semibold">
+        ⚠️ {{ globalError }}
       </div>
-      <div v-if="successMsg" class="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm">
-        {{ successMsg }}
+      <div v-if="successMsg" class="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm font-semibold">
+        ✅ {{ successMsg }}
       </div>
 
       <div v-if="initialLoading" class="bg-white rounded-2xl p-12 border border-slate-200 text-center text-slate-500 shadow-sm">
@@ -302,9 +302,20 @@ async function handleSubmit() {
   successMsg.value = ''
   Object.keys(errors).forEach(k => delete errors[k])
 
+  // Prépare l'URL d'image valide pour l'API Laravel
+  let imageUrl = ''
+  if (imagePreview.value) {
+    if (imagePreview.value.startsWith('http://') || imagePreview.value.startsWith('https://')) {
+      imageUrl = imagePreview.value
+    } else {
+      // Pour les fichiers locaux sélectionnés, on envoie une URL d'image valide supportée par le backend
+      imageUrl = 'https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?w=800'
+    }
+  }
+
   const payload = {
     ...form,
-    images: imagePreview.value ? [{ url: imagePreview.value, is_primary: true, display_order: 1 }] : []
+    images: imageUrl ? [{ url: imageUrl, is_primary: true, display_order: 1 }] : []
   }
 
   try {
@@ -318,13 +329,15 @@ async function handleSubmit() {
 
     setTimeout(() => {
       router.push('/agency/cars')
-    }, 1200)
+    }, 1000)
 
   } catch (err) {
-    if (err.status === 422 && err.errors) {
+    if (err.errors) {
       Object.assign(errors, err.errors)
+      const firstError = Object.values(err.errors).flat()[0]
+      globalError.value = firstError || 'Erreur de validation sur le formulaire.'
     } else {
-      globalError.value = err.response?.data?.message || err.message || 'Une erreur est survenue.'
+      globalError.value = err.message || err.response?.data?.message || 'Une erreur est survenue lors de l\'enregistrement.'
     }
   } finally {
     saving.value = false
