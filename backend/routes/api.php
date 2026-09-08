@@ -119,6 +119,17 @@ Route::middleware([
     Route::patch('/agency/cars/{car}/images/{image}/primary',[CarImageController::class, 'setPrimary']);
     Route::delete('/agency/cars/{car}/images/{image}',[CarImageController::class, 'destroy']);
 
+    Route::patch('/reservations/{reservation}/pickup', [
+        ReservationController::class,
+        'pickup',
+    ]);
+
+    Route::patch('/reservations/{reservation}/return', [
+        ReservationController::class,
+        'return',
+    ]);
+
+
 });
 
 // Admin routes
@@ -170,5 +181,10 @@ Route::middleware(['auth:sanctum', 'role:client'])->group(function () {
     Route::patch('/reservations/{reservation}/cancel', [
         ReservationController::class,
         'cancel',
+    ]);
+
+    Route::patch('/reservations/{reservation}/dispute', [
+        ReservationController::class,
+        'dispute',
     ]);
 });

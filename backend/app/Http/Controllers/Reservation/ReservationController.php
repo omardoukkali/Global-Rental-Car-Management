@@ -295,4 +295,103 @@ class ReservationController extends Controller
             ]),
         ]);
     }
+
+    public function pickup(
+        Request $request,
+        Reservation $reservation
+    ): JsonResponse {
+        $agency = $request->user()->agency;
+
+        if (!$agency || $reservation->agency_id !== $agency->id) {
+            return response()->json([
+                'message' => 'You are not authorized to pickup this reservation.',
+            ], 403);
+        }
+
+        if ($reservation->status !== 'confirmed') {
+            return response()->json([
+                'message' => 'Only confirmed reservations can be picked up.',
+            ], 422);
+        }
+
+        $reservation->update([
+            'status' => 'picked_up',
+            'picked_up_at' => now(),
+        ]);
+
+        return response()->json([
+            'message' => 'Reservation picked up successfully.',
+            'reservation' => $reservation->fresh()->load([
+                'car',
+                'agency',
+                'pickupPoint',
+                'returnPoint',
+            ]),
+        ]);
+    }
+
+    public function return(
+        Request $request,
+        Reservation $reservation
+    ): JsonResponse {
+        $agency = $request->user()->agency;
+
+        if (!$agency || $reservation->agency_id !== $agency->id) {
+            return response()->json([
+                'message' => 'You are not authorized to return this reservation.',
+            ], 403);
+        }
+
+        if ($reservation->status !== 'picked_up') {
+            return response()->json([
+                'message' => 'Only picked up reservations can be returned.',
+            ], 422);
+        }
+
+        $reservation->update([
+            'status' => 'completed',
+            'returned_at' => now(),
+        ]);
+
+        return response()->json([
+            'message' => 'Reservation returned successfully.',
+            'reservation' => $reservation->fresh()->load([
+                'car',
+                'agency',
+                'pickupPoint',
+                'returnPoint',
+            ]),
+        ]);
+    }
+
+    public function dispute(
+        Request $request,
+        Reservation $reservation
+    ): JsonResponse {
+        if ($reservation->client_id !== $request->user()->id) {
+            return response()->json([
+                'message' => 'You are not authorized to dispute this reservation.',
+            ], 403);
+        }
+
+        if ($reservation->status !== 'picked_up') {
+            return response()->json([
+                'message' => 'Only picked up reservations can be disputed.',
+            ], 422);
+        }
+
+        $reservation->update([
+            'status' => 'disputed',
+        ]);
+
+        return response()->json([
+            'message' => 'Reservation disputed successfully.',
+            'reservation' => $reservation->fresh()->load([
+                'car',
+                'agency',
+                'pickupPoint',
+                'returnPoint',
+            ]),
+        ]);
+    }
 }
