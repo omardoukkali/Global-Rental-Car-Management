@@ -111,7 +111,7 @@ class ReservationController extends Controller
             $startAt = Carbon::parse($data['start_at']);
             $endAt = Carbon::parse($data['end_at']);
 
-            $days = $startAt->diffInDays($endAt);
+            $days = max(1, $startAt->ceilDay()->diffInDays($endAt->startOfDay()));
 
             // Calculate price
             $dailyPrice = $car->daily_price;
