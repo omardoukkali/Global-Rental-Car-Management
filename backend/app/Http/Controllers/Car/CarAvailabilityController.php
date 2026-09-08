@@ -15,6 +15,14 @@ class CarAvailabilityController extends Controller
     ): JsonResponse {
         $data = $request->validated();
 
+        // A car that is not available cannot be booked.
+        if ($car->status !== 'available') {
+            return response()->json([
+                'car_id' => $car->id,
+                'available' => false,
+            ]);
+        }
+
         $hasOverlap = $car->reservations()
             ->whereIn('status', [
                 'pending',
