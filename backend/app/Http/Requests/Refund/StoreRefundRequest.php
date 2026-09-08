@@ -8,11 +8,7 @@ class StoreRefundRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return in_array(
-            $this->user()?->role,
-            ['agency', 'admin'],
-            true
-        );
+        return $this->user()?->role === 'agency';
     }
 
     public function rules(): array
