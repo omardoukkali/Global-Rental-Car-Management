@@ -2,7 +2,9 @@
 
 use App\Http\Controllers\Agency\AgencyPointController;
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Car\CarAvailabilityController;
 use App\Http\Controllers\Car\CarImageController;
+use App\Http\Controllers\Reservation\ReservationController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\City\CityController;
@@ -117,6 +119,17 @@ Route::middleware([
     Route::patch('/agency/cars/{car}/images/{image}/primary',[CarImageController::class, 'setPrimary']);
     Route::delete('/agency/cars/{car}/images/{image}',[CarImageController::class, 'destroy']);
 
+    Route::patch('/reservations/{reservation}/pickup', [
+        ReservationController::class,
+        'pickup',
+    ]);
+
+    Route::patch('/reservations/{reservation}/return', [
+        ReservationController::class,
+        'return',
+    ]);
+
+
 });
 
 // Admin routes
@@ -139,3 +152,39 @@ Route::middleware([
 
 
 Route::get('/cities', [CityController::class, 'index']);
+Route::get('/cars/{car}/availability', [
+    CarAvailabilityController::class,
+    'check',
+]);
+
+Route::middleware(['auth:sanctum', 'role:client'])->group(function () {
+    Route::get('/reservations', [
+        ReservationController::class,
+        'index',
+    ]);
+
+    Route::post('/reservations', [
+        ReservationController::class,
+        'store',
+    ]);
+
+    Route::get('/reservations/{reservation}', [
+        ReservationController::class,
+        'show',
+    ]);
+
+    Route::put('/reservations/{reservation}', [
+        ReservationController::class,
+        'update',
+    ]);
+
+    Route::patch('/reservations/{reservation}/cancel', [
+        ReservationController::class,
+        'cancel',
+    ]);
+
+    Route::patch('/reservations/{reservation}/dispute', [
+        ReservationController::class,
+        'dispute',
+    ]);
+});
