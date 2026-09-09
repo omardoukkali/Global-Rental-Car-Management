@@ -448,7 +448,7 @@ async function checkAvailability() {
       start_at: form.start_at,
       end_at: form.end_at
     })
-    availabilityStatus.value = res.data
+    availabilityStatus.value = res?.available !== undefined ? res : (res?.data || null)
   } catch (err) {
     // Si l'endpoint n'est pas encore actif ou échoue, on ignore sans bloquer
     availabilityStatus.value = null
@@ -485,16 +485,16 @@ async function handleSubmit() {
     }
 
     const response = await reservationsService.createReservation(payload)
-    createdReservation.value = response.data?.reservation || {
+    createdReservation.value = response?.reservation || response?.data?.reservation || response || {
       id: 'RES-' + Math.floor(Math.random() * 10000),
       total_amount: totalPrice.value,
       status: 'pending'
     }
   } catch (err) {
-    if (err.response?.status === 422 && err.response.data?.errors) {
-      Object.assign(errors, err.response.data.errors)
+    if ((err.status === 422 || err.response?.status === 422) && (err.errors || err.response?.data?.errors)) {
+      Object.assign(errors, err.errors || err.response?.data?.errors)
     } else {
-      globalError.value = err.response?.data?.message || err.message || 'Une erreur est survenue lors de la réservation.'
+      globalError.value = err.message || err.response?.data?.message || 'Une erreur est survenue lors de la réservation.'
     }
   } finally {
     submitting.value = false
@@ -509,14 +509,14 @@ onMounted(async () => {
   try {
     // 1. Charger la liste des voitures si nécessaire
     const carsRes = await carsService.getCars()
-    availableCars.value = carsRes.data?.cars || []
+    availableCars.value = carsRes?.cars || carsRes?.data?.cars || []
 
     if (targetCarId) {
       selectedCar.value = availableCars.value.find(c => c.id === targetCarId)
       if (!selectedCar.value) {
         try {
           const singleCarRes = await carsService.getCar(targetCarId)
-          selectedCar.value = singleCarRes.data?.car || null
+          selectedCar.value = singleCarRes?.car || singleCarRes?.data?.car || null
         } catch {
           // Ignorer
         }

@@ -24,7 +24,7 @@ class CityFactory extends Factory
     {
         return [
             'name' => fake()->city(),
-            'region' => fake()->state(),
+            'region' => fake()->word(),
             'country' => 'Morocco',
             'is_active' => true,
         ];
