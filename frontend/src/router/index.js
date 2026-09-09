@@ -6,12 +6,12 @@ import AgencyLocations from '@/pages/AgencyLocations.vue'
 import AdminAgencyValidation from '@/pages/AdminAgencyValidation.vue'
 import AgencyCars from '@/pages/AgencyCars.vue'
 import CarForm from '@/pages/CarForm.vue'
+import AgencyDashboard from '@/pages/AgencyDashboard.vue'
 
 const routes = [{
         path: '/',
         name: 'home',
-        component: () =>
-            import ('@/pages/Logout.vue')
+        redirect: '/login'
     },
     {
         path: '/login',
@@ -75,7 +75,13 @@ const routes = [{
         name: 'AgencyCarEdit',
         component: CarForm,
         meta: { requiresAuth: true }
-    }
+    },
+   {
+  path: '/agency/dashboard',
+  name: 'AgencyDashboard',
+  component: AgencyDashboard,
+  meta: { requiresAuth: true }
+}
 ]
 
 const router = createRouter({
