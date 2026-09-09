@@ -120,6 +120,10 @@ Route::middleware([
         RefundController::class,
         'decide',
     ]);
+    Route::patch('/reservations/{reservation}/reject', [
+        ReservationController::class,
+        'reject',
+    ]);
 
 });
 

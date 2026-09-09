@@ -28,9 +28,9 @@ class PaymentController extends Controller
                 ], 403));
             }
 
-            if ($reservation->status === 'cancelled') {
+            if ($reservation->status !== 'pending') {
                 abort(response()->json([
-                    'message' => 'Cancelled reservations cannot be paid.',
+                    'message' => 'Only pending reservations can be paid.',
                 ], 422));
             }
 
@@ -48,7 +48,7 @@ class PaymentController extends Controller
 
             $agencyAmount = $amount - $platformCommission;
 
-            return Payment::create([
+            $payment = Payment::create([
                 'reservation_id' => $reservation->id,
                 'amount' => $amount,
                 'commission_rate' => $commissionRate,
@@ -58,6 +58,12 @@ class PaymentController extends Controller
                 'status' => 'paid',
                 'paid_at' => now(),
             ]);
+
+            $reservation->update([
+                'status' => 'confirmed',
+            ]);
+
+            return $payment;
         });
 
         return response()->json([
