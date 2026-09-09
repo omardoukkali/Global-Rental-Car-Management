@@ -6,6 +6,7 @@ import AgencyLocations from '@/pages/AgencyLocations.vue'
 import AdminAgencyValidation from '@/pages/AdminAgencyValidation.vue'
 import AgencyCars from '@/pages/AgencyCars.vue'
 import CarForm from '@/pages/CarForm.vue'
+import ReservationForm from '@/pages/ReservationForm.vue'
 
 const routes = [{
         path: '/',
@@ -74,6 +75,19 @@ const routes = [{
         path: '/agency/cars/:id/edit',
         name: 'AgencyCarEdit',
         component: CarForm,
+        meta: { requiresAuth: true }
+    },
+    {
+        path: '/reservations/new',
+        name: 'ReservationCreate',
+        component: ReservationForm,
+        meta: { requiresAuth: true }
+    },
+    {
+        path: '/cars/:carId/reserve',
+        name: 'CarReserve',
+        component: ReservationForm,
+        props: true,
         meta: { requiresAuth: true }
     }
 ]
