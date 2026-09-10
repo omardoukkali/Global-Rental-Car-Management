@@ -24,6 +24,8 @@ class Reservation extends Model
         'status',
         'picked_up_at',
         'returned_at',
+        'client_pickup_confirmed_at',
+        'agency_pickup_confirmed_at',
     ];
 
     protected function casts(): array
@@ -35,6 +37,8 @@ class Reservation extends Model
             'total_amount' => 'decimal:2',
             'picked_up_at' => 'datetime',
             'returned_at' => 'datetime',
+            'client_pickup_confirmed_at' => 'datetime',
+            'agency_pickup_confirmed_at' => 'datetime',
         ];
     }
 

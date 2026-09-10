@@ -92,7 +92,10 @@ Route::middleware([
         ReviewController::class,
         'destroy',
     ]);
-
+    Route::patch('/reservations/{reservation}/pickup/confirm', [
+        ReservationController::class,
+        'confirmPickup',
+    ]);
 });
 
 
@@ -223,9 +226,9 @@ Route::middleware([
 
     // Reservation pickup / return
 
-    Route::patch('/reservations/{reservation}/pickup', [
+    Route::patch('/reservations/{reservation}/pickup/confirm', [
         ReservationController::class,
-        'pickup',
+        'confirmAgencyPickup',
     ]);
 
     Route::patch('/reservations/{reservation}/return', [

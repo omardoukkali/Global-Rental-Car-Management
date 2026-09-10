@@ -411,31 +411,37 @@ class ReservationController extends Controller
         ]);
     }
 
-    public function pickup(
+    public function confirmPickup(
         Request $request,
         Reservation $reservation
     ): JsonResponse {
-        $agency = $request->user()->agency;
-
-        if (!$agency || $reservation->agency_id !== $agency->id) {
+        if ($reservation->client_id !== $request->user()->id) {
             return response()->json([
-                'message' => 'You are not authorized to pickup this reservation.',
+                'message' => 'You are not authorized to confirm pickup for this reservation.',
             ], 403);
         }
 
         if ($reservation->status !== 'confirmed') {
             return response()->json([
-                'message' => 'Only confirmed reservations can be picked up.',
+                'message' => 'Only confirmed reservations can confirm pickup.',
             ], 422);
         }
 
-        $reservation->update([
-            'status' => 'picked_up',
-            'picked_up_at' => now(),
-        ]);
+        if (!$reservation->client_pickup_confirmed_at) {
+            $reservation->update([
+                'client_pickup_confirmed_at' => now(),
+            ]);
+        }
+
+        if ($reservation->agency_pickup_confirmed_at) {
+            $reservation->update([
+                'status' => 'picked_up',
+                'picked_up_at' => now(),
+            ]);
+        }
 
         return response()->json([
-            'message' => 'Reservation picked up successfully.',
+            'message' => 'Pickup confirmed successfully.',
             'reservation' => $reservation->fresh()->load([
                 'car',
                 'agency',
@@ -444,6 +450,49 @@ class ReservationController extends Controller
             ]),
         ]);
     }
+
+    public function confirmAgencyPickup(
+        Request $request,
+        Reservation $reservation
+    ): JsonResponse {
+        $agency = $request->user()->agency;
+
+        if (!$agency || $reservation->agency_id !== $agency->id) {
+            return response()->json([
+                'message' => 'You are not authorized to confirm pickup for this reservation.',
+            ], 403);
+        }
+
+        if ($reservation->status !== 'confirmed') {
+            return response()->json([
+                'message' => 'Only confirmed reservations can confirm pickup.',
+            ], 422);
+        }
+
+        if (!$reservation->agency_pickup_confirmed_at) {
+            $reservation->update([
+                'agency_pickup_confirmed_at' => now(),
+            ]);
+        }
+
+        if ($reservation->client_pickup_confirmed_at) {
+            $reservation->update([
+                'status' => 'picked_up',
+                'picked_up_at' => now(),
+            ]);
+        }
+
+        return response()->json([
+            'message' => 'Pickup confirmed successfully.',
+            'reservation' => $reservation->fresh()->load([
+                'car',
+                'agency',
+                'pickupPoint',
+                'returnPoint',
+            ]),
+        ]);
+    }
+    
 
     public function return(
         Request $request,
