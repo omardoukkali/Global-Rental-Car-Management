@@ -7,6 +7,7 @@ import AdminAgencyValidation from '@/pages/AdminAgencyValidation.vue'
 import AgencyCars from '@/pages/AgencyCars.vue'
 import CarForm from '@/pages/CarForm.vue'
 import AgencyDashboard from '@/pages/AgencyDashboard.vue'
+import ReservationForm from '@/pages/ReservationForm.vue'
 
 const routes = [{
         path: '/',
@@ -76,12 +77,25 @@ const routes = [{
         component: CarForm,
         meta: { requiresAuth: true }
     },
-   {
-  path: '/agency/dashboard',
-  name: 'AgencyDashboard',
-  component: AgencyDashboard,
-  meta: { requiresAuth: true }
-}
+    {
+        path: '/agency/dashboard',
+        name: 'AgencyDashboard',
+        component: AgencyDashboard,
+        meta: { requiresAuth: true }
+    },
+    {
+        path: '/reservations/new',
+        name: 'ReservationCreate',
+        component: ReservationForm,
+        meta: { requiresAuth: true }
+    },
+    {
+        path: '/cars/:carId/reserve',
+        name: 'CarReserve',
+        component: ReservationForm,
+        props: true,
+        meta: { requiresAuth: true }
+    }
 ]
 
 const router = createRouter({
