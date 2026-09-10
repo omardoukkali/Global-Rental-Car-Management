@@ -1,111 +1,44 @@
 {
   "info": {
-    "_postman_id": "b4c2b8f1-54e5-4d87-9f07-8ca6f5f4a231",
-    "name": "Global Rental Car Management API",
-    "description": "Complete collection for all current Laravel API routes plus service health probes. Select the accompanying environment. Login and create requests capture reusable tokens and IDs.",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    "_postman_id": "28d9e6fb-d423-459d-90fe-cadccf3aa547",
+    "name": "Global car management API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "51931746",
+    "_collection_link": "https://go.postman.co/collection/51931746-28d9e6fb-d423-459d-90fe-cadccf3aa547?source=collection_link"
   },
-  "event": [
-    {
-      "listen": "test",
-      "script": {
-        "type": "text/javascript",
-        "packages": {},
-        "exec": [
-          "pm.test('No server error',function(){pm.expect(pm.response.code).to.be.below(500);});"
-        ]
-      }
-    }
-  ],
   "item": [
     {
-      "name": "00 - Health",
-      "description": "Backend and AI service probes.",
+      "name": "Auth",
       "item": [
         {
-          "name": "Backend health",
+          "name": "Register Client",
           "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{backend_url}}/up",
-              "host": [
-                "{{backend_url}}"
-              ],
-              "path": [
-                "up"
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{client_token}}",
+                  "type": "string"
+                }
               ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "AI root",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{ai_base_url}}/",
-              "host": [
-                "{{ai_base_url}}"
-              ],
-              "path": []
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "AI OpenAPI",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{ai_base_url}}/openapi.json",
-              "host": [
-                "{{ai_base_url}}"
-              ],
-              "path": [
-                "openapi.json"
-              ]
-            }
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "01 - Authentication",
-      "description": "Registration, login, identity and token revocation.",
-      "item": [
-        {
-          "name": "Register client",
-          "request": {
+            },
             "method": "POST",
             "header": [
               {
                 "key": "Accept",
                 "value": "application/json"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
               }
             ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"first_name\": \"Omar\",\r\n    \"last_name\": \"Agency Owner\",\r\n    \"email\": \"owner@agency.com\",\r\n    \"password\": \"Password123!\",\r\n    \"password_confirmation\": \"Password123!\",\r\n    \"phone\": \"+212611111111\",\r\n\r\n    \"agency_name\": \"Tangier Rent Cars\",\r\n    \"agency_city\": \"a28c2cb6-9049-42d3-946c-67074073bae3\",\r\n    \"address\": \"Tangier, Morocco\",\r\n    \"agency_phone\": \"+212622222222\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
             "url": {
               "raw": "{{base_url}}/register/client",
               "host": [
@@ -115,66 +48,51 @@
                 "register",
                 "client"
               ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"first_name\": \"Postman\",\n  \"last_name\": \"Client\",\n  \"email\": \"{{new_client_email}}\",\n  \"password\": \"{{new_user_password}}\",\n  \"password_confirmation\": \"{{new_user_password}}\",\n  \"phone\": \"+212600001111\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
             }
           },
           "response": []
         },
         {
-          "name": "Register agency",
+          "name": "Register Agency",
           "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{client_token}}",
+                  "type": "string"
+                }
+              ]
+            },
             "method": "POST",
             "header": [
               {
                 "key": "Accept",
                 "value": "application/json"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
               }
             ],
-            "url": {
-              "raw": "{{base_url}}/register/agency",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "register",
-                "agency"
-              ]
-            },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"first_name\": \"Postman\",\n  \"last_name\": \"Agency\",\n  \"email\": \"{{new_agency_email}}\",\n  \"password\": \"{{new_user_password}}\",\n  \"password_confirmation\": \"{{new_user_password}}\",\n  \"phone\": \"+212600001112\",\n  \"agency_name\": \"Postman Rental Agency\",\n  \"agency_city\": \"{{city_id}}\",\n  \"address\": \"Tangier, Morocco\",\n  \"agency_phone\": \"+212600001113\"\n}",
+              "raw": "{\r\n    \"first_name\": \"Omar\",\r\n    \"last_name\": \"Agency Owner\",\r\n    \"email\": \"owner@agency.com\",\r\n    \"password\": \"Password123!\",\r\n    \"password_confirmation\": \"Password123!\",\r\n    \"phone\": \"+212611111111\",\r\n\r\n    \"agency_name\": \"Tangier Rent Cars\",\r\n    \"agency_city\": \"a28c2cb6-9049-42d3-946c-67074073bae3\",\r\n    \"address\": \"Tangier, Morocco\",\r\n    \"agency_phone\": \"+212622222222\"\r\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
+            },
+            "url": {
+              "raw": "{{base_url}}/register/client",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "register",
+                "client"
+              ]
             }
           },
-          "response": [],
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "packages": {},
-                "exec": [
-                  "const b=pm.response.json();if(b.agency)pm.environment.set('agency_id',b.agency.id);"
-                ]
-              }
-            }
-          ]
+          "response": []
         },
         {
           "name": "Login",
@@ -190,6 +108,10 @@
                 "value": "application/json"
               }
             ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"ahmed@xample.com\",\n    \"password\": \"Password123!\"\n}"
+            },
             "url": {
               "raw": "{{base_url}}/login",
               "host": [
@@ -198,50 +120,13 @@
               "path": [
                 "login"
               ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"{{login_email}}\",\n  \"password\": \"{{login_password}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
             }
           },
-          "response": [],
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "packages": {},
-                "exec": [
-                  "const b=pm.response.json();if(b.token){pm.environment.set('token',b.token);if(b.user&&b.user.role)pm.environment.set(b.user.role+'_token',b.token);}"
-                ]
-              }
-            }
-          ]
+          "response": []
         },
         {
-          "name": "Current user",
+          "name": "Logout",
           "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/me",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "me"
-              ]
-            },
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -251,20 +136,22 @@
                   "type": "string"
                 }
               ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Logout current token",
-          "request": {
+            },
             "method": "POST",
             "header": [
               {
                 "key": "Accept",
                 "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
               }
             ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"ahmed@xample.com\",\n    \"password\": \"Password123!\"\n}"
+            },
             "url": {
               "raw": "{{base_url}}/logout",
               "host": [
@@ -273,7 +160,40 @@
               "path": [
                 "logout"
               ]
-            },
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Me",
+          "request": {
+            "method": "GET",
+            "header": []
+          },
+          "response": []
+        }
+      ],
+      "description": "Authentication endpoints for client and agency accounts using Laravel Sanctum.\n\n### Client Registration\n\n`POST /api/register/client`\n\nCreates a new client account.\n\nRequired fields:\n\n- first_name\n    \n- last_name\n    \n- email\n    \n- password\n    \n- password_confirmation\n    \n\nOptional fields:\n\n- phone\n    \n\nThe created user receives:\n\n- role: client\n    \n- status: active\n    \n\n### Agency Registration\n\n`POST /api/register/agency`\n\nCreates an agency owner account and the associated agency profile.\n\nRequired fields:\n\n- first_name\n    \n- last_name\n    \n- email\n    \n- password\n    \n- password_confirmation\n    \n- phone\n    \n- agency_name\n    \n- agency_city\n    \n- address\n    \n- agency_phone\n    \n\nThe created user receives:\n\n- role: agency\n    \n- status: active\n    \n\nThe created agency receives:\n\n- status: pending\n    \n\nOptional fields:\n\n- phone\n    \n\nAgency registration is executed inside a database transaction to ensure data consistency.\n\n### Login\n\n`POST /api/login`\n\nAuthenticates a user using email and password.\n\nOn successful authentication, the API returns:\n\n- User information\n    \n- Sanctum access token\n    \n\nSuspended accounts are not allowed to log in.\n\n### Logout\n\n`POST /api/logout`\n\nRequires authentication using a Bearer token.\n\nRevokes the user's current Sanctum access token.\n\n### Authentication\n\nProtected endpoints must include:\n\n`Authorization: Bearer {token}`  \n  \n\n### Status Codes\n\n- `200` Successful request\n    \n- `201` Resource created successfully\n    \n- `401` Invalid credentials or unauthenticated\n    \n- `403` Account suspended or access forbidden\n    \n- `422` Validation error"
+    },
+    {
+      "name": "Cities",
+      "item": [
+        {
+          "name": "Cities List",
+          "request": {
+            "method": "GET",
+            "header": []
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "Approve agency",
+          "request": {
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -283,90 +203,9 @@
                   "type": "string"
                 }
               ]
-            }
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "02 - Public",
-      "description": "Public catalogue and availability.",
-      "item": [
-        {
-          "name": "List active cities",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/cities",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "cities"
-              ]
-            }
-          },
-          "response": [],
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "packages": {},
-                "exec": [
-                  "const b=pm.response.json();if(Array.isArray(b)&&b[0])pm.environment.set('city_id',b[0].id);"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Check car availability",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/cars/{{car_id}}/availability?start_at={{availability_start}}&end_at={{availability_end}}",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "cars",
-                "{{car_id}}",
-                "availability"
-              ]
-            }
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "03 - Admin",
-      "description": "Admin-only agency approval.",
-      "item": [
-        {
-          "name": "Approve agency",
-          "request": {
+            },
             "method": "PATCH",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
+            "header": [],
             "url": {
               "raw": "{{base_url}}/admin/agencies/{{agency_id}}/approve",
               "host": [
@@ -378,30 +217,25 @@
                 "{{agency_id}}",
                 "approve"
               ]
-            },
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{admin_token}}",
-                  "type": "string"
-                }
-              ]
             }
           },
           "response": []
         },
         {
-          "name": "Reject agency",
+          "name": "Reject Agency",
           "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
             "method": "PATCH",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
+            "header": [],
             "url": {
               "raw": "{{base_url}}/admin/agencies/{{agency_id}}/reject",
               "host": [
@@ -413,16 +247,6 @@
                 "{{agency_id}}",
                 "reject"
               ]
-            },
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{admin_token}}",
-                  "type": "string"
-                }
-              ]
             }
           },
           "response": []
@@ -430,273 +254,35 @@
       ]
     },
     {
-      "name": "04 - Agency",
-      "description": "Agency profile, points, cars, images, reservation workflow and refunds.",
+      "name": "Agency",
       "item": [
         {
-          "name": "Get agency profile",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/agency/profile",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "agency",
-                "profile"
-              ]
-            },
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{agency_token}}",
-                  "type": "string"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Update agency profile",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/agency/profile",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "agency",
-                "profile"
-              ]
-            },
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{agency_token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Updated Postman Agency\",\n  \"email\": \"postman-agency@example.test\",\n  \"phone\": \"+212600009999\",\n  \"address\": \"Updated address\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Agency points",
+          "name": "Agency Points",
           "item": [
             {
-              "name": "Create point",
+              "name": "Activate/Deactivate point",
               "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  },
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{base_url}}/agency/points",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "agency",
-                    "points"
-                  ]
-                },
                 "auth": {
                   "type": "bearer",
                   "bearer": [
                     {
                       "key": "token",
-                      "value": "{{agency_token}}",
+                      "value": "{{token}}",
                       "type": "string"
                     }
                   ]
                 },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"city_id\": \"{{city_id}}\",\n  \"name\": \"Postman Airport Point\",\n  \"address\": \"Tangier Airport\",\n  \"latitude\": 35.7269,\n  \"longitude\": -5.9169,\n  \"allows_pickup\": true,\n  \"allows_return\": true,\n  \"opening_hours\": {\n    \"monday\": \"09:00-18:00\"\n  },\n  \"instructions\": \"Meet at entrance\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": [],
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "packages": {},
-                    "exec": [
-                      "const b=pm.response.json();if(b.point)pm.environment.set('point_id',b.point.id);"
-                    ]
-                  }
-                }
-              ]
-            },
-            {
-              "name": "List points",
-              "request": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{base_url}}/agency/points",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "agency",
-                    "points"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{agency_token}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "Show point",
-              "request": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{base_url}}/agency/points/{{point_id}}",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "agency",
-                    "points",
-                    "{{point_id}}"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{agency_token}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "Update point",
-              "request": {
-                "method": "PUT",
-                "header": [
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  },
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{base_url}}/agency/points/{{point_id}}",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "agency",
-                    "points",
-                    "{{point_id}}"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{agency_token}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"name\": \"Updated Airport Point\",\n  \"allows_pickup\": true,\n  \"allows_return\": true\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "Toggle point status",
-              "request": {
                 "method": "PATCH",
-                "header": [
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
                   }
-                ],
+                },
                 "url": {
                   "raw": "{{base_url}}/agency/points/{{point_id}}/toggle-status",
                   "host": [
@@ -708,153 +294,23 @@
                     "{{point_id}}",
                     "toggle-status"
                   ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{agency_token}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            }
-          ]
-        },
-        {
-          "name": "Cars",
-          "item": [
-            {
-              "name": "Create car",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  },
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{base_url}}/agency/cars",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "agency",
-                    "cars"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{agency_token}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"city_id\": \"{{city_id}}\",\n  \"brand\": \"Toyota\",\n  \"model\": \"Corolla\",\n  \"year\": 2024,\n  \"color\": \"White\",\n  \"plate_number\": \"{{car_plate}}\",\n  \"type\": \"sedan\",\n  \"transmission\": \"automatic\",\n  \"seats\": 5,\n  \"daily_price\": 450,\n  \"energy_type\": \"gasoline\",\n  \"fuel_consumption\": 6.5,\n  \"electric_range\": null,\n  \"images\": [\n    {\n      \"url\": \"https://example.com/car-primary.jpg\",\n      \"is_primary\": true,\n      \"display_order\": 0\n    }\n  ]\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": [],
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "packages": {},
-                    "exec": [
-                      "const b=pm.response.json();if(b.car)pm.environment.set('car_id',b.car.id);"
-                    ]
-                  }
-                }
-              ]
-            },
-            {
-              "name": "List cars",
-              "request": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{base_url}}/agency/cars",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "agency",
-                    "cars"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{agency_token}}",
-                      "type": "string"
-                    }
-                  ]
                 }
               },
               "response": []
             },
             {
-              "name": "Show car",
+              "name": "Update point",
               "request": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{base_url}}/agency/cars/{{car_id}}",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "agency",
-                    "cars",
-                    "{{car_id}}"
-                  ]
-                },
                 "auth": {
                   "type": "bearer",
                   "bearer": [
                     {
                       "key": "token",
-                      "value": "{{agency_token}}",
+                      "value": "{{token}}",
                       "type": "string"
                     }
                   ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "Update car",
-              "request": {
+                },
                 "method": "PUT",
                 "header": [
                   {
@@ -866,1087 +322,228 @@
                     "value": "application/json"
                   }
                 ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"name\": \"Tangier Airport Updateed\",\n    \"allows_pickup\": false,\n    \"allows_return\": true\n}"
+                },
                 "url": {
-                  "raw": "{{base_url}}/agency/cars/{{car_id}}",
+                  "raw": "{{base_url}}/agency/points/{{point_id}}",
                   "host": [
                     "{{base_url}}"
                   ],
                   "path": [
                     "agency",
-                    "cars",
-                    "{{car_id}}"
+                    "points",
+                    "{{point_id}}"
                   ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{agency_token}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"color\": \"Black\",\n  \"daily_price\": 475\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
                 }
               },
               "response": []
             },
             {
-              "name": "Disable car",
+              "name": "Show point",
               "request": {
-                "method": "PATCH",
-                "header": [
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{base_url}}/agency/cars/{{car_id}}/disable",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "agency",
-                    "cars",
-                    "{{car_id}}",
-                    "disable"
-                  ]
-                },
                 "auth": {
                   "type": "bearer",
                   "bearer": [
                     {
                       "key": "token",
-                      "value": "{{agency_token}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            }
-          ]
-        },
-        {
-          "name": "Car images",
-          "item": [
-            {
-              "name": "Add car image",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  },
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{base_url}}/agency/cars/{{car_id}}/images",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "agency",
-                    "cars",
-                    "{{car_id}}",
-                    "images"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{agency_token}}",
+                      "value": "{{token}}",
                       "type": "string"
                     }
                   ]
                 },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"url\": \"https://example.com/car-secondary.jpg\",\n  \"is_primary\": false,\n  \"display_order\": 1\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": [],
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "packages": {},
-                    "exec": [
-                      "const b=pm.response.json();if(b.image)pm.environment.set('image_id',b.image.id);"
-                    ]
-                  }
-                }
-              ]
-            },
-            {
-              "name": "List car images",
-              "request": {
                 "method": "GET",
-                "header": [
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  }
-                ],
+                "header": [],
                 "url": {
-                  "raw": "{{base_url}}/agency/cars/{{car_id}}/images",
+                  "raw": "{{base_url}}/agency/points/{{point_id}}",
                   "host": [
                     "{{base_url}}"
                   ],
                   "path": [
                     "agency",
-                    "cars",
-                    "{{car_id}}",
-                    "images"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{agency_token}}",
-                      "type": "string"
-                    }
+                    "points",
+                    "{{point_id}}"
                   ]
                 }
               },
               "response": []
             },
             {
-              "name": "Set primary image",
-              "request": {
-                "method": "PATCH",
-                "header": [
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{base_url}}/agency/cars/{{car_id}}/images/{{image_id}}/primary",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "agency",
-                    "cars",
-                    "{{car_id}}",
-                    "images",
-                    "{{image_id}}",
-                    "primary"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{agency_token}}",
-                      "type": "string"
-                    }
-                  ]
-                }
+              "name": "List points",
+              "protocolProfileBehavior": {
+                "disableBodyPruning": true
               },
-              "response": []
-            },
-            {
-              "name": "Delete car image",
               "request": {
-                "method": "DELETE",
-                "header": [
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{base_url}}/agency/cars/{{car_id}}/images/{{image_id}}",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "agency",
-                    "cars",
-                    "{{car_id}}",
-                    "images",
-                    "{{image_id}}"
-                  ]
-                },
                 "auth": {
                   "type": "bearer",
                   "bearer": [
                     {
                       "key": "token",
-                      "value": "{{agency_token}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            }
-          ]
-        },
-        {
-          "name": "Reservation workflow",
-          "item": [
-            {
-              "name": "Confirm pickup (agency)",
-              "request": {
-                "method": "PATCH",
-                "header": [
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{base_url}}/reservations/{{reservation_id}}/pickup/confirm-agency",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "reservations",
-                    "{{reservation_id}}",
-                    "pickup",
-                    "confirm-agency"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{agency_token}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "Confirm return (agency)",
-              "request": {
-                "method": "PATCH",
-                "header": [
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{base_url}}/reservations/{{reservation_id}}/return/confirm-agency",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "reservations",
-                    "{{reservation_id}}",
-                    "return",
-                    "confirm-agency"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{agency_token}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "Reject reservation",
-              "request": {
-                "method": "PATCH",
-                "header": [
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  },
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{base_url}}/reservations/{{reservation_id}}/reject",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "reservations",
-                    "{{reservation_id}}",
-                    "reject"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{agency_token}}",
+                      "value": "{{token}}",
                       "type": "string"
                     }
                   ]
                 },
+                "method": "GET",
+                "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"reason\": \"Vehicle unavailable\"\n}",
+                  "raw": "{\r\n    \"city_id\": \"{{city_id}}\",\r\n    \"name\": \"Tangier Airport\",\r\n    \"address\": \"Ibn Battouta Airport, Tangier\",\r\n    \"latitude\": 35.7269,\r\n    \"longitude\": -5.9169,\r\n    \"allows_pickup\": true,\r\n    \"allows_return\": true,\r\n    \"opening_hours\": {\r\n        \"monday\": \"09:00-18:00\",\r\n        \"tuesday\": \"09:00-18:00\"\r\n    },\r\n    \"instructions\": \"Meet at the main entrance.\"\r\n}",
                   "options": {
                     "raw": {
                       "language": "json"
                     }
                   }
+                },
+                "url": {
+                  "raw": "{{base_url}}/agency/points",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "agency",
+                    "points"
+                  ]
                 }
               },
               "response": []
-            }
-          ]
-        },
-        {
-          "name": "Refunds",
-          "item": [
+            },
             {
-              "name": "Process refund",
+              "name": "Create point",
               "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
                 "method": "POST",
-                "header": [
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  },
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{base_url}}/refunds",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "refunds"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{agency_token}}",
-                      "type": "string"
-                    }
-                  ]
-                },
+                "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"payment_id\": \"{{payment_id}}\",\n  \"percentage\": 75,\n  \"reason\": \"Customer cancellation\"\n}",
+                  "raw": "{\r\n    \"city_id\": \"{{city_id}}\",\r\n    \"name\": \"Tangier Airport\",\r\n    \"address\": \"Ibn Battouta Airport, Tangier\",\r\n    \"latitude\": 35.7269,\r\n    \"longitude\": -5.9169,\r\n    \"allows_pickup\": true,\r\n    \"allows_return\": true,\r\n    \"opening_hours\": {\r\n        \"monday\": \"09:00-18:00\",\r\n        \"tuesday\": \"09:00-18:00\"\r\n    },\r\n    \"instructions\": \"Meet at the main entrance.\"\r\n}",
                   "options": {
                     "raw": {
                       "language": "json"
                     }
                   }
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "Decide pending refund",
-              "request": {
-                "method": "PATCH",
-                "header": [
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  },
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
+                },
                 "url": {
-                  "raw": "{{base_url}}/refunds/{{refund_id}}/decision",
+                  "raw": "{{base_url}}/agency/points",
                   "host": [
                     "{{base_url}}"
                   ],
                   "path": [
-                    "refunds",
-                    "{{refund_id}}",
-                    "decision"
+                    "agency",
+                    "points"
                   ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{agency_token}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"percentage\": 100,\n  \"reason\": \"Approved by agency\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
                 }
               },
               "response": []
             }
           ]
-        }
-      ]
-    },
-    {
-      "name": "05 - Client",
-      "description": "Client test, reservations, payment and reviews.",
-      "item": [
+        },
         {
-          "name": "Client access test",
+          "name": "Get Agency Profile",
           "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/client/test",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "client",
-                "test"
-              ]
-            },
             "auth": {
               "type": "bearer",
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{client_token}}",
+                  "value": "{{token}}",
                   "type": "string"
                 }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/agency/profile",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "agency",
+                "profile"
               ]
             }
           },
           "response": []
         },
         {
-          "name": "Reservations",
-          "item": [
-            {
-              "name": "List reservations",
-              "request": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{base_url}}/reservations",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "reservations"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{client_token}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "Create reservation",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  },
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{base_url}}/reservations",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "reservations"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{client_token}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"car_id\": \"{{car_id}}\",\n  \"pickup_point_id\": \"{{point_id}}\",\n  \"return_point_id\": \"{{point_id}}\",\n  \"start_at\": \"{{reservation_start}}\",\n  \"end_at\": \"{{reservation_end}}\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": [],
-              "event": [
+          "name": "Update Agency Profile",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
                 {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "packages": {},
-                    "exec": [
-                      "const b=pm.response.json();if(b.reservation)pm.environment.set('reservation_id',b.reservation.id);"
-                    ]
-                  }
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
                 }
               ]
             },
-            {
-              "name": "Show reservation",
-              "request": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{base_url}}/reservations/{{reservation_id}}",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "reservations",
-                    "{{reservation_id}}"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{client_token}}",
-                      "type": "string"
-                    }
-                  ]
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"name\": \"Updated Agency Name\",\r\n  \"email\": \"updated@agency.com\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
                 }
-              },
-              "response": []
+              }
             },
-            {
-              "name": "Update reservation",
-              "request": {
-                "method": "PUT",
-                "header": [
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  },
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{base_url}}/reservations/{{reservation_id}}",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "reservations",
-                    "{{reservation_id}}"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{client_token}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"pickup_point_id\": \"{{point_id}}\",\n  \"return_point_id\": \"{{point_id}}\",\n  \"start_at\": \"{{reservation_start}}\",\n  \"end_at\": \"{{reservation_end}}\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "Cancel reservation",
-              "request": {
-                "method": "PATCH",
-                "header": [
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{base_url}}/reservations/{{reservation_id}}/cancel",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "reservations",
-                    "{{reservation_id}}",
-                    "cancel"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{client_token}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "Dispute reservation",
-              "request": {
-                "method": "PATCH",
-                "header": [
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{base_url}}/reservations/{{reservation_id}}/dispute",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "reservations",
-                    "{{reservation_id}}",
-                    "dispute"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{client_token}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "Confirm pickup (client)",
-              "request": {
-                "method": "PATCH",
-                "header": [
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{base_url}}/reservations/{{reservation_id}}/pickup/confirm-client",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "reservations",
-                    "{{reservation_id}}",
-                    "pickup",
-                    "confirm-client"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{client_token}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "Confirm return (client)",
-              "request": {
-                "method": "PATCH",
-                "header": [
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{base_url}}/reservations/{{reservation_id}}/return/confirm-client",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "reservations",
-                    "{{reservation_id}}",
-                    "return",
-                    "confirm-client"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{client_token}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            }
-          ]
-        },
-        {
-          "name": "Payments",
-          "item": [
-            {
-              "name": "Create payment",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  },
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{base_url}}/payments",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "payments"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{client_token}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"reservation_id\": \"{{reservation_id}}\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": [],
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "packages": {},
-                    "exec": [
-                      "const b=pm.response.json();if(b.payment)pm.environment.set('payment_id',b.payment.id);"
-                    ]
-                  }
-                }
+            "url": {
+              "raw": "{{base_url}}/agency/profile",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "agency",
+                "profile"
               ]
             }
-          ]
-        },
-        {
-          "name": "Reviews",
-          "item": [
-            {
-              "name": "List reviews",
-              "request": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{base_url}}/reviews",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "reviews"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{client_token}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "Create review",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  },
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{base_url}}/reviews",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "reviews"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{client_token}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"reservation_id\": \"{{reservation_id}}\",\n  \"car_rating\": 5,\n  \"agency_rating\": 5,\n  \"comment\": \"Excellent rental\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": [],
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "packages": {},
-                    "exec": [
-                      "const b=pm.response.json();if(b.review)pm.environment.set('review_id',b.review.id);"
-                    ]
-                  }
-                }
-              ]
-            },
-            {
-              "name": "Show review",
-              "request": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{base_url}}/reviews/{{review_id}}",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "reviews",
-                    "{{review_id}}"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{client_token}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "Update review",
-              "request": {
-                "method": "PUT",
-                "header": [
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  },
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{base_url}}/reviews/{{review_id}}",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "reviews",
-                    "{{review_id}}"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{client_token}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"car_rating\": 4,\n  \"agency_rating\": 5,\n  \"comment\": \"Updated review\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "Delete review",
-              "request": {
-                "method": "DELETE",
-                "header": [
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{base_url}}/reviews/{{review_id}}",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "reviews",
-                    "{{review_id}}"
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{client_token}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            }
-          ]
+          },
+          "response": []
         }
       ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "{agency}",
+      "value": ""
     }
   ]
 }
