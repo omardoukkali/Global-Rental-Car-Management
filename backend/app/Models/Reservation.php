@@ -26,6 +26,8 @@ class Reservation extends Model
         'returned_at',
         'client_pickup_confirmed_at',
         'agency_pickup_confirmed_at',
+        'client_return_confirmed_at',
+        'agency_return_confirmed_at',
     ];
 
     protected function casts(): array
@@ -39,6 +41,8 @@ class Reservation extends Model
             'returned_at' => 'datetime',
             'client_pickup_confirmed_at' => 'datetime',
             'agency_pickup_confirmed_at' => 'datetime',
+            'client_return_confirmed_at' => 'datetime',
+        'agency_return_confirmed_at' => 'datetime',
         ];
     }
 
