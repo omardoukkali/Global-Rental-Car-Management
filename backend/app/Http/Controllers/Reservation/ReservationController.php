@@ -13,6 +13,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use App\Models\Refund;
+use App\Http\Requests\Reservation\RejectReservationRequest;
 
 class ReservationController extends Controller
 {
@@ -110,7 +112,7 @@ class ReservationController extends Controller
             $startAt = Carbon::parse($data['start_at']);
             $endAt = Carbon::parse($data['end_at']);
 
-            $days = $startAt->diffInDays($endAt);
+            $days = max(1, (int) ceil($startAt->diffInHours($endAt) / 24));
 
             // Calculate price
             $dailyPrice = $car->daily_price;
@@ -241,7 +243,7 @@ class ReservationController extends Controller
         $startAt = Carbon::parse($startAt);
         $endAt = Carbon::parse($endAt);
 
-        $days = $startAt->diffInDays($endAt);
+        $days = max(1, (int) ceil($startAt->diffInHours($endAt) / 24));
 
         $dailyPrice = $reservation->daily_price_snapshot;
         $totalAmount = $days * $dailyPrice;
@@ -264,7 +266,65 @@ class ReservationController extends Controller
             ]),
         ]);
     }
+    public function reject(
+        RejectReservationRequest $request,
+        Reservation $reservation
+    ): JsonResponse {
+        $agency = $request->user()->agency;
 
+        if (!$agency || $reservation->agency_id !== $agency->id) {
+            return response()->json([
+                'message' => 'You are not authorized to reject this reservation.',
+            ], 403);
+        }
+
+        if ($reservation->status !== 'confirmed') {
+            return response()->json([
+                'message' => 'Only confirmed reservations can be rejected.',
+            ], 422);
+        }
+
+        $payment = $reservation->payment;
+
+        if (!$payment || $payment->status !== 'paid') {
+            return response()->json([
+                'message' => 'Only paid reservations can be rejected.',
+            ], 422);
+        }
+
+        DB::transaction(function () use ($reservation, $payment, $request) {
+            $reservation->update([
+                'status' => 'rejected',
+            ]);
+
+            Refund::create([
+                'payment_id' => $payment->id,
+                'agency_id' => $reservation->agency_id,
+                'percentage' => 100,
+                'refunded_amount' => $payment->amount,
+                'decision_source' => 'agency',
+                'status' => 'processed',
+                'reason' => $request->validated()['reason'],
+                'decided_at' => now(),
+                'processed_at' => now(),
+            ]);
+
+            $payment->update([
+                'status' => 'refunded',
+            ]);
+        });
+
+        return response()->json([
+            'message' => 'Reservation rejected successfully.',
+            'reservation' => $reservation->fresh()->load([
+                'car',
+                'agency',
+                'pickupPoint',
+                'returnPoint',
+                'payment.refund',
+            ]),
+        ]);
+    }
     public function cancel(
         Request $request,
         Reservation $reservation
@@ -281,9 +341,63 @@ class ReservationController extends Controller
             ], 422);
         }
 
+        $payment = $reservation->payment;
+
+        if (!$payment) {
+            $reservation->update([
+                'status' => 'cancelled',
+            ]);
+
+            return response()->json([
+                'message' => 'Reservation cancelled successfully.',
+                'reservation' => $reservation->fresh()->load([
+                    'car',
+                    'agency',
+                    'pickupPoint',
+                    'returnPoint',
+                ]),
+            ]);
+        }
+
+        $hoursUntilPickup = now()->diffInHours(
+            Carbon::parse($reservation->start_at),
+            false
+        );
+
         $reservation->update([
             'status' => 'cancelled',
         ]);
+
+        if ($hoursUntilPickup >= 24) {
+            $refundedAmount = $payment->amount;
+
+            Refund::create([
+                'payment_id' => $payment->id,
+                'agency_id' => $reservation->agency_id,
+                'percentage' => 100,
+                'refunded_amount' => $refundedAmount,
+                'decision_source' => 'automatic',
+                'status' => 'processed',
+                'reason' => 'Cancellation at least 24 hours before pickup.',
+                'decided_at' => now(),
+                'processed_at' => now(),
+            ]);
+
+            $payment->update([
+                'status' => 'refunded',
+            ]);
+        } else {
+            Refund::create([
+                'payment_id' => $payment->id,
+                'agency_id' => $reservation->agency_id,
+                'percentage' => 50,
+                'refunded_amount' => $payment->amount * 0.50,
+                'decision_source' => 'automatic',
+                'status' => 'pending',
+                'reason' => 'Late cancellation. Waiting for agency decision.',
+                'decided_at' => now(),
+            ]);
+        }
 
         return response()->json([
             'message' => 'Reservation cancelled successfully.',
@@ -292,6 +406,7 @@ class ReservationController extends Controller
                 'agency',
                 'pickupPoint',
                 'returnPoint',
+                'payment.refund',
             ]),
         ]);
     }

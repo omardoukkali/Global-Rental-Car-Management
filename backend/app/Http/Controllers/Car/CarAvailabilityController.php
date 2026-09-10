@@ -9,11 +9,16 @@ use Illuminate\Http\JsonResponse;
 
 class CarAvailabilityController extends Controller
 {
-    public function check(
-        CheckCarAvailabilityRequest $request,
-        Car $car
-    ): JsonResponse {
+    public function check(CheckCarAvailabilityRequest $request, Car $car): JsonResponse
+    {
         $data = $request->validated();
+
+        if ($car->status !== 'available') {
+            return response()->json([
+                'car_id' => $car->id,
+                'available' => false,
+            ]);
+        }
 
         $hasOverlap = $car->reservations()
             ->whereIn('status', [
@@ -27,7 +32,7 @@ class CarAvailabilityController extends Controller
 
         return response()->json([
             'car_id' => $car->id,
-            'available' => !$hasOverlap,
+            'available' => ! $hasOverlap,
         ]);
     }
 }

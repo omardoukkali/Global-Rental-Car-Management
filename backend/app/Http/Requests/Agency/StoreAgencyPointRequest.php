@@ -46,10 +46,12 @@ class StoreAgencyPointRequest extends FormRequest
             ],
 
             'allows_pickup' => [
+                'sometimes',
                 'boolean',
             ],
 
             'allows_return' => [
+                'sometimes',
                 'boolean',
             ],
 
@@ -70,6 +72,8 @@ class StoreAgencyPointRequest extends FormRequest
         return [
             function (Validator $validator) {
                 if (
+                    $this->has('allows_pickup') &&
+                    $this->has('allows_return') &&
                     !$this->boolean('allows_pickup') &&
                     !$this->boolean('allows_return')
                 ) {
