@@ -11,9 +11,9 @@ use App\Http\Controllers\City\CityController;
 use App\Http\Controllers\Payment\PaymentController;
 use App\Http\Controllers\Reservation\ReservationController;
 use App\Http\Controllers\Review\ReviewController;
+use App\Http\Controllers\Refund\RefundController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Refund\RefundController;
 
 
 // Public routes
@@ -68,6 +68,7 @@ Route::middleware([
             'message' => 'Client access granted.',
         ]);
     });
+
     Route::get('/reviews', [
         ReviewController::class,
         'index',
@@ -93,6 +94,16 @@ Route::middleware([
         'destroy',
     ]);
 
+    Route::patch('/reservations/{reservation}/pickup/confirm-client', [
+        ReservationController::class,
+        'confirmPickup',
+    ]);
+
+    Route::patch('/reservations/{reservation}/return/confirm-client', [
+        ReservationController::class,
+        'confirmReturn',
+    ]);
+
 });
 
 
@@ -112,14 +123,17 @@ Route::middleware([
         AgencyController::class,
         'update'
     ]);
+
     Route::post('/refunds', [
         RefundController::class,
         'store',
     ]);
+
     Route::patch('/refunds/{refund}/decision', [
         RefundController::class,
         'decide',
     ]);
+
     Route::patch('/reservations/{reservation}/reject', [
         ReservationController::class,
         'reject',
@@ -223,14 +237,14 @@ Route::middleware([
 
     // Reservation pickup / return
 
-    Route::patch('/reservations/{reservation}/pickup', [
+    Route::patch('/reservations/{reservation}/pickup/confirm-agency', [
         ReservationController::class,
-        'pickup',
+        'confirmAgencyPickup',
     ]);
 
-    Route::patch('/reservations/{reservation}/return', [
+    Route::patch('/reservations/{reservation}/return/confirm-agency', [
         ReservationController::class,
-        'return',
+        'confirmAgencyReturn',
     ]);
 
 });
@@ -267,6 +281,19 @@ Route::middleware([
 Route::get('/cities', [
     CityController::class,
     'index'
+]);
+
+
+// Public cars
+
+Route::get('/cars', [
+    CarController::class,
+    'publicIndex',
+]);
+
+Route::get('/cars/{car}', [
+    CarController::class,
+    'publicShow',
 ]);
 
 
