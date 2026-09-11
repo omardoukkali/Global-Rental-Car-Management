@@ -79,24 +79,33 @@
 
 <script setup>
 import { reactive, ref } from 'vue'
-import { RouterLink, useRouter } from 'vue-router'
+import { RouterLink, useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
 const router = useRouter()
+const route = useRoute()
 
 const form = reactive({ email: '', password: '' })
 const errors = reactive({})
 const globalError = ref('')
 const loading = ref(false)
 
+function homeForRole(user) {
+  const role = user?.role
+  if (role === 'agency') return '/agency/dashboard'
+  if (role === 'admin') return '/admin/agencies/validation'
+  return '/myreservations'
+}
+
 async function handleSubmit() {
   Object.keys(errors).forEach(k => delete errors[k])
   globalError.value = ''
   loading.value = true
   try {
-    await auth.login(form)
-    router.push('/')
+    const user = await auth.login(form)
+    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : ''
+    router.push(redirect || homeForRole(user))
   } catch (e) {
     if (e.status === 422 && e.errors) Object.assign(errors, e.errors)
     else globalError.value = e.message
