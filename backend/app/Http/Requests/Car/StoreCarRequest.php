@@ -2,11 +2,14 @@
 
 namespace App\Http\Requests\Car;
 
+use App\Http\Requests\Car\Concerns\ValidatesEnergyConsistency;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
 class StoreCarRequest extends FormRequest
 {
+    use ValidatesEnergyConsistency;
+
     public function authorize(): bool
     {
         return true;
@@ -135,6 +138,8 @@ class StoreCarRequest extends FormRequest
                     );
                 }
             },
+
+            fn (Validator $validator) => $this->validateEnergyConsistency($validator),
         ];
     }
 }
