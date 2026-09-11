@@ -284,6 +284,19 @@ Route::get('/cities', [
 ]);
 
 
+// Public cars
+
+Route::get('/cars', [
+    CarController::class,
+    'publicIndex',
+]);
+
+Route::get('/cars/{car}', [
+    CarController::class,
+    'publicShow',
+]);
+
+
 // Public car availability
 
 Route::get('/cars/{car}/availability', [

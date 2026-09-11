@@ -11,6 +11,56 @@ use Illuminate\Support\Facades\DB;
 
 class CarController extends Controller
 {
+    public function publicIndex(): JsonResponse
+    {
+        $cars = Car::query()
+            ->where('status', 'available')
+            ->with([
+                'agency',
+                'city',
+                'images',
+                'agency.agencyPoints' => function ($query) {
+                    $query
+                        ->where('is_active', true)
+                        ->where(function ($query) {
+                            $query
+                                ->where('allows_pickup', true)
+                                ->orWhere('allows_return', true);
+                        });
+                },
+            ])
+            ->get();
+
+        return response()->json([
+            'cars' => $cars,
+        ]);
+    }
+
+    public function publicShow(Car $car): JsonResponse
+    {
+        if ($car->status !== 'available') {
+            return response()->json([
+                'message' => 'Car is not available.',
+            ], 404);
+        }
+
+        return response()->json([
+            'car' => $car->load([
+                'agency',
+                'city',
+                'images',
+                'agency.agencyPoints' => function ($query) {
+                    $query
+                        ->where('is_active', true)
+                        ->where(function ($query) {
+                            $query
+                                ->where('allows_pickup', true)
+                                ->orWhere('allows_return', true);
+                        });
+                },
+            ]),
+        ]);
+    }
     public function store(StoreCarRequest $request): JsonResponse
     {
         $agency = $request->user()->agency;
