@@ -8,6 +8,7 @@ import AgencyCars from '@/pages/AgencyCars.vue'
 import CarForm from '@/pages/CarForm.vue'
 import AgencyDashboard from '@/pages/AgencyDashboard.vue'
 import ReservationForm from '@/pages/ReservationForm.vue'
+import ClientReservations from '@/pages/ClientReservations.vue'
 
 const routes = [{
         path: '/',
@@ -95,6 +96,12 @@ const routes = [{
         component: ReservationForm,
         props: true,
         meta: { requiresAuth: true }
+    },
+    {
+        path: '/myreservations',
+        name: 'ClientReservations',
+        component: ClientReservations,
+        meta: { requiresAuth: true }
     }
 ]
 
@@ -103,9 +110,21 @@ const router = createRouter({
     routes,
 })
 
+function homeForRole(user) {
+    const role = user?.role
+    if (role === 'agency') return { name: 'AgencyDashboard' }
+    if (role === 'admin') return { name: 'AdminAgencyValidation' }
+    return { name: 'ClientReservations' }
+}
+
 router.beforeEach((to, from, next) => {
     const auth = useAuthStore()
     const isAuthenticated = auth.isAuthenticated
+
+    if (to.path === '/' && isAuthenticated) {
+        next(homeForRole(auth.user))
+        return
+    }
 
     if (to.meta.requiresAuth && !isAuthenticated) {
         next({ name: 'login', query: { redirect: to.fullPath } })
@@ -113,7 +132,7 @@ router.beforeEach((to, from, next) => {
     }
 
     if (to.meta.guestOnly && isAuthenticated) {
-        next({ name: 'logout' })
+        next(homeForRole(auth.user))
         return
     }
 
