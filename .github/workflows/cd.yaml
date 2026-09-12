@@ -1,54 +1,127 @@
 name: Continuous Deployment
 
-# Ne se déclenche pas sur un push directement.
-# Il attend la fin du workflow "CI Pipeline" et ne s'exécute
+# Attend la fin du workflow "CI Pipeline" et ne s'exécute
 # que si celui-ci a réussi, sur la branche main.
 on:
   workflow_run:
-    workflows: ["CI Pipeline"]     # doit correspondre au `name:` de ci.yaml
+    workflows: ["CI Pipeline"]
     types: [completed]
     branches: [main]
 
+env:
+  REGISTRY: docker.io
+  DOCKER_USER: nizarharmach1
+  RESOURCE_GROUP: rg-globalrentalcar
+  API_URL: https://grc-api.gentletree-1896907b.francecentral.azurecontainerapps.io
+  FRONTEND_URL: https://grc-frontend.gentletree-1896907b.francecentral.azurecontainerapps.io
+
+permissions:
+  id-token: write      # requis pour l'authentification OIDC vers Azure
+  contents: read
+
 jobs:
   deploy:
-    name: Deploy to Production
+    name: Deploy to Azure Container Apps
     runs-on: ubuntu-latest
 
-    # Le "gate" : on déploie seulement si la CI est verte ET que c'est bien main
     if: >
       github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.head_branch == 'main'
 
     steps:
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.0.3
+      - name: Checkout le commit testé par la CI
+        uses: actions/checkout@v4
         with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          script: |
-            set -e
-            cd /var/www/global-rental-car-management
+          ref: ${{ github.event.workflow_run.head_sha }}
 
-            # on retient le commit actuel pour pouvoir revenir en arrière
-            PREVIOUS=$(git rev-parse HEAD)
+      - name: Définir le tag d'image (SHA court)
+        id: vars
+        run: echo "tag=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
 
-            git pull origin main
-            docker compose up -d --build
-            docker image prune -f
+      - name: Connexion à Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ env.DOCKER_USER }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-            echo "Vérification de l'état de l'application..."
-            if ! curl --fail --silent --show-error \
-                  --retry 15 --retry-delay 5 --retry-all-errors \
-                  http://localhost:8000/up; then
-              echo "Back-end en échec — retour à la version $PREVIOUS"
-              git reset --hard "$PREVIOUS"
-              docker compose up -d --build
-              exit 1
+      - name: Build & push backend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          tags: ${{ env.DOCKER_USER }}/grc-api:${{ steps.vars.outputs.tag }}
+
+      - name: Build & push frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: true
+          tags: ${{ env.DOCKER_USER }}/grc-frontend:${{ steps.vars.outputs.tag }}
+
+      - name: Build & push AI service
+        uses: docker/build-push-action@v6
+        with:
+          context: ./AI
+          push: true
+          tags: ${{ env.DOCKER_USER }}/grc-ai:${{ steps.vars.outputs.tag }}
+
+      - name: Connexion à Azure (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Mémoriser les révisions actuelles (pour rollback)
+        id: current
+        run: |
+          set -e
+          for app in grc-api grc-frontend grc-ai; do
+            rev=$(az containerapp revision list \
+              --name "$app" --resource-group "$RESOURCE_GROUP" \
+              --query "[?properties.active].name | [-1]" -o tsv)
+            echo "${app}=${rev}" >> "$GITHUB_OUTPUT"
+            echo "Révision actuelle de $app : $rev"
+          done
+
+      - name: Déployer les nouvelles images
+        run: |
+          set -e
+          TAG=${{ steps.vars.outputs.tag }}
+          for app in grc-api grc-frontend grc-ai; do
+            image="$DOCKER_USER/${app/grc-api/grc-api}:$TAG"
+            az containerapp update \
+              --name "$app" \
+              --resource-group "$RESOURCE_GROUP" \
+              --image "$DOCKER_USER/$app:$TAG"
+          done
+
+      - name: Vérifier l'état de l'application
+        id: health
+        run: |
+          echo "Vérification du back-end..."
+          curl --fail --silent --show-error \
+            --retry 20 --retry-delay 5 --retry-all-errors \
+            "$API_URL/up"
+
+          echo "Vérification du front-end..."
+          curl --fail --silent --show-error \
+            --retry 20 --retry-delay 5 --retry-all-errors \
+            "$FRONTEND_URL" > /dev/null
+
+          echo "Déploiement vérifié et fonctionnel."
+
+      - name: Rollback en cas d'échec
+        if: failure() && steps.current.outcome == 'success'
+        run: |
+          echo "Échec du déploiement — retour aux révisions précédentes"
+          for app in grc-api grc-frontend grc-ai; do
+            prev=$(echo '${{ toJSON(steps.current.outputs) }}' | jq -r --arg a "$app" '.[$a]')
+            if [ -n "$prev" ] && [ "$prev" != "null" ]; then
+              az containerapp revision activate \
+                --revision "$prev" \
+                --resource-group "$RESOURCE_GROUP" || true
+              echo "$app restauré vers $prev"
             fi
-
-            curl --fail --silent --show-error \
-              --retry 10 --retry-delay 5 --retry-all-errors \
-              http://localhost:5000/docs
-
-            echo "Déploiement vérifié et fonctionnel."
+          done
+          exit 1
