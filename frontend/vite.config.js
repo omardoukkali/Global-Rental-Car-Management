@@ -12,6 +12,7 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 3333,
+    allowedHosts: ['.azurecontainerapps.io'],
     watch: {
       usePolling: true, // nécessaire pour le hot reload dans Docker sur Windows
     },
