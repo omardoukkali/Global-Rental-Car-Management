@@ -1,26 +1,24 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
-import { resolve } from 'path'
+import path from 'path'
 
 export default defineConfig({
-  base: '/app/',
   plugins: [vue()],
   resolve: {
-    alias: { '@': resolve(__dirname, 'src') }
+    alias: {
+      '@': path.resolve(import.meta.dirname, './src'),
+    },
   },
   server: {
-    port: 5173,
-    proxy: {
-      '/api': {
-        target: 'http://127.0.0.1:8888',
-        changeOrigin: true,
-        secure: false,
-      },
-      '/storage': {
-        target: 'http://127.0.0.1:8888',
-        changeOrigin: true,
-        secure: false,
-      }
-    }
-  }
+    host: '0.0.0.0',
+    port: 3333,
+    allowedHosts: ['.azurecontainerapps.io'],
+    watch: {
+      usePolling: true, // nécessaire pour le hot reload dans Docker sur Windows
+    },
+  },
+  test: {
+    globals: true,           // describe/it/expect sans import
+    environment: 'jsdom',    // simule un navigateur pour Vue
+  },
 })

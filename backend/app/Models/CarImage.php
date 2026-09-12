@@ -2,29 +2,31 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
-
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class CarImage extends Model
 {
-    use HasUuids;
+    use HasFactory, HasUuids;
+
     protected $fillable = [
-        'id',
         'car_id',
         'url',
         'is_primary',
-        'sort_order',
+        'display_order',
     ];
 
     protected function casts(): array
     {
         return [
             'is_primary' => 'boolean',
-            'sort_order' => 'integer',
+            'display_order' => 'integer',
         ];
     }
-    public function car(){
+
+    public function car()
+    {
         return $this->belongsTo(Car::class);
     }
 }

@@ -1,109 +1,355 @@
 <?php
 
-use App\Http\Controllers\AdminController;
-use App\Http\Controllers\AgencyController;
-use App\Http\Controllers\CarController;
-use App\Http\Controllers\CarImageController;
-use App\Http\Controllers\CityController;
-use App\Http\Controllers\PaymentController;
-use App\Http\Controllers\ReservationController;
-use App\Http\Controllers\ReviewController;
+use App\Http\Controllers\Admin\AgencyApprovalController;
+use App\Http\Controllers\Agency\AgencyController;
+use App\Http\Controllers\Agency\AgencyPointController;
+use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Car\CarAvailabilityController;
+use App\Http\Controllers\Car\CarController;
+use App\Http\Controllers\Car\CarImageController;
+use App\Http\Controllers\City\CityController;
+use App\Http\Controllers\Payment\PaymentController;
+use App\Http\Controllers\Reservation\ReservationController;
+use App\Http\Controllers\Review\ReviewController;
+use App\Http\Controllers\Refund\RefundController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\AuthController;
 
-// ── Public routes
-Route::prefix('auth')->group(function () {
-    Route::post('/register/client', [AuthController::class, 'registerClient']);
-    Route::post('/register/agency', [AuthController::class, 'registerAgency']);
-    Route::post('/login',           [AuthController::class, 'login']);
+
+// Public routes
+
+Route::prefix('register')->group(function () {
+
+    Route::post('/client', [
+        AuthController::class,
+        'registerClient'
+    ]);
+
+    Route::post('/agency', [
+        AuthController::class,
+        'registerAgency'
+    ]);
+
 });
 
-Route::get('/cities',                       [CityController::class, 'index']);
-Route::get('/agencies',                     [AgencyController::class, 'index']);
-Route::get('/agencies/{agency}',            [AgencyController::class, 'show']);
-Route::get('/cars',                         [CarController::class, 'index']);
-Route::get('/cars/{car}',                   [CarController::class, 'show']);
-Route::get('/cars/{car}/reviews',           [ReviewController::class, 'carReviews']);
-Route::get('/agencies/{agency}/reviews',    [ReviewController::class, 'agencyReviews']);
+Route::post('/login', [
+    AuthController::class,
+    'login'
+]);
 
-// ── Authenticated routes
+
+// Authenticated routes
+
 Route::middleware('auth:sanctum')->group(function () {
 
-    // Auth
-    Route::prefix('auth')->group(function () {
-        Route::post('/logout', [AuthController::class, 'logout']);
-        Route::get('/me',      [AuthController::class, 'me']);
+    Route::get('/me', function (Request $request) {
+        return response()->json([
+            'user' => $request->user(),
+        ]);
     });
 
-    // ── Client only
-    Route::middleware('role:client')->prefix('client')->group(function () {
-        // Reservations
-        Route::post('/reservations',                              [ReservationController::class, 'store']);
-        Route::get('/reservations',                               [ReservationController::class, 'clientIndex']);
-        Route::get('/reservations/{reservation}',                 [ReservationController::class, 'clientShow']);
-        Route::delete('/reservations/{reservation}',              [ReservationController::class, 'cancel']);
-        // Payments
-        Route::post('/reservations/{reservation}/pay',            [PaymentController::class, 'pay']);
-        Route::post('/reservations/{reservation}/refund',         [PaymentController::class, 'refund']);
-        Route::get('/reservations/{reservation}/payment',         [PaymentController::class, 'clientShow']);
-        // Reviews
-        Route::post('/reservations/{reservation}/review',         [ReviewController::class, 'store']);
-        Route::get('/reviews',                                    [ReviewController::class, 'clientIndex']);
+    Route::post('/logout', [
+        AuthController::class,
+        'logout'
+    ]);
+
+});
+
+
+// Client routes
+
+Route::middleware([
+    'auth:sanctum',
+    'role:client'
+])->group(function () {
+
+    Route::get('/client/test', function () {
+        return response()->json([
+            'message' => 'Client access granted.',
+        ]);
     });
 
-    // ── Agency only
-    Route::middleware('role:agency_owner')->prefix('agency')->group(function () {
-        // Profile
-        Route::put('/profile', [AgencyController::class, 'update']);
-        // Cars
-        Route::get('/cars',              [CarController::class, 'agencyIndex']);
-        Route::post('/cars',             [CarController::class, 'store']);
-        Route::put('/cars/{car}',        [CarController::class, 'update']);
-        Route::delete('/cars/{car}',     [CarController::class, 'destroy']);
-        // Car Images
-        Route::get('/cars/{car}/images',                    [CarImageController::class, 'index']);
-        Route::post('/cars/{car}/images',                   [CarImageController::class, 'store']);
-        Route::put('/cars/{car}/images/{image}/primary',    [CarImageController::class, 'setPrimary']);
-        Route::delete('/cars/{car}/images/{image}',         [CarImageController::class, 'destroy']);
-        // Reservations
-        Route::get('/reservations',                         [ReservationController::class, 'agencyIndex']);
-        Route::get('/reservations/{reservation}',           [ReservationController::class, 'agencyShow']);
-        // Payments
-        Route::get('/payments',                             [PaymentController::class, 'agencyIndex']);
-    });
+    Route::get('/reviews', [
+        ReviewController::class,
+        'index',
+    ]);
 
-    // ── Admin only
-    Route::middleware('role:admin')->prefix('admin')->group(function () {
-        // Dashboard
-        Route::get('/dashboard',                            [AdminController::class, 'dashboard']);
-        // Users
-        Route::get('/users',                                [AdminController::class, 'users']);
-        Route::put('/users/{user}/suspend',                 [AdminController::class, 'suspendUser']);
-        Route::put('/users/{user}/activate',                [AdminController::class, 'activateUser']);
-        Route::delete('/users/{user}',                      [AdminController::class, 'deleteUser']);
-        // Cities
-        Route::post('/cities',                              [CityController::class, 'store']);
-        // Agencies
-        Route::get('/agencies',                             [AgencyController::class, 'adminIndex']);
-        Route::put('/agencies/{agency}/approve',            [AgencyController::class, 'approve']);
-        Route::put('/agencies/{agency}/reject',             [AgencyController::class, 'reject']);
-        Route::delete('/agencies/{agency}',                 [AgencyController::class, 'destroy']);
-        // Cars
-        Route::get('/cars',                                 [CarController::class, 'adminIndex']);
-        Route::delete('/cars/{car}',                        [CarController::class, 'destroy']);
-        // Reservations
-        Route::get('/reservations',                         [ReservationController::class, 'adminIndex']);
-        // Payments
-        Route::get('/payments',                             [PaymentController::class, 'adminIndex']);
-        Route::put('/payments/{payment}/release',           [PaymentController::class, 'release']);
-        // Reviews
-        Route::get('/reviews',                              [ReviewController::class, 'adminIndex']);
-        Route::delete('/reviews/{review}',                  [ReviewController::class, 'destroy']);
-        Route::put('/reviews/{id}/restore',                 [ReviewController::class, 'restore']);
-    });
+    Route::post('/reviews', [
+        ReviewController::class,
+        'store',
+    ]);
 
-    // ── Admin OR Agency
-    Route::middleware('role:admin,agency_owner')->group(function () {
-        // shared routes...
-    });
+    Route::get('/reviews/{review}', [
+        ReviewController::class,
+        'show',
+    ]);
+
+    Route::put('/reviews/{review}', [
+        ReviewController::class,
+        'update',
+    ]);
+
+    Route::delete('/reviews/{review}', [
+        ReviewController::class,
+        'destroy',
+    ]);
+
+    Route::patch('/reservations/{reservation}/pickup/confirm-client', [
+        ReservationController::class,
+        'confirmPickup',
+    ]);
+
+    Route::patch('/reservations/{reservation}/return/confirm-client', [
+        ReservationController::class,
+        'confirmReturn',
+    ]);
+
+});
+
+
+// Agency routes
+
+Route::middleware([
+    'auth:sanctum',
+    'role:agency',
+])->group(function () {
+
+    Route::get('/agency/profile', [
+        AgencyController::class,
+        'show'
+    ]);
+
+    Route::put('/agency/profile', [
+        AgencyController::class,
+        'update'
+    ]);
+
+    Route::post('/refunds', [
+        RefundController::class,
+        'store',
+    ]);
+
+    Route::patch('/refunds/{refund}/decision', [
+        RefundController::class,
+        'decide',
+    ]);
+
+    Route::patch('/reservations/{reservation}/reject', [
+        ReservationController::class,
+        'reject',
+    ]);
+
+});
+
+
+// Approved agencies routes
+
+Route::middleware([
+    'auth:sanctum',
+    'role:agency',
+    'agency.approved',
+])->group(function () {
+
+    // Agency Points
+
+    Route::post('/agency/points', [
+        AgencyPointController::class,
+        'store',
+    ]);
+
+    Route::get('/agency/points', [
+        AgencyPointController::class,
+        'index',
+    ]);
+
+    Route::get('/agency/points/{agencyPoint}', [
+        AgencyPointController::class,
+        'show',
+    ]);
+
+    Route::put('/agency/points/{agencyPoint}', [
+        AgencyPointController::class,
+        'update',
+    ]);
+
+    Route::patch('/agency/points/{agencyPoint}/toggle-status', [
+        AgencyPointController::class,
+        'toggleStatus',
+    ]);
+
+
+    // Cars
+
+    Route::post('/agency/cars', [
+        CarController::class,
+        'store'
+    ]);
+
+    Route::get('/agency/cars', [
+        CarController::class,
+        'index'
+    ]);
+
+    Route::get('/agency/cars/{car}', [
+        CarController::class,
+        'show'
+    ]);
+
+    Route::put('/agency/cars/{car}', [
+        CarController::class,
+        'update'
+    ]);
+
+    Route::patch('/agency/cars/{car}/disable', [
+        CarController::class,
+        'disable'
+    ]);
+
+
+    // Car Images
+
+    Route::post('/agency/cars/{car}/images', [
+        CarImageController::class,
+        'store'
+    ]);
+
+    Route::get('/agency/cars/{car}/images', [
+        CarImageController::class,
+        'index'
+    ]);
+
+    Route::patch(
+        '/agency/cars/{car}/images/{image}/primary',
+        [
+            CarImageController::class,
+            'setPrimary'
+        ]
+    );
+
+    Route::delete(
+        '/agency/cars/{car}/images/{image}',
+        [
+            CarImageController::class,
+            'destroy'
+        ]
+    );
+
+
+    // Reservation pickup / return
+
+    Route::patch('/reservations/{reservation}/pickup/confirm-agency', [
+        ReservationController::class,
+        'confirmAgencyPickup',
+    ]);
+
+    Route::patch('/reservations/{reservation}/return/confirm-agency', [
+        ReservationController::class,
+        'confirmAgencyReturn',
+    ]);
+
+});
+
+
+// Admin routes
+
+Route::middleware([
+    'auth:sanctum',
+    'role:admin'
+])->group(function () {
+
+    Route::patch(
+        '/admin/agencies/{agency}/approve',
+        [
+            AgencyApprovalController::class,
+            'approve'
+        ]
+    );
+
+    Route::patch(
+        '/admin/agencies/{agency}/reject',
+        [
+            AgencyApprovalController::class,
+            'reject'
+        ]
+    );
+
+});
+
+
+// Public city routes
+
+Route::get('/cities', [
+    CityController::class,
+    'index'
+]);
+
+
+// Public cars
+
+Route::get('/cars', [
+    CarController::class,
+    'publicIndex',
+]);
+
+Route::get('/cars/{car}', [
+    CarController::class,
+    'publicShow',
+]);
+
+
+// Public car availability
+
+Route::get('/cars/{car}/availability', [
+    CarAvailabilityController::class,
+    'check',
+]);
+
+
+// Client reservation + payment routes
+
+Route::middleware([
+    'auth:sanctum',
+    'role:client'
+])->group(function () {
+
+    // Reservations
+
+    Route::get('/reservations', [
+        ReservationController::class,
+        'index',
+    ]);
+
+    Route::post('/reservations', [
+        ReservationController::class,
+        'store',
+    ]);
+
+    Route::get('/reservations/{reservation}', [
+        ReservationController::class,
+        'show',
+    ]);
+
+    Route::put('/reservations/{reservation}', [
+        ReservationController::class,
+        'update',
+    ]);
+
+    Route::patch('/reservations/{reservation}/cancel', [
+        ReservationController::class,
+        'cancel',
+    ]);
+
+    Route::patch('/reservations/{reservation}/dispute', [
+        ReservationController::class,
+        'dispute',
+    ]);
+
+
+    // Payments
+
+    Route::post('/payments', [
+        PaymentController::class,
+        'store',
+    ]);
+
 });

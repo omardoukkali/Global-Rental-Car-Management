@@ -1,0 +1,9 @@
+# Use this workspace to collaborate
+workspace:
+  id: 5ae527e0-7839-4ca7-896a-6f22927ba7a1
+
+localResources:
+  collections:
+    - ../docs/postman/Global car management API.postman_collection.json
+  environments:
+    - ../docs/postman/Global car managment env.postman_environment.json

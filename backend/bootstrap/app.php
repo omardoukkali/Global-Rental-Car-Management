@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Middleware\RoleMiddleware;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -13,13 +12,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        $middleware->web(append: [
-            \App\Http\Middleware\HandleInertiaRequests::class,
+        $middleware->alias([
+            'role' => \App\Http\Middleware\RoleMiddleware::class,
+            'agency.approved' => \App\Http\Middleware\EnsureAgencyIsApproved::class,
         ]);
-        $middleware->api(prepend: [
-            \Illuminate\Http\Middleware\HandleCors::class,
-        ]);
-        $middleware->alias(['role' => RoleMiddleware::class]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

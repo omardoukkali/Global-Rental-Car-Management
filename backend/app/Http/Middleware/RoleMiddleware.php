@@ -8,23 +8,22 @@ use Symfony\Component\HttpFoundation\Response;
 
 class RoleMiddleware
 {
-    public function handle(Request $request, Closure $next, string ...$roles): Response
-    {
-        // 1. Verify user is authenticated
-        if (!$request->user()) {
-            return redirect()->route('login');
-        }
+    /**
+     * Handle an incoming request.
+     *
+     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     */
+    public function handle(
+        Request $request,
+        Closure $next,
+        ...$roles
+    ): Response {
+        $user = $request->user();
 
-        // 2. Verify user has one of the required roles
-        if (!in_array($request->user()->role, $roles)) {
-            session()->flash('error', 'Unauthorized access.');
-
-            return match ($request->user()->role) {
-                'client' => redirect()->route('client.reservations'),
-                'agency_owner' => redirect()->route('agency.dashboard'),
-                'admin' => redirect()->route('admin.dashboard'),
-                default => redirect()->route('landing'),
-            };
+        if (!$user || !in_array($user->role, $roles, true)) {
+            return response()->json([
+                'message' => 'You are not authorized to access this resource.',
+            ], 403);
         }
 
         return $next($request);
