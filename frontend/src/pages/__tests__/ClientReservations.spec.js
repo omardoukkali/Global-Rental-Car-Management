@@ -7,6 +7,7 @@ vi.mock('@/services/reservations', () => ({
   default: {
     getReservations: vi.fn(),
     cancelReservation: vi.fn(),
+    confirmPickupClient: vi.fn(),
   },
 }))
 
@@ -109,5 +110,77 @@ describe('ClientReservations.vue (SCRUM-110)', () => {
 
     expect(reservationsService.cancelReservation).toHaveBeenCalledWith('res-1')
     expect(wrapper.text()).toContain('Annulée')
+  })
+
+  it('shows pickup button when reservation is confirmed and client has not confirmed', async () => {
+    reservationsService.getReservations.mockResolvedValueOnce({
+      reservations: [
+        {
+          id: 'res-pickup',
+          reference: 'RES-PICKUP',
+          status: 'confirmed',
+          client_pickup_confirmed_at: null,
+          agency_pickup_confirmed_at: null,
+          start_at: '2026-09-10T10:00:00.000000Z',
+          end_at: '2026-09-12T10:00:00.000000Z',
+          total_amount: '500.00',
+          car: { brand: 'Toyota', model: 'Yaris', year: 2023, images: [] },
+          agency: { name: 'Atlas Cars' },
+        },
+      ],
+    })
+
+    const wrapper = mount(ClientReservations, {
+      global: { stubs: ['RouterLink'] },
+    })
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="confirm-pickup-button"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="waiting-agency-pickup"]').exists()).toBe(false)
+  })
+
+  it('calls confirmPickupClient and shows waiting-agency state', async () => {
+    reservationsService.getReservations.mockResolvedValueOnce({
+      reservations: [
+        {
+          id: 'res-pickup',
+          reference: 'RES-PICKUP',
+          status: 'confirmed',
+          client_pickup_confirmed_at: null,
+          agency_pickup_confirmed_at: null,
+          start_at: '2026-09-10T10:00:00.000000Z',
+          end_at: '2026-09-12T10:00:00.000000Z',
+          total_amount: '500.00',
+          car: { brand: 'Toyota', model: 'Yaris', year: 2023, images: [] },
+          agency: { name: 'Atlas Cars' },
+        },
+      ],
+    })
+    reservationsService.confirmPickupClient.mockResolvedValueOnce({
+      reservation: {
+        id: 'res-pickup',
+        reference: 'RES-PICKUP',
+        status: 'confirmed',
+        client_pickup_confirmed_at: '2026-09-14T12:00:00.000000Z',
+        agency_pickup_confirmed_at: null,
+        start_at: '2026-09-10T10:00:00.000000Z',
+        end_at: '2026-09-12T10:00:00.000000Z',
+        total_amount: '500.00',
+        car: { brand: 'Toyota', model: 'Yaris', year: 2023, images: [] },
+        agency: { name: 'Atlas Cars' },
+      },
+    })
+
+    const wrapper = mount(ClientReservations, {
+      global: { stubs: ['RouterLink'] },
+    })
+    await flushPromises()
+
+    await wrapper.find('[data-testid="confirm-pickup-button"]').trigger('click')
+    await flushPromises()
+
+    expect(reservationsService.confirmPickupClient).toHaveBeenCalledWith('res-pickup')
+    expect(wrapper.find('[data-testid="confirm-pickup-button"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="waiting-agency-pickup"]').exists()).toBe(true)
   })
 })

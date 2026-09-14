@@ -9,6 +9,8 @@ import CarForm from '@/pages/CarForm.vue'
 import AgencyDashboard from '@/pages/AgencyDashboard.vue'
 import ReservationForm from '@/pages/ReservationForm.vue'
 import ClientReservations from '@/pages/ClientReservations.vue'
+import AgencyPickupConfirm from '@/pages/AgencyPickupConfirm.vue'
+import AgencyPoints from '@/pages/AgencyPoints.vue'
 
 const routes = [{
         path: '/',
@@ -82,6 +84,18 @@ const routes = [{
         path: '/agency/dashboard',
         name: 'AgencyDashboard',
         component: AgencyDashboard,
+        meta: { requiresAuth: true }
+    },
+    {
+        path: '/agency/pickup',
+        name: 'AgencyPickupConfirm',
+        component: AgencyPickupConfirm,
+        meta: { requiresAuth: true }
+    },
+    {
+        path: '/agency/points',
+        name: 'AgencyPoints',
+        component: AgencyPoints,
         meta: { requiresAuth: true }
     },
     {
