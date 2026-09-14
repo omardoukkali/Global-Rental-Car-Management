@@ -8,6 +8,7 @@ vi.mock('@/services/reservations', () => ({
     getReservations: vi.fn(),
     cancelReservation: vi.fn(),
     confirmPickupClient: vi.fn(),
+    confirmReturnClient: vi.fn(),
   },
 }))
 
@@ -182,5 +183,77 @@ describe('ClientReservations.vue (SCRUM-110)', () => {
     expect(reservationsService.confirmPickupClient).toHaveBeenCalledWith('res-pickup')
     expect(wrapper.find('[data-testid="confirm-pickup-button"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="waiting-agency-pickup"]').exists()).toBe(true)
+  })
+
+  it('shows return button when status is picked_up and client has not confirmed return', async () => {
+    reservationsService.getReservations.mockResolvedValueOnce({
+      reservations: [
+        {
+          id: 'res-return',
+          reference: 'RES-RETURN',
+          status: 'picked_up',
+          client_return_confirmed_at: null,
+          agency_return_confirmed_at: null,
+          start_at: '2026-09-10T10:00:00.000000Z',
+          end_at: '2026-09-12T10:00:00.000000Z',
+          total_amount: '500.00',
+          car: { brand: 'Toyota', model: 'Yaris', year: 2023, images: [] },
+          agency: { name: 'Atlas Cars' },
+        },
+      ],
+    })
+
+    const wrapper = mount(ClientReservations, {
+      global: { stubs: ['RouterLink'] },
+    })
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="confirm-return-button"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="waiting-agency-return"]').exists()).toBe(false)
+  })
+
+  it('calls confirmReturnClient and shows waiting-agency-return state', async () => {
+    reservationsService.getReservations.mockResolvedValueOnce({
+      reservations: [
+        {
+          id: 'res-return',
+          reference: 'RES-RETURN',
+          status: 'picked_up',
+          client_return_confirmed_at: null,
+          agency_return_confirmed_at: null,
+          start_at: '2026-09-10T10:00:00.000000Z',
+          end_at: '2026-09-12T10:00:00.000000Z',
+          total_amount: '500.00',
+          car: { brand: 'Toyota', model: 'Yaris', year: 2023, images: [] },
+          agency: { name: 'Atlas Cars' },
+        },
+      ],
+    })
+    reservationsService.confirmReturnClient.mockResolvedValueOnce({
+      reservation: {
+        id: 'res-return',
+        reference: 'RES-RETURN',
+        status: 'picked_up',
+        client_return_confirmed_at: '2026-09-14T15:00:00.000000Z',
+        agency_return_confirmed_at: null,
+        start_at: '2026-09-10T10:00:00.000000Z',
+        end_at: '2026-09-12T10:00:00.000000Z',
+        total_amount: '500.00',
+        car: { brand: 'Toyota', model: 'Yaris', year: 2023, images: [] },
+        agency: { name: 'Atlas Cars' },
+      },
+    })
+
+    const wrapper = mount(ClientReservations, {
+      global: { stubs: ['RouterLink'] },
+    })
+    await flushPromises()
+
+    await wrapper.find('[data-testid="confirm-return-button"]').trigger('click')
+    await flushPromises()
+
+    expect(reservationsService.confirmReturnClient).toHaveBeenCalledWith('res-return')
+    expect(wrapper.find('[data-testid="confirm-return-button"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="waiting-agency-return"]').exists()).toBe(true)
   })
 })

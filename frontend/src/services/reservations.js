@@ -28,4 +28,12 @@ export default {
     confirmPickupAgency(id) {
         return api.patch(`/reservations/${id}/pickup/confirm-agency`)
     },
+
+    confirmReturnClient(id) {
+        return api.patch(`/reservations/${id}/return/confirm-client`)
+    },
+
+    confirmReturnAgency(id) {
+        return api.patch(`/reservations/${id}/return/confirm-agency`)
+    },
 }

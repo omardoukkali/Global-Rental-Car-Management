@@ -11,6 +11,7 @@ import ReservationForm from '@/pages/ReservationForm.vue'
 import ClientReservations from '@/pages/ClientReservations.vue'
 import AgencyPickupConfirm from '@/pages/AgencyPickupConfirm.vue'
 import AgencyPoints from '@/pages/AgencyPoints.vue'
+import AgencyReturnConfirm from '@/pages/AgencyReturnConfirm.vue'
 
 const routes = [{
         path: '/',
@@ -90,6 +91,12 @@ const routes = [{
         path: '/agency/pickup',
         name: 'AgencyPickupConfirm',
         component: AgencyPickupConfirm,
+        meta: { requiresAuth: true }
+    },
+    {
+        path: '/agency/return',
+        name: 'AgencyReturnConfirm',
+        component: AgencyReturnConfirm,
         meta: { requiresAuth: true }
     },
     {
