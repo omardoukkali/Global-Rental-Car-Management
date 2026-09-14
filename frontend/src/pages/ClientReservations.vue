@@ -8,6 +8,7 @@ const loading = ref(true)
 const error = ref('')
 const cancellingId = ref(null)
 const confirmingPickupId = ref(null)
+const confirmingReturnId = ref(null)
 const actionError = ref('')
 
 const STATUS_LABELS = {
@@ -76,6 +77,21 @@ function waitingAgencyPickup(reservation) {
   )
 }
 
+function canConfirmReturn(reservation) {
+  return (
+    reservation?.status === 'picked_up' &&
+    !reservation?.client_return_confirmed_at
+  )
+}
+
+function waitingAgencyReturn(reservation) {
+  return (
+    reservation?.status === 'picked_up' &&
+    !!reservation?.client_return_confirmed_at &&
+    !reservation?.agency_return_confirmed_at
+  )
+}
+
 function carImageUrl(car) {
   const images = car?.images
   if (!images?.length) return null
@@ -140,6 +156,27 @@ async function confirmPickup(reservation) {
     actionError.value = err?.message || 'Échec de la confirmation du pickup.'
   } finally {
     confirmingPickupId.value = null
+  }
+}
+
+async function confirmReturn(reservation) {
+  if (!canConfirmReturn(reservation) || confirmingReturnId.value) return
+  actionError.value = ''
+  confirmingReturnId.value = reservation.id
+  try {
+    const data = await reservationsService.confirmReturnClient(reservation.id)
+    const updated = data?.reservation || data?.data?.reservation
+    if (updated) {
+      reservations.value = reservations.value.map((item) =>
+        item.id === reservation.id ? { ...item, ...updated } : item
+      )
+    } else {
+      await loadReservations()
+    }
+  } catch (err) {
+    actionError.value = err?.message || 'Échec de la confirmation du retour.'
+  } finally {
+    confirmingReturnId.value = null
   }
 }
 
@@ -298,6 +335,23 @@ onMounted(loadReservations)
                 class="text-xs font-semibold text-slate-500"
               >
                 En attente de confirmation de l’agence
+              </p>
+              <button
+                v-if="canConfirmReturn(res)"
+                type="button"
+                data-testid="confirm-return-button"
+                class="text-sm font-semibold text-emerald-700 hover:text-emerald-800 disabled:opacity-50"
+                :disabled="confirmingReturnId === res.id"
+                @click="confirmReturn(res)"
+              >
+                {{ confirmingReturnId === res.id ? 'Confirmation…' : 'Confirmer le retour' }}
+              </button>
+              <p
+                v-else-if="waitingAgencyReturn(res)"
+                data-testid="waiting-agency-return"
+                class="text-xs font-semibold text-slate-500"
+              >
+                En attente de confirmation de retour de l’agence
               </p>
             </div>
           </div>
