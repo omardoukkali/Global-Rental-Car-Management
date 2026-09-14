@@ -47,6 +47,16 @@
             <span class="text-xs bg-slate-100 px-2 py-0.5 rounded-full font-bold text-slate-600">{{ totalCars }}</span>
           </RouterLink>
 
+          <RouterLink to="/agency/pickup" class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-[#0F172A] transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            Confirmer pickup
+          </RouterLink>
+
+          <RouterLink to="/agency/points" class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-[#0F172A] transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            Points de retrait
+          </RouterLink>
+
           <RouterLink to="/agency/profile" class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-[#0F172A] transition-colors">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
             Mon agence
@@ -80,15 +90,23 @@
             </p>
           </div>
 
-          <RouterLink 
-            to="/agency/cars/new" 
-            class="btn-primary inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-semibold shadow-sm hover:opacity-90 transition-all text-sm"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-            </svg>
-            Ajouter un véhicule
-          </RouterLink>
+          <div class="flex flex-col sm:flex-row gap-2">
+            <RouterLink
+              to="/agency/pickup"
+              class="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm border border-slate-200 bg-white text-[#0F172A] hover:bg-slate-50 transition-all"
+            >
+              Prise en charge
+            </RouterLink>
+            <RouterLink 
+              to="/agency/cars/new" 
+              class="btn-primary inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-semibold shadow-sm hover:opacity-90 transition-all text-sm"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+              </svg>
+              Ajouter un véhicule
+            </RouterLink>
+          </div>
         </div>
 
         <!-- ÉTAT DE CHARGEMENT -->
@@ -241,13 +259,27 @@
                 <h2 class="font-bricolage text-xl font-bold text-[#0F172A]">Points de retrait & service</h2>
                 <p class="text-xs text-slate-500 mt-0.5">Emplacements où vos clients récupèrent leurs véhicules.</p>
               </div>
-              <span class="text-xs font-bold bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full">
-                {{ points.length }} point(s) enregistré(s)
-              </span>
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-bold bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full">
+                  {{ points.length }} point(s) enregistré(s)
+                </span>
+                <RouterLink
+                  to="/agency/points"
+                  class="text-xs font-bold text-blue-600 hover:underline"
+                >
+                  Gérer
+                </RouterLink>
+              </div>
             </div>
 
-            <div v-if="points.length === 0" class="p-6 text-center text-slate-400 text-sm bg-slate-50 rounded-xl border border-dashed border-slate-200">
-              Aucun point de retrait configuré. Vos véhicules sont gérés à l'adresse principale de votre agence.
+            <div v-if="points.length === 0" class="p-6 text-center text-slate-400 text-sm bg-slate-50 rounded-xl border border-dashed border-slate-200 space-y-3">
+              <p>Aucun point de retrait configuré. Sans point, le client ne peut pas réserver.</p>
+              <RouterLink
+                to="/agency/points"
+                class="inline-flex px-4 py-2 rounded-xl bg-[#0F172A] text-white text-xs font-semibold"
+              >
+                Ajouter un point
+              </RouterLink>
             </div>
 
             <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

@@ -138,5 +138,29 @@ class DemoDataSeeder extends Seeder
                 ],
             ]);
         }
+
+        // Seed pickup/return points so reservation form dropdowns work
+        if ($atlasAgency->agencyPoints()->count() === 0) {
+            $atlasAgency->agencyPoints()->create([
+                'city_id' => $casa->id,
+                'name' => 'Atlas Cars — Anfa',
+                'address' => 'Boulevard d\'Anfa, Casablanca',
+                'allows_pickup' => true,
+                'allows_return' => true,
+                'is_active' => true,
+            ]);
+        }
+
+        $demoAgency = Agency::where('slug', 'demo-rent-cars')->first();
+        if ($demoAgency && $demoAgency->agencyPoints()->count() === 0) {
+            $demoAgency->agencyPoints()->create([
+                'city_id' => $city->id,
+                'name' => 'Demo Rent — Accueil',
+                'address' => $demoAgency->address ?: 'Tangier, Morocco',
+                'allows_pickup' => true,
+                'allows_return' => true,
+                'is_active' => true,
+            ]);
+        }
     }
 }

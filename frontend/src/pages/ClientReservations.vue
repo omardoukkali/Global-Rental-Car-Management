@@ -7,6 +7,7 @@ const reservations = ref([])
 const loading = ref(true)
 const error = ref('')
 const cancellingId = ref(null)
+const confirmingPickupId = ref(null)
 const actionError = ref('')
 
 const STATUS_LABELS = {
@@ -60,6 +61,21 @@ function canCancel(reservation) {
   return ['pending', 'confirmed'].includes(reservation?.status)
 }
 
+function canConfirmPickup(reservation) {
+  return (
+    reservation?.status === 'confirmed' &&
+    !reservation?.client_pickup_confirmed_at
+  )
+}
+
+function waitingAgencyPickup(reservation) {
+  return (
+    reservation?.status === 'confirmed' &&
+    !!reservation?.client_pickup_confirmed_at &&
+    !reservation?.agency_pickup_confirmed_at
+  )
+}
+
 function carImageUrl(car) {
   const images = car?.images
   if (!images?.length) return null
@@ -106,6 +122,27 @@ async function cancelReservation(reservation) {
   }
 }
 
+async function confirmPickup(reservation) {
+  if (!canConfirmPickup(reservation) || confirmingPickupId.value) return
+  actionError.value = ''
+  confirmingPickupId.value = reservation.id
+  try {
+    const data = await reservationsService.confirmPickupClient(reservation.id)
+    const updated = data?.reservation || data?.data?.reservation
+    if (updated) {
+      reservations.value = reservations.value.map((item) =>
+        item.id === reservation.id ? { ...item, ...updated } : item
+      )
+    } else {
+      await loadReservations()
+    }
+  } catch (err) {
+    actionError.value = err?.message || 'Échec de la confirmation du pickup.'
+  } finally {
+    confirmingPickupId.value = null
+  }
+}
+
 onMounted(loadReservations)
 </script>
 
@@ -140,7 +177,7 @@ onMounted(loadReservations)
           Mes réservations
         </h1>
         <p class="text-sm text-slate-500 mt-1">
-          Suivez vos locations et annulez celles encore en attente ou confirmées.
+          Suivez vos locations, confirmez la prise en charge, et annulez celles encore en attente ou confirmées.
         </p>
       </div>
 
@@ -245,6 +282,23 @@ onMounted(loadReservations)
               >
                 {{ cancellingId === res.id ? 'Annulation…' : 'Annuler' }}
               </button>
+              <button
+                v-if="canConfirmPickup(res)"
+                type="button"
+                data-testid="confirm-pickup-button"
+                class="text-sm font-semibold text-emerald-700 hover:text-emerald-800 disabled:opacity-50"
+                :disabled="confirmingPickupId === res.id"
+                @click="confirmPickup(res)"
+              >
+                {{ confirmingPickupId === res.id ? 'Confirmation…' : 'Confirmer la prise en charge' }}
+              </button>
+              <p
+                v-else-if="waitingAgencyPickup(res)"
+                data-testid="waiting-agency-pickup"
+                class="text-xs font-semibold text-slate-500"
+              >
+                En attente de confirmation de l’agence
+              </p>
             </div>
           </div>
         </li>

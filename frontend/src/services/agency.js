@@ -27,5 +27,22 @@ export default {
 
     deleteAgency(id) {
         return api.delete(`/agencies/${id}`)
-    }
-} 
+    },
+
+    getPoints() {
+        return api.get('/agency/points')
+    },
+
+    createPoint(payload) {
+        return api.post('/agency/points', payload)
+    },
+
+    updatePoint(id, payload) {
+        return api.put(`/agency/points/${id}`, payload)
+    },
+
+    togglePointStatus(id) {
+        return api.patch(`/agency/points/${id}/toggle-status`)
+    },
+}
+ 
