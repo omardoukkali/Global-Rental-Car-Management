@@ -421,6 +421,12 @@ class ReservationController extends Controller
             ], 403);
         }
 
+        if ($reservation->client_pickup_confirmed_at) {
+            return response()->json([
+                'message' => 'Pickup has already been confirmed by the client.',
+            ], 422);
+        }
+
         if ($reservation->status !== 'confirmed') {
             return response()->json([
                 'message' => 'Only confirmed reservations can confirm pickup.',
@@ -463,6 +469,12 @@ class ReservationController extends Controller
             ], 403);
         }
 
+        if ($reservation->agency_pickup_confirmed_at) {
+            return response()->json([
+                'message' => 'Pickup has already been confirmed by the agency.',
+            ], 422);
+        }
+
         if ($reservation->status !== 'confirmed') {
             return response()->json([
                 'message' => 'Only confirmed reservations can confirm pickup.',
@@ -500,6 +512,12 @@ class ReservationController extends Controller
             return response()->json([
                 'message' => 'You are not authorized to confirm return for this reservation.',
             ], 403);
+        }
+
+        if ($reservation->client_return_confirmed_at) {
+            return response()->json([
+                'message' => 'Return has already been confirmed by the client.',
+            ], 422);
         }
 
         if ($reservation->status !== 'picked_up') {
@@ -541,6 +559,12 @@ class ReservationController extends Controller
             return response()->json([
                 'message' => 'You are not authorized to confirm return for this reservation.',
             ], 403);
+        }
+
+        if ($reservation->agency_return_confirmed_at) {
+            return response()->json([
+                'message' => 'Return has already been confirmed by the agency.',
+            ], 422);
         }
 
         if ($reservation->status !== 'picked_up') {
