@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Feature\Scrum;
+namespace Tests\Feature\Reservation;
 
 use App\Models\Agency;
 use App\Models\AgencyPoint;
