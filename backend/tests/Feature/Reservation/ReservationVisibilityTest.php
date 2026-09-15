@@ -12,7 +12,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
-class Scrum117ReservationVisibilityTest extends TestCase
+class ReservationVisibilityTest extends TestCase
 {
     use RefreshDatabase;
 
