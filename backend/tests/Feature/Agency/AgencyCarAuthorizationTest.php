@@ -10,7 +10,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
-class Scrum101AgencyCarAuthorizationTest extends TestCase
+class AgencyCarAuthorizationTest extends TestCase
 {
     use RefreshDatabase;
 

@@ -12,7 +12,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
-class Scrum160DuplicateConfirmationTest extends TestCase
+class DuplicateConfirmationTest extends TestCase
 {
     use RefreshDatabase;
 

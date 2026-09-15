@@ -12,7 +12,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
-class Scrum165DisputedConfirmationTest extends TestCase
+class DisputedReservationConfirmationTest extends TestCase
 {
     use RefreshDatabase;
 
