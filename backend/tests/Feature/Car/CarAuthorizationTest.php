@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Feature\Agency;
+namespace Tests\Feature\Car;
 
 use App\Models\Agency;
 use App\Models\Car;
@@ -10,7 +10,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
-class AgencyCarAuthorizationTest extends TestCase
+class CarAuthorizationTest extends TestCase
 {
     use RefreshDatabase;
 
