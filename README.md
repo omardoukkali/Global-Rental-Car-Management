@@ -102,7 +102,9 @@ so no manual steps are needed:
 3. Generates an `APP_KEY` if none is set
 4. Waits for PostgreSQL, then runs migrations
 5. Seeds the database on first boot only (guarded by a lock file)
-6. Starts the application server
+6. Starts the Laravel scheduler (`schedule:work`) in the background — it runs
+   `refunds:process-expired` every minute
+7. Starts the application server
 
 > **Note on `APP_KEY`.** `docker-compose.yml` currently supplies a hardcoded
 > fallback key when `APP_KEY` is unset in `.env`. The app therefore boots with a
