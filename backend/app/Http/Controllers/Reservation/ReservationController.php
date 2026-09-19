@@ -175,86 +175,99 @@ class ReservationController extends Controller
             ], 403);
         }
 
-        if (!in_array($reservation->status, ['pending', 'confirmed'])) {
-            return response()->json([
-                'message' => 'This reservation cannot be updated.',
-            ], 422);
-        }
-
         $data = $request->validated();
 
-        $pickupPointId = $data['pickup_point_id']
-            ?? $reservation->pickup_point_id;
+        DB::transaction(function () use ($reservation, $data) {
+            // Lock the car first (same order as store) so overlap checks are serialized
+            Car::where('id', $reservation->car_id)->lockForUpdate()->first();
 
-        $returnPointId = $data['return_point_id']
-            ?? $reservation->return_point_id;
+            $reservation = Reservation::with('payment')
+                ->where('id', $reservation->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        $startAt = $data['start_at']
-            ?? $reservation->start_at;
+            if (!in_array($reservation->status, ['pending', 'confirmed'])) {
+                abort(response()->json([
+                    'message' => 'This reservation cannot be updated.',
+                ], 422));
+            }
 
-        $endAt = $data['end_at']
-            ?? $reservation->end_at;
+            $pickupPointId = $data['pickup_point_id']
+                ?? $reservation->pickup_point_id;
 
-        $pickupPoint = AgencyPoint::findOrFail($pickupPointId);
-        $returnPoint = AgencyPoint::findOrFail($returnPointId);
+            $returnPointId = $data['return_point_id']
+                ?? $reservation->return_point_id;
 
-        if ($pickupPoint->agency_id !== $reservation->agency_id) {
-            return response()->json([
-                'message' => 'Pickup point does not belong to the reservation agency.',
-            ], 422);
-        }
+            $startAt = Carbon::parse($data['start_at'] ?? $reservation->start_at);
+            $endAt = Carbon::parse($data['end_at'] ?? $reservation->end_at);
 
-        if ($returnPoint->agency_id !== $reservation->agency_id) {
-            return response()->json([
-                'message' => 'Return point does not belong to the reservation agency.',
-            ], 422);
-        }
+            $datesChanged = !$startAt->equalTo($reservation->start_at)
+                || !$endAt->equalTo($reservation->end_at);
 
-        if (!$pickupPoint->is_active || !$pickupPoint->allows_pickup) {
-            return response()->json([
-                'message' => 'Pickup point is not available for pickup.',
-            ], 422);
-        }
+            // The payment amount is fixed once paid, so the dates are too
+            if ($datesChanged && $reservation->payment?->status === 'paid') {
+                abort(response()->json([
+                    'message' => 'Dates of a paid reservation cannot be changed.',
+                ], 422));
+            }
 
-        if (!$returnPoint->is_active || !$returnPoint->allows_return) {
-            return response()->json([
-                'message' => 'Return point is not available for return.',
-            ], 422);
-        }
+            $pickupPoint = AgencyPoint::findOrFail($pickupPointId);
+            $returnPoint = AgencyPoint::findOrFail($returnPointId);
 
-        $hasOverlap = $reservation->car
-            ->reservations()
-            ->where('id', '!=', $reservation->id)
-            ->whereIn('status', [
-                'pending',
-                'confirmed',
-                'picked_up',
-            ])
-            ->where('start_at', '<', $endAt)
-            ->where('end_at', '>', $startAt)
-            ->exists();
+            if ($pickupPoint->agency_id !== $reservation->agency_id) {
+                abort(response()->json([
+                    'message' => 'Pickup point does not belong to the reservation agency.',
+                ], 422));
+            }
 
-        if ($hasOverlap) {
-            return response()->json([
-                'message' => 'Car is already reserved for the selected period.',
-            ], 422);
-        }
+            if ($returnPoint->agency_id !== $reservation->agency_id) {
+                abort(response()->json([
+                    'message' => 'Return point does not belong to the reservation agency.',
+                ], 422));
+            }
 
-        $startAt = Carbon::parse($startAt);
-        $endAt = Carbon::parse($endAt);
+            if (!$pickupPoint->is_active || !$pickupPoint->allows_pickup) {
+                abort(response()->json([
+                    'message' => 'Pickup point is not available for pickup.',
+                ], 422));
+            }
 
-        $days = max(1, (int) ceil($startAt->diffInHours($endAt) / 24));
+            if (!$returnPoint->is_active || !$returnPoint->allows_return) {
+                abort(response()->json([
+                    'message' => 'Return point is not available for return.',
+                ], 422));
+            }
 
-        $dailyPrice = $reservation->daily_price_snapshot;
-        $totalAmount = $days * $dailyPrice;
+            $hasOverlap = Reservation::where('car_id', $reservation->car_id)
+                ->where('id', '!=', $reservation->id)
+                ->whereIn('status', [
+                    'pending',
+                    'confirmed',
+                    'picked_up',
+                ])
+                ->where('start_at', '<', $endAt)
+                ->where('end_at', '>', $startAt)
+                ->exists();
 
-        $reservation->update([
-            'pickup_point_id' => $pickupPointId,
-            'return_point_id' => $returnPointId,
-            'start_at' => $startAt,
-            'end_at' => $endAt,
-            'total_amount' => $totalAmount,
-        ]);
+            if ($hasOverlap) {
+                abort(response()->json([
+                    'message' => 'Car is already reserved for the selected period.',
+                ], 422));
+            }
+
+            $days = max(1, (int) ceil($startAt->diffInHours($endAt) / 24));
+
+            $dailyPrice = $reservation->daily_price_snapshot;
+            $totalAmount = $days * $dailyPrice;
+
+            $reservation->update([
+                'pickup_point_id' => $pickupPointId,
+                'return_point_id' => $returnPointId,
+                'start_at' => $startAt,
+                'end_at' => $endAt,
+                'total_amount' => $totalAmount,
+            ]);
+        });
 
         return response()->json([
             'message' => 'Reservation updated successfully.',
@@ -335,79 +348,74 @@ class ReservationController extends Controller
             ], 403);
         }
 
-        if (!in_array($reservation->status, ['pending', 'confirmed'])) {
-            return response()->json([
-                'message' => 'This reservation cannot be cancelled.',
-            ], 422);
-        }
+        $payment = DB::transaction(function () use ($reservation) {
+            $reservation = Reservation::with('payment')
+                ->where('id', $reservation->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        $payment = $reservation->payment;
+            if (!in_array($reservation->status, ['pending', 'confirmed'])) {
+                abort(response()->json([
+                    'message' => 'This reservation cannot be cancelled.',
+                ], 422));
+            }
 
-        if (!$payment) {
+            $payment = $reservation->payment;
+
             $reservation->update([
                 'status' => 'cancelled',
             ]);
 
-            return response()->json([
-                'message' => 'Reservation cancelled successfully.',
-                'reservation' => $reservation->fresh()->load([
-                    'car',
-                    'agency',
-                    'pickupPoint',
-                    'returnPoint',
-                ]),
-            ]);
-        }
+            if (!$payment) {
+                return null;
+            }
 
-        $hoursUntilPickup = now()->diffInHours(
-            Carbon::parse($reservation->start_at),
-            false
-        );
+            $hoursUntilPickup = now()->diffInHours(
+                Carbon::parse($reservation->start_at),
+                false
+            );
 
-        $reservation->update([
-            'status' => 'cancelled',
-        ]);
+            if ($hoursUntilPickup >= 24) {
+                Refund::create([
+                    'payment_id' => $payment->id,
+                    'agency_id' => $reservation->agency_id,
+                    'percentage' => 100,
+                    'refunded_amount' => $payment->amount,
+                    'decision_source' => 'automatic',
+                    'status' => 'processed',
+                    'reason' => 'Cancellation at least 24 hours before pickup.',
+                    'decided_at' => now(),
+                    'processed_at' => now(),
+                ]);
 
-        if ($hoursUntilPickup >= 24) {
-            $refundedAmount = $payment->amount;
+                $payment->update([
+                    'status' => 'refunded',
+                ]);
+            } else {
+                Refund::create([
+                    'payment_id' => $payment->id,
+                    'agency_id' => $reservation->agency_id,
+                    'percentage' => 50,
+                    'refunded_amount' => $payment->amount * 0.50,
+                    'decision_source' => 'automatic',
+                    'status' => 'pending',
+                    'reason' => 'Late cancellation. Waiting for agency decision.',
+                    'decided_at' => now(),
+                ]);
+            }
 
-            Refund::create([
-                'payment_id' => $payment->id,
-                'agency_id' => $reservation->agency_id,
-                'percentage' => 100,
-                'refunded_amount' => $refundedAmount,
-                'decision_source' => 'automatic',
-                'status' => 'processed',
-                'reason' => 'Cancellation at least 24 hours before pickup.',
-                'decided_at' => now(),
-                'processed_at' => now(),
-            ]);
+            return $payment;
+        });
 
-            $payment->update([
-                'status' => 'refunded',
-            ]);
-        } else {
-            Refund::create([
-                'payment_id' => $payment->id,
-                'agency_id' => $reservation->agency_id,
-                'percentage' => 50,
-                'refunded_amount' => $payment->amount * 0.50,
-                'decision_source' => 'automatic',
-                'status' => 'pending',
-                'reason' => 'Late cancellation. Waiting for agency decision.',
-                'decided_at' => now(),
-            ]);
+        $relations = ['car', 'agency', 'pickupPoint', 'returnPoint'];
+
+        if ($payment) {
+            $relations[] = 'payment.refund';
         }
 
         return response()->json([
             'message' => 'Reservation cancelled successfully.',
-            'reservation' => $reservation->fresh()->load([
-                'car',
-                'agency',
-                'pickupPoint',
-                'returnPoint',
-                'payment.refund',
-            ]),
+            'reservation' => $reservation->fresh()->load($relations),
         ]);
     }
 
