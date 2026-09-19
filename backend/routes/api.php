@@ -12,6 +12,7 @@ use App\Http\Controllers\Payment\PaymentController;
 use App\Http\Controllers\Reservation\ReservationController;
 use App\Http\Controllers\Review\ReviewController;
 use App\Http\Controllers\Refund\RefundController;
+use App\Http\Controllers\SmartDrive\SmartDriveController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -335,6 +336,14 @@ Route::get('/cars/{car}/availability', [
     CarAvailabilityController::class,
     'check',
 ]);
+
+
+// SmartDrive AI: vehicles eligible for the client's trip (public)
+
+Route::post('/smartdrive/eligible-vehicles', [
+    SmartDriveController::class,
+    'eligibleVehicles',
+])->middleware('throttle:30,1');
 
 
 // Public reviews
