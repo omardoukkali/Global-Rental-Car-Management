@@ -1,0 +1,2 @@
+HTTP 200
+{"message":"Car image deleted successfully."}

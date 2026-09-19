@@ -1,0 +1,13 @@
+GET /cars 200
+GET /cars/{id} 200
+GET /agency/cars no token 401
+GET /agency/cars as client 403
+GET /agency/cars as agency 200
+POST /agency/cars 201 id=a2c86a4d-e065-4c58-9f58-09644a5c9319
+PUT /agency/cars/{id} 200
+POST image 201
+GET images 200
+PATCH primary 200
+DELETE image 200
+PATCH disable 200
+GET public disabled 404
