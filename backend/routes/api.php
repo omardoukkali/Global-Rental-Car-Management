@@ -305,6 +305,19 @@ Route::get('/cars/{car}/availability', [
 ]);
 
 
+// Public reviews
+
+Route::get('/cars/{car}/reviews', [
+    ReviewController::class,
+    'carReviews',
+]);
+
+Route::get('/agencies/{agency}/reviews', [
+    ReviewController::class,
+    'agencyReviews',
+]);
+
+
 // Client reservation + payment routes
 
 Route::middleware([
