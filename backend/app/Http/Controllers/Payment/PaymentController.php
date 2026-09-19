@@ -17,7 +17,7 @@ class PaymentController extends Controller
         $data = $request->validated();
 
         $payment = DB::transaction(function () use ($request, $data) {
-            $reservation = Reservation::with('payment')
+            $reservation = Reservation::with(['payment', 'agency'])
                 ->where('id', $data['reservation_id'])
                 ->lockForUpdate()
                 ->firstOrFail();
@@ -40,13 +40,14 @@ class PaymentController extends Controller
                 ], 422));
             }
 
-            $amount = $reservation->total_amount;
+            $amount = (float) $reservation->total_amount;
 
-            $commissionRate = 15;
+            // Each agency negotiates its own platform commission.
+            $commissionRate = (float) $reservation->agency->commission_rate;
 
-            $platformCommission = $amount * ($commissionRate / 100);
+            $platformCommission = round($amount * ($commissionRate / 100), 2);
 
-            $agencyAmount = $amount - $platformCommission;
+            $agencyAmount = round($amount - $platformCommission, 2);
 
             $payment = Payment::create([
                 'reservation_id' => $reservation->id,
