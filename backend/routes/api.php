@@ -373,6 +373,11 @@ Route::middleware([
 
     // Payments
 
+    Route::get('/payments', [
+        PaymentController::class,
+        'index',
+    ]);
+
     Route::post('/payments', [
         PaymentController::class,
         'store',

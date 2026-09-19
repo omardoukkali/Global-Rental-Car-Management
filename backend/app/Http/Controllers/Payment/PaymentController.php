@@ -7,11 +7,32 @@ use App\Http\Requests\Payment\StorePaymentRequest;
 use App\Models\Payment;
 use App\Models\Reservation;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class PaymentController extends Controller
 {
+    public function index(Request $request): JsonResponse
+    {
+        $payments = Payment::whereHas(
+            'reservation',
+            fn ($query) => $query->where('client_id', $request->user()->id)
+        )
+            ->with([
+                'reservation:id,reference,car_id,agency_id,start_at,end_at,status',
+                'reservation.car:id,brand,model',
+                'reservation.agency:id,name',
+                'refund',
+            ])
+            ->latest()
+            ->get();
+
+        return response()->json([
+            'payments' => $payments,
+        ]);
+    }
+
     public function store(StorePaymentRequest $request): JsonResponse
     {
         $data = $request->validated();
