@@ -15,6 +15,7 @@ class CarController extends Controller
     {
         $cars = Car::query()
             ->where('status', 'available')
+            ->whereHas('agency', fn ($query) => $query->where('status', 'approved'))
             ->with([
                 'agency',
                 'city',
@@ -38,7 +39,7 @@ class CarController extends Controller
 
     public function publicShow(Car $car): JsonResponse
     {
-        if ($car->status !== 'available') {
+        if ($car->status !== 'available' || $car->agency?->status !== 'approved') {
             return response()->json([
                 'message' => 'Car is not available.',
             ], 404);

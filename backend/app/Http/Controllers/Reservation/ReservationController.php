@@ -48,7 +48,7 @@ class ReservationController extends Controller
                 ->firstOrFail();
 
             // Check if the car is available
-            if ($car->status !== 'available') {
+            if ($car->status !== 'available' || $car->agency?->status !== 'approved') {
                 abort(response()->json([
                     'message' => 'Car is not available.',
                 ], 422));
