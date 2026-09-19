@@ -53,41 +53,67 @@ class AgencyController extends Controller
         ]);
 
         $agency = $request->user()->agency;
-        $year = (int) ($validated['year'] ?? now()->year);
+        $year = $validated['year'] ?? now()->year;
 
-        // Net revenue = agency share minus the refunded part
+        // One entry per month (1 to 12)
+        $monthly = [];
+
+        for ($month = 1; $month <= 12; $month++) {
+            $monthly[$month] = [
+                'month' => $month,
+                'revenue' => 0,
+                'reservations' => 0,
+            ];
+        }
+
+        // 1. Revenue: the agency's share of each payment, minus what was refunded
         $payments = Payment::with('refund')
             ->whereIn('status', ['paid', 'refunded'])
             ->whereYear('paid_at', $year)
-            ->whereHas('reservation', fn ($query) => $query->where('agency_id', $agency->id))
+            ->whereHas('reservation', function ($reservationQuery) use ($agency) {
+                $reservationQuery->where('agency_id', $agency->id);
+            })
             ->get();
 
-        $netRevenue = fn (Payment $payment) => (float) $payment->agency_amount
-            * (1 - ((float) ($payment->refund?->percentage ?? 0)) / 100);
+        $totalRevenue = 0;
 
-        $reservationsThisYear = $agency->reservations()
-            ->whereYear('start_at', $year)
-            ->get(['id', 'status', 'start_at']);
+        foreach ($payments as $payment) {
+            $refundPercentage = 0;
 
-        $monthly = collect(range(1, 12))->map(fn (int $month) => [
-            'month' => $month,
-            'revenue' => round(
-                $payments->filter(fn ($payment) => $payment->paid_at->month === $month)->sum($netRevenue),
-                2
-            ),
-            'reservations' => $reservationsThisYear
-                ->filter(fn ($reservation) => $reservation->start_at->month === $month)
-                ->count(),
-        ]);
+            if ($payment->refund) {
+                $refundPercentage = $payment->refund->percentage;
+            }
+
+            $revenue = $payment->agency_amount * (100 - $refundPercentage) / 100;
+
+            $monthly[$payment->paid_at->month]['revenue'] += $revenue;
+            $totalRevenue += $revenue;
+        }
+
+        // 2. Reservations: count per month and per status
+        $reservationsByStatus = [];
+
+        foreach ($agency->reservations as $reservation) {
+            if ($reservation->start_at->year == $year) {
+                $monthly[$reservation->start_at->month]['reservations']++;
+            }
+
+            if (!isset($reservationsByStatus[$reservation->status])) {
+                $reservationsByStatus[$reservation->status] = 0;
+            }
+
+            $reservationsByStatus[$reservation->status]++;
+        }
+
+        foreach ($monthly as $month => $data) {
+            $monthly[$month]['revenue'] = round($data['revenue'], 2);
+        }
 
         return response()->json([
-            'year' => $year,
-            'total_revenue' => round($payments->sum($netRevenue), 2),
-            'monthly' => $monthly,
-            'reservations_by_status' => $agency->reservations()
-                ->selectRaw('status, count(*) as total')
-                ->groupBy('status')
-                ->pluck('total', 'status'),
+            'year' => (int) $year,
+            'total_revenue' => round($totalRevenue, 2),
+            'monthly' => array_values($monthly),
+            'reservations_by_status' => $reservationsByStatus,
             'occupancy_rate' => $this->currentMonthOccupancy($agency),
             'avg_rating' => $agency->avg_rating,
             'total_reviews' => $agency->total_reviews,
@@ -95,27 +121,46 @@ class AgencyController extends Controller
     }
 
     /**
-     * Percentage of car-days booked this month over the agency's rentable fleet.
+     * Occupancy this month = booked car-days / (number of cars x days in month), in %.
      */
     private function currentMonthOccupancy(Agency $agency): float
     {
         $monthStart = now()->startOfMonth();
         $monthEnd = now()->endOfMonth();
 
-        $fleetSize = $agency->cars()->where('status', '!=', 'unavailable')->count();
+        // Disabled cars cannot be rented, so they don't count
+        $numberOfCars = $agency->cars()->where('status', '!=', 'unavailable')->count();
 
-        if ($fleetSize === 0) {
-            return 0.0;
+        if ($numberOfCars === 0) {
+            return 0;
         }
 
-        $bookedDays = $agency->reservations()
+        $reservations = $agency->reservations()
             ->whereIn('status', ['confirmed', 'picked_up', 'completed'])
             ->where('start_at', '<', $monthEnd)
             ->where('end_at', '>', $monthStart)
-            ->get(['start_at', 'end_at'])
-            ->sum(fn ($reservation) => $reservation->start_at->max($monthStart)
-                ->diffInHours($reservation->end_at->min($monthEnd)) / 24);
+            ->get();
 
-        return round($bookedDays / ($fleetSize * $monthStart->daysInMonth) * 100, 2);
+        $bookedDays = 0;
+
+        foreach ($reservations as $reservation) {
+            // Only count the part of the reservation inside this month
+            $start = $reservation->start_at;
+            $end = $reservation->end_at;
+
+            if ($start < $monthStart) {
+                $start = $monthStart;
+            }
+
+            if ($end > $monthEnd) {
+                $end = $monthEnd;
+            }
+
+            $bookedDays += $start->diffInHours($end) / 24;
+        }
+
+        $availableDays = $numberOfCars * $monthStart->daysInMonth;
+
+        return round($bookedDays / $availableDays * 100, 2);
     }
 }

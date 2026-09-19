@@ -23,20 +23,20 @@ class RefundController extends Controller
             ],
         ]);
 
-        $refunds = $request->user()
+        $query = $request->user()
             ->agency
             ->refunds()
             ->with([
                 'payment.reservation:id,reference,client_id,car_id,start_at,end_at,status',
                 'payment.reservation.client:id,first_name,last_name',
                 'payment.reservation.car:id,brand,model,plate_number',
-            ])
-            ->when(
-                $validated['status'] ?? null,
-                fn ($query, $status) => $query->where('status', $status)
-            )
-            ->latest()
-            ->get();
+            ]);
+
+        if (isset($validated['status'])) {
+            $query->where('status', $validated['status']);
+        }
+
+        $refunds = $query->latest()->get();
 
         return response()->json([
             'refunds' => $refunds,

@@ -16,40 +16,74 @@ class CarController extends Controller
     {
         $filters = $request->validated();
 
-        $cars = Car::query()
+        // Only available cars from approved agencies
+        $query = Car::query()
             ->where('status', 'available')
-            ->whereHas('agency', fn ($query) => $query->where('status', 'approved'))
-            ->when($filters['q'] ?? null, function ($query, $search) {
-                $query->where(function ($query) use ($search) {
-                    $query
-                        ->where('brand', 'ilike', "%{$search}%")
-                        ->orWhere('model', 'ilike', "%{$search}%");
-                });
-            })
-            ->when($filters['city_id'] ?? null, fn ($query, $cityId) => $query->where('city_id', $cityId))
-            ->when($filters['type'] ?? null, fn ($query, $type) => $query->where('type', $type))
-            ->when($filters['transmission'] ?? null, fn ($query, $transmission) => $query->where('transmission', $transmission))
-            ->when($filters['energy_type'] ?? null, fn ($query, $energy) => $query->where('energy_type', $energy))
-            ->when($filters['min_seats'] ?? null, fn ($query, $seats) => $query->where('seats', '>=', $seats))
-            ->when(isset($filters['min_price']), fn ($query) => $query->where('daily_price', '>=', $filters['min_price']))
-            ->when(isset($filters['max_price']), fn ($query) => $query->where('daily_price', '<=', $filters['max_price']))
-            // Only cars free for the whole requested period (same rule as availability check)
-            ->when(isset($filters['start_at'], $filters['end_at']), function ($query) use ($filters) {
-                $query->whereDoesntHave('reservations', function ($query) use ($filters) {
-                    $query
-                        ->whereIn('status', ['pending', 'confirmed', 'picked_up'])
-                        ->where('start_at', '<', $filters['end_at'])
-                        ->where('end_at', '>', $filters['start_at']);
-                });
-            })
-            ->when(
-                $filters['sort'] ?? null,
-                fn ($query, $sort) => match ($sort) {
-                    'price_asc' => $query->orderBy('daily_price'),
-                    'price_desc' => $query->orderByDesc('daily_price'),
-                    'newest' => $query->latest(),
-                }
-            )
+            ->whereHas('agency', function ($agencyQuery) {
+                $agencyQuery->where('status', 'approved');
+            });
+
+        // Search by brand or model (ilike = case-insensitive in PostgreSQL)
+        if (isset($filters['q'])) {
+            $search = '%' . $filters['q'] . '%';
+
+            $query->where(function ($searchQuery) use ($search) {
+                $searchQuery->where('brand', 'ilike', $search)
+                    ->orWhere('model', 'ilike', $search);
+            });
+        }
+
+        if (isset($filters['city_id'])) {
+            $query->where('city_id', $filters['city_id']);
+        }
+
+        if (isset($filters['type'])) {
+            $query->where('type', $filters['type']);
+        }
+
+        if (isset($filters['transmission'])) {
+            $query->where('transmission', $filters['transmission']);
+        }
+
+        if (isset($filters['energy_type'])) {
+            $query->where('energy_type', $filters['energy_type']);
+        }
+
+        if (isset($filters['min_seats'])) {
+            $query->where('seats', '>=', $filters['min_seats']);
+        }
+
+        if (isset($filters['min_price'])) {
+            $query->where('daily_price', '>=', $filters['min_price']);
+        }
+
+        if (isset($filters['max_price'])) {
+            $query->where('daily_price', '<=', $filters['max_price']);
+        }
+
+        // Only cars with no active reservation during the requested dates
+        if (isset($filters['start_at'])) {
+            $startAt = $filters['start_at'];
+            $endAt = $filters['end_at'];
+
+            $query->whereDoesntHave('reservations', function ($reservationQuery) use ($startAt, $endAt) {
+                $reservationQuery->whereIn('status', ['pending', 'confirmed', 'picked_up'])
+                    ->where('start_at', '<', $endAt)
+                    ->where('end_at', '>', $startAt);
+            });
+        }
+
+        $sort = $filters['sort'] ?? null;
+
+        if ($sort === 'price_asc') {
+            $query->orderBy('daily_price', 'asc');
+        } elseif ($sort === 'price_desc') {
+            $query->orderBy('daily_price', 'desc');
+        } elseif ($sort === 'newest') {
+            $query->orderBy('created_at', 'desc');
+        }
+
+        $cars = $query
             ->with([
                 'agency',
                 'city',
