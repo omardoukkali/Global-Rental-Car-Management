@@ -13,7 +13,7 @@ const citiesLoading = ref(false)
 const recommendations = ref([])
 
 const preferences = ref({
-  city: '',
+  cityId: '',
   startDate: '',
   endDate: '',
   passengers: 2,
@@ -46,7 +46,7 @@ function carTitle(car) {
 
 function carImage(car) {
   const image = (car?.images || []).find((item) => item.is_primary) || car?.images?.[0]
-  return image?.url || image?.image_url || null
+  return car?.image_url || image?.url || image?.image_url || null
 }
 
 function extractCities(response) {
@@ -98,7 +98,7 @@ async function analyze() {
   view.value = 'loading'
 
   try {
-    cars.value = await smartdriveService.getRecommendations(preferences.value)
+    cars.value = await smartdriveService.getEligibleVehicles(preferences.value)
 
     await new Promise((resolve) => window.setTimeout(resolve, 650))
     recommendations.value = [...cars.value]
@@ -113,7 +113,7 @@ async function analyze() {
 
     if (!recommendations.value.length) {
       error.value = 'Aucun véhicule disponible pour ces critères.'
-      view.value = 'form'
+      view.value = 'empty'
     } else {
       recommendations.value = recommendations.value.map((car, index) => ({
         ...car,
@@ -122,8 +122,8 @@ async function analyze() {
       view.value = 'results'
     }
   } catch (err) {
-    error.value = err?.message || 'Impossible de charger les véhicules disponibles.'
-    view.value = 'form'
+    error.value = err?.message || 'Aucun véhicule disponible pour ces critères.'
+    view.value = 'empty'
   } finally {
     loading.value = false
   }
@@ -135,7 +135,7 @@ function editPreferences() {
 
 function startOver() {
   recommendations.value = []
-  preferences.value = { city: '', startDate: '', endDate: '', passengers: 2, budget: 450, vehicleType: '', transmission: '', energy: '' }
+  preferences.value = { cityId: '', startDate: '', endDate: '', passengers: 2, budget: 450, vehicleType: '', transmission: '', energy: '' }
   view.value = 'form'
 }
 
@@ -189,15 +189,15 @@ function reserve(car) {
             <form class="smartdrive-form" @submit.prevent="analyze">
               <div class="smartdrive-field">
                 <label for="smartdrive-city">Ville de départ</label>
-                <select id="smartdrive-city" v-model="preferences.city" required :disabled="citiesLoading || !cities.length">
+                <select id="smartdrive-city" v-model="preferences.cityId" required :disabled="citiesLoading || !cities.length">
                   <option value="" disabled>{{ citiesLoading ? 'Chargement des villes…' : 'Choisir une ville' }}</option>
-                  <option v-for="city in cities" :key="city.id" :value="city.name">{{ city.name }}</option>
+                  <option v-for="city in cities" :key="city.id" :value="city.id">{{ city.name }}</option>
                 </select>
                 <span v-if="!citiesLoading && !cities.length" class="smartdrive-field-hint">Les villes sont momentanément indisponibles.</span>
               </div>
               <div class="smartdrive-field">
                 <label for="smartdrive-passengers">Voyageurs</label>
-                <input id="smartdrive-passengers" v-model.number="preferences.passengers" type="number" min="1" max="12" required />
+                <input id="smartdrive-passengers" v-model.number="preferences.passengers" type="number" min="1" max="9" required />
               </div>
               <div class="smartdrive-field">
                 <label for="smartdrive-start-date">Départ</label>
@@ -214,19 +214,19 @@ function reserve(car) {
               <div class="smartdrive-field">
                 <label for="smartdrive-type">Type</label>
                 <select id="smartdrive-type" v-model="preferences.vehicleType">
-                  <option value="">Tous les types</option><option value="Citadine">Citadine</option><option value="SUV">SUV</option><option value="Berline">Berline</option>
+                  <option value="">Tous les types</option><option value="hatchback">Citadine</option><option value="suv">SUV</option><option value="sedan">Berline</option><option value="van">Utilitaire</option>
                 </select>
               </div>
               <div class="smartdrive-field">
                 <label for="smartdrive-transmission">Boîte</label>
                 <select id="smartdrive-transmission" v-model="preferences.transmission">
-                  <option value="">Indifférent</option><option value="automatique">Automatique</option><option value="manuelle">Manuelle</option>
+                  <option value="">Indifférent</option><option value="automatic">Automatique</option><option value="manual">Manuelle</option>
                 </select>
               </div>
               <div class="smartdrive-field">
                 <label for="smartdrive-energy">Énergie</label>
                 <select id="smartdrive-energy" v-model="preferences.energy">
-                  <option value="">Indifférent</option><option value="essence">Essence</option><option value="diesel">Diesel</option><option value="electrique">Électrique</option>
+                  <option value="">Indifférent</option><option value="gasoline">Essence</option><option value="diesel">Diesel</option><option value="hybrid">Hybride</option><option value="electric">Électrique</option>
                 </select>
               </div>
               <p v-if="error" class="smartdrive-error" role="alert">{{ error }}</p>
@@ -239,6 +239,12 @@ function reserve(car) {
             <h3>SmartDrive analyse les options</h3>
             <p>Nous comparons les véhicules disponibles selon vos priorités.</p>
             <div class="smartdrive-progress"><span /></div>
+          </div>
+
+          <div v-else-if="view === 'empty'" class="smartdrive-empty" role="status">
+            <h3>Aucun véhicule disponible pour ces critères.</h3>
+            <p>{{ error }}</p>
+            <button type="button" class="smartdrive-secondary" @click="editPreferences">Modifier mes critères</button>
           </div>
 
           <template v-else-if="view === 'results' && hasResults">

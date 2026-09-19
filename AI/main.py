@@ -1,9 +1,10 @@
 import os
 import json
-from urllib.request import urlopen
+from urllib.request import Request, urlopen
 from pathlib import Path
+from typing import Optional
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -12,30 +13,69 @@ import uvicorn
 app = FastAPI()
 BASE_DIR = Path(__file__).resolve().parent
 BACKEND_URL = os.environ.get("BACKEND_URL", "http://backend:8000/api")
+EXPERIMENTAL_DATA_PATH = BASE_DIR / "data" / "experimental_vehicles.json"
 
 
 class RecommendationRequest(BaseModel):
-    budget: float = Field(default=450, ge=0)
-    passengers: int = Field(default=2, ge=1, le=12)
-    city: str = ""
-    vehicle_type: str = ""
-    transmission: str = ""
-    energy: str = ""
+    budget_per_day: float = Field(ge=0)
+    start_at: str
+    end_at: str
+    city_id: str
+    passengers: int = Field(ge=1, le=9)
+    vehicle_type: Optional[str] = None
+    transmission: Optional[str] = None
+    energy_type: Optional[str] = None
 
 
 def score_vehicle(car, request):
-    score = 54
+    score = 40
+    matched_preferences = 0
+    preference_count = 0
     if request.vehicle_type and str(car.get("type", "")).lower() == request.vehicle_type.lower():
-        score += 16
+        score += 18
+        matched_preferences += 1
+    if request.vehicle_type:
+        preference_count += 1
     if request.transmission and str(car.get("transmission", "")).lower() == request.transmission.lower():
-        score += 13
-    if request.energy and str(car.get("energy_type", "")).lower() == request.energy.lower():
-        score += 10
+        score += 14
+        matched_preferences += 1
+    if request.transmission:
+        preference_count += 1
+    if request.energy_type and str(car.get("energy_type", "")).lower() == request.energy_type.lower():
+        score += 14
+        matched_preferences += 1
+    if request.energy_type:
+        preference_count += 1
     if int(car.get("seats") or 0) >= request.passengers:
-        score += 10
+        score += 12
     price = float(car.get("daily_price") or 0)
-    score += 10 if price <= request.budget else -min(18, int((price - request.budget) / 50) + 1)
-    return max(1, min(99, score))
+    score += 20 if price <= request.budget_per_day else -min(20, int((price - request.budget_per_day) / 50) + 1)
+    if preference_count and matched_preferences == preference_count:
+        score += 5
+    return max(1, min(99, round(score)))
+
+
+def load_experimental_vehicles():
+    with EXPERIMENTAL_DATA_PATH.open(encoding="utf-8") as data_file:
+        return json.load(data_file)
+
+
+def analyze_vehicles(vehicles, request):
+    analyzed = [{**vehicle, "score": score_vehicle(vehicle, request)} for vehicle in vehicles]
+    return sorted(analyzed, key=lambda vehicle: (-vehicle["score"], -float(vehicle.get("daily_price") or 0)))
+
+
+def fetch_eligible_vehicles(request):
+    request_data = request.model_dump() if hasattr(request, "model_dump") else request.dict()
+    payload = json.dumps(request_data).encode("utf-8")
+    backend_request = Request(
+        f"{BACKEND_URL}/smartdrive/eligible-vehicles",
+        data=payload,
+        headers={"Content-Type": "application/json", "Accept": "application/json"},
+        method="POST",
+    )
+    with urlopen(backend_request, timeout=5) as response:
+        return json.loads(response.read().decode("utf-8"))
 
 
 @app.get("/health")
@@ -58,14 +98,26 @@ def cities():
 
 @app.post("/api/recommend")
 def recommend(request: RecommendationRequest):
-    fallback = [
-        {"id": "sandero", "brand": "Dacia", "model": "Sandero", "type": "Citadine", "seats": 5, "transmission": "Manuelle", "energy_type": "Essence", "daily_price": 260, "rating": 4.7},
-        {"id": "clio", "brand": "Renault", "model": "Clio V", "type": "Citadine", "seats": 5, "transmission": "Automatique", "energy_type": "Essence", "daily_price": 340, "rating": 4.9},
-        {"id": "duster", "brand": "Dacia", "model": "Duster", "type": "SUV", "seats": 5, "transmission": "Manuelle", "energy_type": "Diesel", "daily_price": 480, "rating": 4.8},
-    ]
-    results = [{**car, "score": score_vehicle(car, request)} for car in fallback]
-    results.sort(key=lambda car: car["score"], reverse=True)
-    return {"recommended": results[0], "results": results}
+    try:
+        eligible = fetch_eligible_vehicles(request)
+        vehicles = eligible.get("vehicles", [])
+        source = "laravel"
+    except Exception as error:
+        if os.environ.get("SMARTDRIVE_USE_EXPERIMENTAL_DATA", "false").lower() != "true":
+            raise HTTPException(status_code=503, detail="Le service de véhicules éligibles est indisponible.") from error
+        vehicles = load_experimental_vehicles()
+        eligible = {"trip": None, "preferences": request.dict()}
+        source = "experimental"
+
+    results = analyze_vehicles(vehicles, request)
+    return {
+        "trip": eligible.get("trip"),
+        "preferences": eligible.get("preferences"),
+        "total": len(results),
+        "recommended": results[0] if results else None,
+        "results": results,
+        "source": source,
+    }
 
 @app.get("/")
 def read_root():
