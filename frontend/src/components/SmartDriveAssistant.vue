@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import api from '@/services/api'
-import carsService from '@/services/cars'
+import smartdriveService from '@/services/smartdrive'
 
 const open = ref(false)
 const view = ref('intro')
@@ -14,6 +14,8 @@ const recommendations = ref([])
 
 const preferences = ref({
   city: '',
+  startDate: '',
+  endDate: '',
   passengers: 2,
   budget: 450,
   vehicleType: '',
@@ -96,16 +98,7 @@ async function analyze() {
   view.value = 'loading'
 
   try {
-    if (!cars.value.length) {
-      const response = await carsService.getPublicCars()
-      cars.value = Array.isArray(response?.cars)
-        ? response.cars
-        : Array.isArray(response?.data?.cars)
-          ? response.data.cars
-          : Array.isArray(response)
-            ? response
-            : []
-    }
+    cars.value = await smartdriveService.getRecommendations(preferences.value)
 
     await new Promise((resolve) => window.setTimeout(resolve, 650))
     recommendations.value = [...cars.value]
@@ -142,7 +135,7 @@ function editPreferences() {
 
 function startOver() {
   recommendations.value = []
-  preferences.value = { city: '', passengers: 2, budget: 450, vehicleType: '', transmission: '', energy: '' }
+  preferences.value = { city: '', startDate: '', endDate: '', passengers: 2, budget: 450, vehicleType: '', transmission: '', energy: '' }
   view.value = 'form'
 }
 
@@ -171,12 +164,8 @@ function reserve(car) {
       </span>
       <span class="hidden sm:inline">M’aider à choisir</span>
       <span class="smartdrive-launcher-label sm:hidden">SmartDrive</span>
-        <span class="smartdrive-live-dot" aria-label="Assistant disponible" />
+      <span class="smartdrive-live-dot" aria-label="Assistant disponible" />
     </button>
-
-    <Transition name="smartdrive-fade">
-        <button v-if="open" type="button" class="smartdrive-backdrop" aria-label="Fermer SmartDrive AI" @click="closeAssistant" />
-      </Transition>
       <Transition name="smartdrive-fade">
         <section v-if="open" class="smartdrive-panel" role="dialog" aria-modal="false" aria-labelledby="smartdrive-title">
         <div class="smartdrive-panel-bar" />
@@ -209,6 +198,14 @@ function reserve(car) {
               <div class="smartdrive-field">
                 <label for="smartdrive-passengers">Voyageurs</label>
                 <input id="smartdrive-passengers" v-model.number="preferences.passengers" type="number" min="1" max="12" required />
+              </div>
+              <div class="smartdrive-field">
+                <label for="smartdrive-start-date">Départ</label>
+                <input id="smartdrive-start-date" v-model="preferences.startDate" type="date" required />
+              </div>
+              <div class="smartdrive-field">
+                <label for="smartdrive-end-date">Retour</label>
+                <input id="smartdrive-end-date" v-model="preferences.endDate" type="date" :min="preferences.startDate" required />
               </div>
               <div class="smartdrive-field">
                 <label for="smartdrive-budget">Budget / jour</label>
