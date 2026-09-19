@@ -1,21 +1,21 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import api from '@/services/api'
 import smartdriveService from '../smartdrive'
 
-vi.mock('@/services/api', () => ({
+const { post } = vi.hoisted(() => ({ post: vi.fn() }))
+
+vi.mock('axios', () => ({
   default: {
-    get: vi.fn(),
-    post: vi.fn(),
+    create: vi.fn(() => ({ post })),
   },
 }))
 
 describe('smartdrive service', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    post.mockReset()
   })
 
   it('sends the complete preference payload to the Laravel SmartDrive endpoint', async () => {
-    api.post.mockResolvedValueOnce({ vehicles: [{ id: 'car-1' }] })
+    post.mockResolvedValueOnce({ data: { results: [{ id: 'car-1' }] } })
 
     const preferences = {
       budget: 450,
@@ -31,7 +31,7 @@ describe('smartdrive service', () => {
     await expect(smartdriveService.getEligibleVehicles(preferences)).resolves.toEqual([
       { id: 'car-1' },
     ])
-    expect(api.post).toHaveBeenCalledWith('/smartdrive/eligible-vehicles', {
+    expect(post).toHaveBeenCalledWith('/api/recommend', {
       budget_per_day: 450,
       start_at: '2026-09-21',
       end_at: '2026-09-25',

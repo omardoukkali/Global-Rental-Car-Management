@@ -2,7 +2,15 @@ import json
 import unittest
 from pathlib import Path
 
-from main import RecommendationRequest, analyze_vehicles, load_experimental_vehicles
+from main import SCORING_WEIGHTS, RecommendationRequest, analyze_vehicles, load_experimental_vehicles, score_breakdown
+
+CITY_IDS = {
+    "Agadir": "a2c296b8-dd35-43da-b3df-52459a2033f6",
+    "Casablanca": "a2c296b8-72d9-4163-9b99-74673eb932da",
+    "Marrakech": "a2c296b8-aa39-40be-8f10-2c700b3585b5",
+    "Rabat": "a2c296b8-9360-4b43-abec-7d2f41ae1260",
+    "Tangier": "a2c296b8-355a-4455-8bdd-8ab5255f813c",
+}
 
 
 class SmartDriveEngineTests(unittest.TestCase):
@@ -31,12 +39,25 @@ class SmartDriveEngineTests(unittest.TestCase):
             self.assertGreater(vehicle["seats"], 0)
             self.assertGreaterEqual(vehicle["daily_price"], 0)
 
+    def test_every_supported_city_has_a_distinct_experimental_fleet(self):
+        city_fleets = {name: load_experimental_vehicles(city_id) for name, city_id in CITY_IDS.items()}
+        self.assertTrue(all(len(fleet) > 0 for fleet in city_fleets.values()))
+        self.assertEqual(sum(len(fleet) for fleet in city_fleets.values()), len(self.vehicles))
+        self.assertEqual(len({vehicle["id"] for fleet in city_fleets.values() for vehicle in fleet}), len(self.vehicles))
+
     def test_personalized_matching_vehicle_is_ranked_first(self):
         results = analyze_vehicles(self.vehicles, self.request)
         self.assertEqual(results[0]["id"], "experimental-clio-001")
-        self.assertEqual(results[0]["score"], 99)
+        self.assertEqual(set(results[0]["score_breakdown"]), set(SCORING_WEIGHTS))
+        self.assertEqual(sum(SCORING_WEIGHTS.values()), 100)
+        self.assertEqual(results[0]["score"], round(sum(results[0]["score_breakdown"].values())))
         self.assertGreater(results[0]["score"], results[-1]["score"])
         self.assertEqual(results, analyze_vehicles(self.vehicles, self.request))
+
+    def test_all_weighted_dimensions_are_used(self):
+        breakdown = score_breakdown(self.vehicles[0], self.request)
+        self.assertEqual(set(breakdown), set(SCORING_WEIGHTS))
+        self.assertTrue(all(0 <= value <= SCORING_WEIGHTS[key] for key, value in breakdown.items()))
 
     def test_large_passenger_request_prefers_nine_seat_vehicle(self):
         if hasattr(self.request, "model_copy"):
