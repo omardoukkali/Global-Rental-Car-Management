@@ -43,6 +43,23 @@ class ReservationController extends Controller
                 'sometimes',
                 'in:pending,confirmed,rejected,picked_up,completed,cancelled,disputed',
             ],
+
+            'car_id' => [
+                'sometimes',
+                'uuid',
+            ],
+
+            // Calendar window: reservations overlapping [from, to]
+            'from' => [
+                'required_with:to',
+                'date',
+            ],
+
+            'to' => [
+                'required_with:from',
+                'date',
+                'after:from',
+            ],
         ]);
 
         $reservations = $request->user()
@@ -58,6 +75,16 @@ class ReservationController extends Controller
             ->when(
                 $validated['status'] ?? null,
                 fn ($query, $status) => $query->where('status', $status)
+            )
+            ->when(
+                $validated['car_id'] ?? null,
+                fn ($query, $carId) => $query->where('car_id', $carId)
+            )
+            ->when(
+                isset($validated['from'], $validated['to']),
+                fn ($query) => $query
+                    ->where('start_at', '<', $validated['to'])
+                    ->where('end_at', '>', $validated['from'])
             )
             ->latest()
             ->get();

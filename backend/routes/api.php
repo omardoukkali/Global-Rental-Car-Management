@@ -247,6 +247,11 @@ Route::middleware([
         'index',
     ]);
 
+    Route::get('/agency/stats', [
+        AgencyController::class,
+        'stats',
+    ]);
+
 
     // Reservation pickup / return
 
