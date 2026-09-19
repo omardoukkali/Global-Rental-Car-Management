@@ -14,8 +14,7 @@ class CarImageFactory extends Factory
     {
         return [
             'car_id' => Car::factory(),
-            // Placeholder photo service (a different picture for each seed)
-            'url' => 'https://picsum.photos/seed/' . fake()->uuid() . '/800/600',
+            'url' => 'https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7b/Dacia_Logan_III.jpg/960px-Dacia_Logan_III.jpg',
             'is_primary' => false,
             'display_order' => 0,
         ];

@@ -38,9 +38,21 @@ class UserSeeder extends Seeder
         );
 
         // 29 more clients (30 in total)
-        User::factory()->count(29)->create([
-            'role' => 'client',
-            'status' => 'active',
-        ]);
+        $firstNames = ['Youssef', 'Amina', 'Mohamed', 'Salma', 'Omar', 'Khadija', 'Hamza', 'Imane', 'Ayoub', 'Sara', 'Mehdi', 'Hiba', 'Yassine', 'Meryem', 'Othmane', 'Zineb', 'Karim', 'Houda', 'Reda', 'Ghita'];
+        $lastNames = ['El Amrani', 'Benali', 'Alaoui', 'Bennani', 'Tazi', 'El Idrissi', 'Chraibi', 'Berrada', 'El Fassi', 'Lahlou', 'Benjelloun', 'Kettani'];
+
+        for ($i = 1; $i <= 29; $i++) {
+            $firstName = fake()->randomElement($firstNames);
+            $lastName = fake()->randomElement($lastNames);
+
+            User::factory()->create([
+                'first_name' => $firstName,
+                'last_name' => $lastName,
+                'email' => strtolower($firstName) . $i . '@example.ma',
+                'phone' => '+2126' . fake()->numerify('########'),
+                'role' => 'client',
+                'status' => 'active',
+            ]);
+        }
     }
 }
