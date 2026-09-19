@@ -197,6 +197,12 @@ onMounted(loadReservations)
         <div class="flex items-center gap-3 text-sm">
           <span class="font-bold text-[#0F172A]">Mes réservations</span>
           <RouterLink
+            to="/payments"
+            class="font-semibold text-slate-500 hover:text-slate-800 transition-colors"
+          >
+            Paiements
+          </RouterLink>
+          <RouterLink
             to="/reservations/new"
             class="font-semibold text-slate-500 hover:text-slate-800 transition-colors"
           >
