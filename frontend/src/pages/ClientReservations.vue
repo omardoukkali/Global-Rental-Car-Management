@@ -370,5 +370,6 @@ onMounted(loadReservations)
         </li>
       </ul>
     </main>
+
   </div>
 </template>
