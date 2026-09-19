@@ -116,13 +116,14 @@ re-run from scratch.
 
 ## Seeded development accounts
 
-The seeder creates test users. Password for all three: `123456`
+The seeders create demo data. Password for every account: `password`
 
 | Email | Role |
 |---|---|
-| admin@test.com | admin |
-| owner@test.com | agency_owner |
-| client@test.com | client |
+| admin@example.com | admin |
+| client@example.com | client |
+| agency@example.com | agency |
+| hassan@agency.ma | agency |
 
 These are **development credentials only** and must never be used in a deployed
 environment.

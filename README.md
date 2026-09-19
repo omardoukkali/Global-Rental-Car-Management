@@ -102,7 +102,9 @@ so no manual steps are needed:
 3. Generates an `APP_KEY` if none is set
 4. Waits for PostgreSQL, then runs migrations
 5. Seeds the database on first boot only (guarded by a lock file)
-6. Starts the application server
+6. Starts the Laravel scheduler (`schedule:work`) in the background — it runs
+   `refunds:process-expired` every minute
+7. Starts the application server
 
 > **Note on `APP_KEY`.** `docker-compose.yml` currently supplies a hardcoded
 > fallback key when `APP_KEY` is unset in `.env`. The app therefore boots with a
@@ -119,16 +121,23 @@ so no manual steps are needed:
 
 ## Seeded development accounts
 
-The seeder creates test users for local development.
+The seeders create demo data for local development. Password for every account: `password`
 
 | Email | Role |
 |---|---|
-| admin@test.com | admin |
-| owner@test.com | agency |
-| client@test.com | client |
+| admin@example.com | admin |
+| client@example.com | client |
+| agency@example.com | agency (Demo Rent Cars, Tangier) |
+| hassan@agency.ma | agency (Atlas Cars, Casablanca) |
+
+They also create 29 more clients, 10 more agencies (one pending, one rejected), about 80
+cars with images, and about 400 reservations in every status, with their payments,
+refunds and reviews. There is one seeder per model in `backend/database/seeders/`,
+called in order by `DatabaseSeeder`.
 
 These are **development credentials only** and must never exist in a deployed
 environment. The seeder is guarded by a lock file and runs on first boot only.
+To reseed from scratch: `docker compose exec backend php artisan migrate:fresh --seed`
 
 ---
 

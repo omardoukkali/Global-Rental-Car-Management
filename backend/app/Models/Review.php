@@ -26,6 +26,13 @@ class Review extends Model
         ];
     }
 
+    protected static function booted(): void
+    {
+        // Keep the agency's avg_rating / total_reviews in sync
+        static::saved(fn (Review $review) => $review->reservation?->agency?->refreshRating());
+        static::deleted(fn (Review $review) => $review->reservation?->agency?->refreshRating());
+    }
+
     public function reservation()
     {
         return $this->belongsTo(Reservation::class);

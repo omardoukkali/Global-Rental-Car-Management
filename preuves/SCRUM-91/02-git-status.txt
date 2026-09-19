@@ -1,0 +1,12 @@
+## feature/SCRUM-138-139-client-payments
+ M backend/database/seeders/AdminUserSeeder.php
+ M frontend/src/pages/ClientReservations.vue
+ M frontend/src/pages/ReservationForm.vue
+ M frontend/src/router/index.js
+?? Rapport_Technique_Individuel_ELFAQIR_Mohamed.docx
+?? frontend/screen/
+?? frontend/src/pages/PaymentCheckout.vue
+?? frontend/src/pages/PaymentHistory.vue
+?? frontend/src/services/payments.js
+?? preuves/
+?? tmp_run_functional_tests.py

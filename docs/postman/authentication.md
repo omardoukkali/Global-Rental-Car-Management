@@ -6,6 +6,8 @@ POST /api/register/agency
 POST /api/login
 GET  /api/me
 POST /api/logout
+POST /api/forgot-password   (max 5 / minute)
+POST /api/reset-password    (max 5 / minute)
 
 Authentication:
 Laravel Sanctum / Bearer Token
@@ -34,3 +36,4 @@ Main HTTP responses:
 401 Unauthenticated / invalid credentials
 403 Forbidden
 422 Validation error
+429 Too many requests

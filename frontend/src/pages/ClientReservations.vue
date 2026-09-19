@@ -62,6 +62,10 @@ function canCancel(reservation) {
   return ['pending', 'confirmed'].includes(reservation?.status)
 }
 
+function canPay(reservation) {
+  return reservation?.status === 'pending'
+}
+
 function canConfirmPickup(reservation) {
   return (
     reservation?.status === 'confirmed' &&
@@ -315,6 +319,14 @@ onMounted(loadReservations)
                 {{ formatMoney(res.total_amount) }}
                 <span class="text-xs font-normal text-slate-500">MAD</span>
               </p>
+              <RouterLink
+                v-if="canPay(res)"
+                :to="`/reservations/${res.id}/pay`"
+                data-testid="pay-link"
+                class="text-sm font-semibold text-emerald-700 hover:text-emerald-800"
+              >
+                Payer
+              </RouterLink>
               <button
                 v-if="canCancel(res)"
                 type="button"
@@ -364,5 +376,6 @@ onMounted(loadReservations)
         </li>
       </ul>
     </main>
+
   </div>
 </template>

@@ -4,9 +4,9 @@
     <div v-if="createdReservation" data-testid="success-banner" class="turo-success">
       <div class="turo-success-icon">✓</div>
       <p class="turo-eyebrow turo-teal-text">Demande envoyée</p>
-      <h1 class="turo-car-title">Réservation confirmée</h1>
+      <h1 class="turo-car-title">Réservation créée</h1>
       <p class="turo-meta">
-        L’agence examinera votre demande. Vous recevrez une mise à jour sous peu.
+        Statut pending. Le paiement confirme la réservation auprès de l’agence.
       </p>
       <div class="turo-success-box">
         <div class="turo-row">
@@ -33,7 +33,14 @@
         </div>
       </div>
       <div class="turo-success-actions">
-        <RouterLink to="/myreservations" class="turo-btn-primary">Voir mes réservations</RouterLink>
+        <RouterLink
+          v-if="createdReservation.id"
+          :to="`/reservations/${createdReservation.id}/pay`"
+          class="turo-btn-primary"
+        >
+          Payer maintenant
+        </RouterLink>
+        <RouterLink to="/myreservations" class="turo-btn-ghost">Voir mes réservations</RouterLink>
         <button type="button" class="turo-btn-ghost" @click="resetForm">Nouvelle réservation</button>
       </div>
     </div>
