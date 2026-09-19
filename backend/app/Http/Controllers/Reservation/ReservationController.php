@@ -429,40 +429,16 @@ class ReservationController extends Controller
             ], 403);
         }
 
-        if ($reservation->client_pickup_confirmed_at) {
-            return response()->json([
-                'message' => 'Pickup has already been confirmed by the client.',
-            ], 422);
-        }
-
-        if ($reservation->status !== 'confirmed') {
-            return response()->json([
-                'message' => 'Only confirmed reservations can confirm pickup.',
-            ], 422);
-        }
-
-        if (!$reservation->client_pickup_confirmed_at) {
-            $reservation->update([
-                'client_pickup_confirmed_at' => now(),
-            ]);
-        }
-
-        if ($reservation->agency_pickup_confirmed_at) {
-            $reservation->update([
-                'status' => 'picked_up',
-                'picked_up_at' => now(),
-            ]);
-        }
-
-        return response()->json([
-            'message' => 'Pickup confirmed successfully.',
-            'reservation' => $reservation->fresh()->load([
-                'car',
-                'agency',
-                'pickupPoint',
-                'returnPoint',
-            ]),
-        ]);
+        return $this->confirmStep(
+            $reservation,
+            'client_pickup_confirmed_at',
+            'agency_pickup_confirmed_at',
+            'confirmed',
+            ['status' => 'picked_up', 'picked_up_at' => now()],
+            'Pickup has already been confirmed by the client.',
+            'Only confirmed reservations can confirm pickup.',
+            'Pickup confirmed successfully.'
+        );
     }
 
     public function confirmAgencyPickup(
@@ -477,41 +453,18 @@ class ReservationController extends Controller
             ], 403);
         }
 
-        if ($reservation->agency_pickup_confirmed_at) {
-            return response()->json([
-                'message' => 'Pickup has already been confirmed by the agency.',
-            ], 422);
-        }
-
-        if ($reservation->status !== 'confirmed') {
-            return response()->json([
-                'message' => 'Only confirmed reservations can confirm pickup.',
-            ], 422);
-        }
-
-        if (!$reservation->agency_pickup_confirmed_at) {
-            $reservation->update([
-                'agency_pickup_confirmed_at' => now(),
-            ]);
-        }
-
-        if ($reservation->client_pickup_confirmed_at) {
-            $reservation->update([
-                'status' => 'picked_up',
-                'picked_up_at' => now(),
-            ]);
-        }
-
-        return response()->json([
-            'message' => 'Pickup confirmed successfully.',
-            'reservation' => $reservation->fresh()->load([
-                'car',
-                'agency',
-                'pickupPoint',
-                'returnPoint',
-            ]),
-        ]);
+        return $this->confirmStep(
+            $reservation,
+            'agency_pickup_confirmed_at',
+            'client_pickup_confirmed_at',
+            'confirmed',
+            ['status' => 'picked_up', 'picked_up_at' => now()],
+            'Pickup has already been confirmed by the agency.',
+            'Only confirmed reservations can confirm pickup.',
+            'Pickup confirmed successfully.'
+        );
     }
+
     public function confirmReturn(
         Request $request,
         Reservation $reservation
@@ -522,41 +475,18 @@ class ReservationController extends Controller
             ], 403);
         }
 
-        if ($reservation->client_return_confirmed_at) {
-            return response()->json([
-                'message' => 'Return has already been confirmed by the client.',
-            ], 422);
-        }
-
-        if ($reservation->status !== 'picked_up') {
-            return response()->json([
-                'message' => 'Only picked up reservations can confirm return.',
-            ], 422);
-        }
-
-        if (!$reservation->client_return_confirmed_at) {
-            $reservation->update([
-                'client_return_confirmed_at' => now(),
-            ]);
-        }
-
-        if ($reservation->agency_return_confirmed_at) {
-            $reservation->update([
-                'status' => 'completed',
-                'returned_at' => now(),
-            ]);
-        }
-
-        return response()->json([
-            'message' => 'Return confirmed successfully.',
-            'reservation' => $reservation->fresh()->load([
-                'car',
-                'agency',
-                'pickupPoint',
-                'returnPoint',
-            ]),
-        ]);
+        return $this->confirmStep(
+            $reservation,
+            'client_return_confirmed_at',
+            'agency_return_confirmed_at',
+            'picked_up',
+            ['status' => 'completed', 'returned_at' => now()],
+            'Return has already been confirmed by the client.',
+            'Only picked up reservations can confirm return.',
+            'Return confirmed successfully.'
+        );
     }
+
     public function confirmAgencyReturn(
         Request $request,
         Reservation $reservation
@@ -569,33 +499,69 @@ class ReservationController extends Controller
             ], 403);
         }
 
-        if ($reservation->agency_return_confirmed_at) {
-            return response()->json([
-                'message' => 'Return has already been confirmed by the agency.',
-            ], 422);
-        }
+        return $this->confirmStep(
+            $reservation,
+            'agency_return_confirmed_at',
+            'client_return_confirmed_at',
+            'picked_up',
+            ['status' => 'completed', 'returned_at' => now()],
+            'Return has already been confirmed by the agency.',
+            'Only picked up reservations can confirm return.',
+            'Return confirmed successfully.'
+        );
+    }
 
-        if ($reservation->status !== 'picked_up') {
-            return response()->json([
-                'message' => 'Only picked up reservations can confirm return.',
-            ], 422);
-        }
+    /**
+     * Record one side of a two-party confirmation. The row is locked so that
+     * when client and agency confirm at the same time, the second one always
+     * sees the first and moves the reservation to its next status.
+     */
+    private function confirmStep(
+        Reservation $reservation,
+        string $ownField,
+        string $otherField,
+        string $requiredStatus,
+        array $completedChanges,
+        string $alreadyConfirmedMessage,
+        string $wrongStatusMessage,
+        string $successMessage
+    ): JsonResponse {
+        DB::transaction(function () use (
+            $reservation,
+            $ownField,
+            $otherField,
+            $requiredStatus,
+            $completedChanges,
+            $alreadyConfirmedMessage,
+            $wrongStatusMessage
+        ) {
+            $reservation = Reservation::where('id', $reservation->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        if (!$reservation->agency_return_confirmed_at) {
-            $reservation->update([
-                'agency_return_confirmed_at' => now(),
-            ]);
-        }
+            if ($reservation->{$ownField}) {
+                abort(response()->json([
+                    'message' => $alreadyConfirmedMessage,
+                ], 422));
+            }
 
-        if ($reservation->client_return_confirmed_at) {
-            $reservation->update([
-                'status' => 'completed',
-                'returned_at' => now(),
-            ]);
-        }
+            if ($reservation->status !== $requiredStatus) {
+                abort(response()->json([
+                    'message' => $wrongStatusMessage,
+                ], 422));
+            }
+
+            $changes = [$ownField => now()];
+
+            if ($reservation->{$otherField}) {
+                $changes = array_merge($changes, $completedChanges);
+            }
+
+            $reservation->update($changes);
+        });
 
         return response()->json([
-            'message' => 'Return confirmed successfully.',
+            'message' => $successMessage,
             'reservation' => $reservation->fresh()->load([
                 'car',
                 'agency',
