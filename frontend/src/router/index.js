@@ -12,6 +12,8 @@ import ClientReservations from '@/pages/ClientReservations.vue'
 import AgencyPickupConfirm from '@/pages/AgencyPickupConfirm.vue'
 import AgencyPoints from '@/pages/AgencyPoints.vue'
 import AgencyReturnConfirm from '@/pages/AgencyReturnConfirm.vue'
+import PaymentCheckout from '@/pages/PaymentCheckout.vue'
+import PaymentHistory from '@/pages/PaymentHistory.vue'
 
 const routes = [{
         path: '/',
@@ -122,6 +124,18 @@ const routes = [{
         path: '/myreservations',
         name: 'ClientReservations',
         component: ClientReservations,
+        meta: { requiresAuth: true }
+    },
+    {
+        path: '/reservations/:id/pay',
+        name: 'PaymentCheckout',
+        component: PaymentCheckout,
+        meta: { requiresAuth: true }
+    },
+    {
+        path: '/payments',
+        name: 'PaymentHistory',
+        component: PaymentHistory,
         meta: { requiresAuth: true }
     }
 ]
