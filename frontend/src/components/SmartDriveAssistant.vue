@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import api from '@/services/api'
 import smartdriveService from '@/services/smartdrive'
 
@@ -11,6 +11,14 @@ const cars = ref([])
 const cities = ref([])
 const citiesLoading = ref(false)
 const recommendations = ref([])
+const launcherNote = ref(0)
+
+const launcherNotes = [
+  'Je connais votre prochaine voiture.',
+  'Quelques choix. Une recommandation claire.',
+  'Votre trajet mérite mieux qu’un simple filtre.',
+]
+let launcherNoteTimer
 
 const preferences = ref({
   cityId: '',
@@ -31,6 +39,18 @@ function openAssistant() {
   error.value = ''
   loadCities()
 }
+
+function rotateLauncherNote() {
+  launcherNote.value = (launcherNote.value + 1) % launcherNotes.length
+}
+
+onMounted(() => {
+  launcherNoteTimer = window.setInterval(rotateLauncherNote, 5200)
+})
+
+onUnmounted(() => {
+  window.clearInterval(launcherNoteTimer)
+})
 
 function closeAssistant() {
   open.value = false
@@ -110,7 +130,9 @@ async function analyze() {
       .map((car) => ({
         ...car,
         smartScore: scoreCar(car),
-        smartReason: resultReason(car, 0),
+        smartConfidence: car.confidence ?? null,
+        smartExplanation: car.explanation || { strengths: [resultReason(car, 0)], tradeoffs: [] },
+        smartReason: car.explanation?.summary || resultReason(car, 0),
       }))
       .sort((first, second) => second.smartScore - first.smartScore)
       .slice(0, 3)
@@ -121,7 +143,9 @@ async function analyze() {
     } else {
       recommendations.value = recommendations.value.map((car, index) => ({
         ...car,
-        smartReason: resultReason(car, index),
+        smartConfidence: car.confidence ?? null,
+        smartExplanation: car.explanation || { strengths: [resultReason(car, index)], tradeoffs: [] },
+        smartReason: car.explanation?.summary || resultReason(car, index),
       }))
       view.value = 'results'
     }
@@ -150,6 +174,18 @@ function reserve(car) {
 
 <template>
   <div class="smartdrive-root">
+    <Transition name="smartdrive-note">
+      <button
+        v-if="!open"
+        type="button"
+        class="smartdrive-note"
+        aria-label="Découvrir les recommandations SmartDrive"
+        @click="openAssistant"
+      >
+        <span class="smartdrive-note-dot" aria-hidden="true" />
+        {{ launcherNotes[launcherNote] }}
+      </button>
+    </Transition>
     <button
       v-if="!open"
       type="button"
@@ -160,25 +196,24 @@ function reserve(car) {
     >
       <span class="smartdrive-launcher-glow" aria-hidden="true" />
       <span class="smartdrive-launcher-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-          <path d="M5 16h14l-1.1-5.2a2 2 0 0 0-2-1.6H8.1a2 2 0 0 0-2 1.6L5 16Z" />
-          <path d="M4 16v2.5M20 16v2.5M7 16h.01M17 16h.01M7 9.2 8.2 7h7.6L17 9.2" />
+        <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.7">
+          <path d="M7 20.5h18l-1.4-6.3a2.6 2.6 0 0 0-2.5-2H10.9a2.6 2.6 0 0 0-2.5 2L7 20.5Z" />
+          <path d="M6 20.5v3M26 20.5v3M10 20.5h.01M22 20.5h.01M10 12.2l1.6-3h8.8l1.6 3" />
         </svg>
         <span class="smartdrive-spark">✦</span>
       </span>
-      <span class="hidden sm:inline">M’aider à choisir</span>
-      <span class="smartdrive-launcher-label sm:hidden">SmartDrive</span>
+      <span class="smartdrive-launcher-copy"><strong>SmartDrive</strong><small>Votre copilote location</small></span>
       <span class="smartdrive-live-dot" aria-label="Assistant disponible" />
     </button>
       <Transition name="smartdrive-fade">
         <section v-if="open" class="smartdrive-panel" role="dialog" aria-modal="false" aria-labelledby="smartdrive-title">
         <div class="smartdrive-panel-bar" />
         <header class="smartdrive-header">
-          <div class="smartdrive-avatar" aria-hidden="true">✦</div>
+          <div class="smartdrive-avatar" aria-hidden="true"><span>✦</span></div>
           <div>
             <p class="smartdrive-kicker">GLOBALRENTAL AI</p>
             <h2 id="smartdrive-title">SmartDrive</h2>
-            <p class="smartdrive-status"><span /> Assistant disponible</p>
+            <p class="smartdrive-status"><span /> Prêt à vous guider</p>
           </div>
           <button type="button" class="smartdrive-close" aria-label="Fermer SmartDrive AI" @click="closeAssistant">×</button>
         </header>
@@ -186,9 +221,9 @@ function reserve(car) {
         <div class="smartdrive-body">
           <template v-if="view === 'intro' || view === 'form'">
             <div class="smartdrive-intro">
-              <div class="smartdrive-welcome-chip"><span>✦</span> Recommandations personnalisées</div>
-              <h3>Trouvez la voiture qui vous ressemble.</h3>
-              <p>Quelques préférences suffisent. Nous comparons les véhicules disponibles pour vous aider à décider.</p>
+              <div class="smartdrive-welcome-chip"><span>✦</span> Recommandation personnalisée</div>
+              <h3>On trouve votre meilleur trajet.</h3>
+              <p>Dites-nous ce qui compte. SmartDrive compare les options disponibles et vous explique son choix.</p>
             </div>
             <form class="smartdrive-form" @submit.prevent="analyze">
               <div class="smartdrive-field">
@@ -270,7 +305,12 @@ function reserve(car) {
                 <p>{{ car.type || 'Véhicule' }} · {{ car.transmission || 'Boîte standard' }}<br /><strong>{{ Number(car.daily_price || 0).toLocaleString('fr-MA') }} MAD</strong> / jour</p>
               </div>
               <div class="smartdrive-score"><strong>{{ car.smartScore }}%</strong><span>match</span></div>
+              <div v-if="car.smartConfidence !== null" class="smartdrive-confidence">Confiance {{ car.smartConfidence }}%</div>
               <p class="smartdrive-reason"><b v-if="index === 0">Notre choix · </b>{{ car.smartReason }}</p>
+              <ul v-if="car.smartExplanation?.strengths?.length" class="smartdrive-explanation">
+                <li v-for="strength in car.smartExplanation.strengths.slice(0, 3)" :key="strength">{{ strength }}</li>
+              </ul>
+              <p v-if="car.smartExplanation?.tradeoffs?.length" class="smartdrive-tradeoff">À savoir : {{ car.smartExplanation.tradeoffs.join(' ; ') }}</p>
               <RouterLink
                 class="smartdrive-book"
                 :to="{ name: 'ReservationCreate', query: { car_id: car.id } }"
@@ -308,6 +348,56 @@ function reserve(car) {
 .smartdrive-result { position: relative; }
 .smartdrive-best-badge { position: absolute; top: -.55rem; right: .7rem; padding: .2rem .42rem; color: #166534; background: #dcfce7; border: 1px solid #bbf7d0; border-radius: 999px; font-size: .56rem; font-weight: 800; }
 .smartdrive-field-hint { color: #be123c; font-size: .62rem; }
+.smartdrive-confidence { grid-column: 1 / -1; color: #166534; font-size: .65rem; font-weight: 800; }
+.smartdrive-explanation { grid-column: 1 / -1; margin: 0; padding-left: 1rem; color: #475569; font-size: .68rem; line-height: 1.45; }
+.smartdrive-explanation li::marker { color: #16a34a; }
+.smartdrive-tradeoff { grid-column: 1 / -1; margin: 0; color: #92400e; font-size: .66rem; line-height: 1.4; }
+.smartdrive-note { position: fixed; right: 1.25rem; bottom: 5.85rem; z-index: 3; display: inline-flex; align-items: center; gap: .45rem; max-width: min(285px, calc(100vw - 2rem)); padding: .55rem .75rem; color: #3d3d3f; background: rgba(255,255,255,.96); border: 1px solid #e8e8ea; border-radius: .7rem; box-shadow: 0 12px 28px rgba(10,10,11,.12); font-size: .69rem; font-weight: 700; text-align: left; cursor: pointer; backdrop-filter: blur(16px); }
+.smartdrive-note:hover { color: #0a0a0b; border-color: #b8c8ef; transform: translateY(-2px); }
+.smartdrive-note:after { position: absolute; right: 1.3rem; bottom: -.35rem; width: .65rem; height: .65rem; content: ''; background: #fff; border-right: 1px solid #e8e8ea; border-bottom: 1px solid #e8e8ea; transform: rotate(45deg); }
+.smartdrive-note-dot { width: .38rem; height: .38rem; flex: 0 0 auto; background: #2563eb; border-radius: 50%; box-shadow: 0 0 0 4px #dbeafe; }
+.smartdrive-note-enter-active,.smartdrive-note-leave-active { transition: opacity .25s ease, transform .25s ease; }
+.smartdrive-note-enter-from,.smartdrive-note-leave-to { opacity: 0; transform: translateY(.4rem); }
+.smartdrive-launcher { right: 1.25rem; bottom: 1.25rem; gap: .7rem; min-height: 3.35rem; padding: .45rem .8rem .45rem .45rem; background: #0a0a0b; border: 1px solid #2b2b2e; border-radius: 1rem; box-shadow: 0 16px 38px rgba(10,10,11,.24), 0 0 0 1px rgba(255,255,255,.04) inset; }
+.smartdrive-launcher:hover { background: #1f1f22; box-shadow: 0 20px 42px rgba(10,10,11,.3), 0 0 0 1px rgba(255,255,255,.08) inset; }
+.smartdrive-launcher:active { transform: translateY(0) scale(.98); }
+.smartdrive-launcher-icon { width: 2.45rem; height: 2.45rem; color: #dbeafe; background: linear-gradient(145deg,#2f6cf6,#1743a9); border: 1px solid rgba(255,255,255,.22); border-radius: .78rem; box-shadow: 0 6px 15px rgba(37,99,235,.32); }
+.smartdrive-launcher-icon svg { width: 1.65rem; height: 1.65rem; animation: smartdrive-car-float 3.2s ease-in-out infinite; }
+.smartdrive-spark { top: -.48rem; right: -.45rem; color: #ffd166; text-shadow: 0 0 10px rgba(255,209,102,.7); animation: smartdrive-sparkle 2.2s ease-in-out infinite; }
+.smartdrive-launcher-copy { display: flex; flex-direction: column; gap: .05rem; min-width: 7.9rem; text-align: left; }
+.smartdrive-launcher-copy strong { color: #fff; font-family: 'Bricolage Grotesque', sans-serif; font-size: .85rem; letter-spacing: -.01em; }
+.smartdrive-launcher-copy small { color: #a8a8ad; font-size: .6rem; font-weight: 500; }
+.smartdrive-live-dot { width: .42rem; height: .42rem; margin-left: .1rem; background: #52d88c; border-color: #0a0a0b; box-shadow: 0 0 0 3px rgba(82,216,140,.15); }
+.smartdrive-panel { right: 1.25rem; bottom: 5.25rem; width: min(455px, calc(100vw - 2rem)); border-color: #e8e8ea; border-radius: 1.15rem; box-shadow: 0 28px 80px rgba(10,10,11,.2), 0 0 0 1px rgba(255,255,255,.7) inset; }
+.smartdrive-panel-bar { height: .3rem; background: linear-gradient(90deg,#0a0a0b 0 18%,#2563eb 18% 68%,#52d88c 68% 100%); }
+.smartdrive-header { padding: 1.2rem 1.35rem 1.05rem; }
+.smartdrive-avatar { position: relative; overflow: hidden; width: 2.7rem; height: 2.7rem; background: #0a0a0b; border-radius: .85rem; box-shadow: 0 8px 18px rgba(10,10,11,.16); }
+.smartdrive-avatar:before { position: absolute; inset: .35rem; content: ''; border: 1px solid rgba(255,255,255,.22); border-radius: .6rem; transform: rotate(45deg); }
+.smartdrive-avatar span { position: relative; z-index: 1; color: #dbeafe; animation: smartdrive-sparkle 2.6s ease-in-out infinite; }
+.smartdrive-header h2 { letter-spacing: -.04em; }
+.smartdrive-status { color: #6b6b70; }
+.smartdrive-status span { background: #52d88c; box-shadow: 0 0 0 3px rgba(82,216,140,.14); }
+.smartdrive-body { padding: 1.4rem 1.35rem 1.35rem; }
+.smartdrive-welcome-chip { color: #1743a9; background: #eef4ff; border-color: #d9e6ff; }
+.smartdrive-intro h3 { max-width: 18rem; font-size: 1.5rem; line-height: 1.05; }
+.smartdrive-intro p { max-width: 24rem; color: #6b6b70; }
+.smartdrive-field input,.smartdrive-field select { border-color: #e1e1e4; border-radius: .65rem; }
+.smartdrive-field input:focus,.smartdrive-field select:focus { border-color: #1a1a1c; box-shadow: 0 0 0 3px rgba(10,10,11,.08); }
+.smartdrive-primary,.smartdrive-book { background: #0a0a0b; border-radius: .68rem; }
+.smartdrive-primary:hover,.smartdrive-book:hover { background: #2b2b2e; }
+.smartdrive-result { background: #fff; border-color: #e8e8ea; border-radius: .85rem; box-shadow: 0 5px 16px rgba(10,10,11,.035); transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease; }
+.smartdrive-result:hover { border-color: #b8c8ef; box-shadow: 0 12px 28px rgba(37,99,235,.08); transform: translateY(-2px); }
+.smartdrive-car-image { background: #f1f5fb; border-radius: .65rem; }
+.smartdrive-score { color: #16814f; }
+.smartdrive-confidence { display: inline-flex; align-items: center; justify-self: end; padding: .25rem .42rem; color: #17623e; background: #eaf8ef; border: 1px solid #ccefd9; border-radius: 999px; font-size: .58rem; }
+.smartdrive-explanation { padding: .5rem .65rem .5rem 1.15rem; background: #fafafa; border-radius: .55rem; }
+.smartdrive-tradeoff { padding: .45rem .55rem; background: #fff8e8; border-radius: .45rem; }
+.smartdrive-empty { padding: 2.7rem 1rem; text-align: center; }
+.smartdrive-empty h3 { margin: 0 0 .5rem; color: #0a0a0b; font-family: 'Bricolage Grotesque', sans-serif; font-size: 1.2rem; }
+.smartdrive-empty p { color: #6b6b70; font-size: .75rem; }
+@keyframes smartdrive-car-float { 0%,100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-2px) rotate(-2deg); } }
+@keyframes smartdrive-sparkle { 0%,100% { opacity: .75; transform: scale(.9) rotate(0); } 50% { opacity: 1; transform: scale(1.12) rotate(12deg); } }
 @keyframes smartdrive-pulse { 0% { opacity: .7; transform: scale(.98); } 65%, 100% { opacity: 0; transform: scale(1.08); } }
-@media (prefers-reduced-motion: reduce) { .smartdrive-launcher-glow,.smartdrive-spinner,.smartdrive-progress span { animation: none; } .smartdrive-fade-enter-active,.smartdrive-fade-leave-active { transition: none; } }
+@media (max-width: 640px) { .smartdrive-note { right: 1rem; bottom: 5.65rem; max-width: calc(100vw - 2rem); }.smartdrive-launcher { right: 1rem; bottom: 1rem; }.smartdrive-launcher-copy { min-width: 7rem; }.smartdrive-panel { right: 1rem; bottom: 4.7rem; width: calc(100vw - 2rem); } }
+@media (prefers-reduced-motion: reduce) { .smartdrive-launcher-glow,.smartdrive-spinner,.smartdrive-progress span,.smartdrive-launcher-icon svg,.smartdrive-spark,.smartdrive-avatar span { animation: none; } .smartdrive-fade-enter-active,.smartdrive-fade-leave-active,.smartdrive-note-enter-active,.smartdrive-note-leave-active { transition: none; } }
 </style>
