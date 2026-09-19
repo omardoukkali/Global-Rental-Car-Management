@@ -145,8 +145,8 @@ Fix it in `UserFactory` with a state using `forceFill()`, or switch those calls 
 
 - `backend/database/factories/UserFactory.php`
 - `backend/database/factories/AgencyFactory.php`
-- `backend/database/seeders/AdminUserSeeder.php` — this one certainly sets `role: admin`
-- `backend/database/seeders/DemoDataSeeder.php`
+- `backend/database/seeders/UserSeeder.php` — this one certainly sets `role: admin` (and `role: client`)
+- `backend/database/seeders/AgencySeeder.php` — sets `role: agency` for agency owners
 
 **Run the full suite after this change.** Expect failures until the factories are updated. All 73 backend tests must be green before pushing.
 

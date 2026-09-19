@@ -69,5 +69,9 @@ else
     echo "Database already seeded. Skipping."
 fi
 
-# 7. Hand off execution to CMD (php artisan serve)
+# 7. Start the Laravel scheduler in the background (runs refunds:process-expired, etc.)
+echo "Starting scheduler in the background..."
+php artisan schedule:work &
+
+# 8. Hand off execution to CMD (php artisan serve)
 exec "$@"
