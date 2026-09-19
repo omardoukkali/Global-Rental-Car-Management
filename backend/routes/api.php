@@ -235,6 +235,19 @@ Route::middleware([
     );
 
 
+    // Agency reservations and refunds
+
+    Route::get('/agency/reservations', [
+        ReservationController::class,
+        'agencyIndex',
+    ]);
+
+    Route::get('/agency/refunds', [
+        RefundController::class,
+        'index',
+    ]);
+
+
     // Reservation pickup / return
 
     Route::patch('/reservations/{reservation}/pickup/confirm-agency', [

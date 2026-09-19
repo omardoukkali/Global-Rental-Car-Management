@@ -36,6 +36,37 @@ class ReservationController extends Controller
         ]);
     }
 
+    public function agencyIndex(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'status' => [
+                'sometimes',
+                'in:pending,confirmed,rejected,picked_up,completed,cancelled,disputed',
+            ],
+        ]);
+
+        $reservations = $request->user()
+            ->agency
+            ->reservations()
+            ->with([
+                'client:id,first_name,last_name,email,phone',
+                'car',
+                'pickupPoint',
+                'returnPoint',
+                'payment.refund',
+            ])
+            ->when(
+                $validated['status'] ?? null,
+                fn ($query, $status) => $query->where('status', $status)
+            )
+            ->latest()
+            ->get();
+
+        return response()->json([
+            'reservations' => $reservations,
+        ]);
+    }
+
     public function store(StoreReservationRequest $request): JsonResponse
     {
         $data = $request->validated();
