@@ -1,0 +1,7 @@
+login client 200
+GET no token 401
+POST reservation 201 a2c86a61-8c7c-4f7e-980d-bed89b73f5bb
+GET list 200
+GET id 200
+GET as agency 403
+PATCH cancel 200
