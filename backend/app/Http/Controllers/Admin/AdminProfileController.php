@@ -23,7 +23,7 @@ class AdminProfileController extends Controller
         $validated = $request->validate([
             'first_name' => ['sometimes', 'required', 'string', 'max:100'],
             'last_name' => ['sometimes', 'required', 'string', 'max:100'],
-            'phone' => ['sometimes', 'nullable', 'string', 'max:20'],
+            'phone' => ['sometimes', 'nullable', 'string', 'regex:/^(\+212|0)[5-7][0-9]{8}$/'],
             'email' => [
                 'sometimes',
                 'required',

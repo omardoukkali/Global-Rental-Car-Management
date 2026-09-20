@@ -30,6 +30,13 @@ class RegisterClientRequest extends FormRequest
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
+    public function messages(): array
+    {
+        return [
+            'phone.regex' => 'Le numéro doit être un numéro marocain valide (ex. +212612345678).',
+        ];
+    }
+
     public function rules(): array
     {
         return [
@@ -66,7 +73,8 @@ class RegisterClientRequest extends FormRequest
             'phone' => [
                 'nullable',
                 'string',
-                'max:20',
+                // Moroccan number: +212612345678 or 0612345678
+                'regex:/^(\+212|0)[5-7][0-9]{8}$/',
             ],
         ];
     }

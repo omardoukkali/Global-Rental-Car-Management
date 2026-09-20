@@ -30,6 +30,14 @@ class RegisterAgencyRequest extends FormRequest
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
+    public function messages(): array
+    {
+        return [
+            'phone.regex' => 'Le numéro doit être un numéro marocain valide (ex. +212612345678).',
+            'agency_phone.regex' => 'Le numéro doit être un numéro marocain valide (ex. +212612345678).',
+        ];
+    }
+
     public function rules(): array
     {
         return [
@@ -68,7 +76,8 @@ class RegisterAgencyRequest extends FormRequest
             'phone' => [
                 'required',
                 'string',
-                'max:20',
+                // Moroccan number: +212612345678 or 0612345678
+                'regex:/^(\+212|0)[5-7][0-9]{8}$/',
             ],
 
             // Agency information
@@ -94,7 +103,7 @@ class RegisterAgencyRequest extends FormRequest
             'agency_phone' => [
                 'required',
                 'string',
-                'max:20',
+                'regex:/^(\+212|0)[5-7][0-9]{8}$/',
             ],
         ];
     }
