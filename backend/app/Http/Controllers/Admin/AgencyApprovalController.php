@@ -76,7 +76,16 @@ class AgencyApprovalController extends Controller
         DB::transaction(function () use ($agency) {
             $agency->cars()->each(fn (Car $car) => $car->delete());
             $agency->agencyPoints()->update(['is_active' => false]);
-            $agency->owner?->update(['status' => 'suspended']);
+            $owner = $agency->owner;
+
+            if ($owner) {
+                // status is not mass assignable (F-03)
+                $owner->status = 'suspended';
+                $owner->save();
+
+                // Suspension takes effect right away (F-02)
+                $owner->tokens()->delete();
+            }
             $agency->delete();
         });
 

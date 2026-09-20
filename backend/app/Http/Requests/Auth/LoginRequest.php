@@ -15,9 +15,13 @@ class LoginRequest extends FormRequest
     }
     protected function prepareForValidation(): void
     {
-        $this->merge([
-            'email' => strtolower(trim($this->email)),
-        ]);
+        // Runs before validation, so the email is still raw input:
+        // anything other than a string would break trim() with a 500.
+        if (is_string($this->email)) {
+            $this->merge([
+                'email' => strtolower(trim($this->email)),
+            ]);
+        }
     }
     /**
      * Get the validation rules that apply to the request.

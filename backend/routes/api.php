@@ -41,9 +41,14 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 
-Route::post('/register/client', [AuthController::class, 'registerClient']);
-Route::post('/register/agency', [AuthController::class, 'registerAgency']);
-Route::post('/login', [AuthController::class, 'login']);
+// Registration: 3 requests per minute (a real user registers once)
+Route::middleware('throttle:3,1')->group(function () {
+    Route::post('/register/client', [AuthController::class, 'registerClient']);
+    Route::post('/register/agency', [AuthController::class, 'registerAgency']);
+});
+
+// Login: 5 requests per minute, against brute force
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1');
 
 // Password reset (max 5 requests per minute)
 Route::middleware('throttle:5,1')->group(function () {
@@ -80,7 +85,7 @@ Route::post('/smartdrive/eligible-vehicles', [SmartDriveController::class, 'elig
 |--------------------------------------------------------------------------
 */
 
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'user.active'])->group(function () {
 
     Route::get('/me', function (Request $request) {
         return response()->json([
@@ -98,7 +103,7 @@ Route::middleware('auth:sanctum')->group(function () {
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth:sanctum', 'role:client'])->group(function () {
+Route::middleware(['auth:sanctum', 'user.active', 'role:client'])->group(function () {
 
     Route::get('/client/test', function () {
         return response()->json([
@@ -137,7 +142,7 @@ Route::middleware(['auth:sanctum', 'role:client'])->group(function () {
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth:sanctum', 'role:agency'])->group(function () {
+Route::middleware(['auth:sanctum', 'user.active', 'role:agency'])->group(function () {
 
     // Profile
     Route::get('/agency/profile', [AgencyController::class, 'show']);
@@ -158,7 +163,7 @@ Route::middleware(['auth:sanctum', 'role:agency'])->group(function () {
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth:sanctum', 'role:agency', 'agency.approved'])->group(function () {
+Route::middleware(['auth:sanctum', 'user.active', 'role:agency', 'agency.approved'])->group(function () {
 
     // Dashboard
     Route::get('/agency/reservations', [ReservationController::class, 'agencyIndex']);
@@ -197,7 +202,7 @@ Route::middleware(['auth:sanctum', 'role:agency', 'agency.approved'])->group(fun
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
+Route::middleware(['auth:sanctum', 'user.active', 'role:admin'])->group(function () {
     Route::get('/admin/dashboard', [AdminDashboardController::class, 'show']);
     Route::get('/admin/agencies', [AgencyApprovalController::class, 'index']);
     Route::get('/admin/agencies/{agency}', [AgencyApprovalController::class, 'show']);

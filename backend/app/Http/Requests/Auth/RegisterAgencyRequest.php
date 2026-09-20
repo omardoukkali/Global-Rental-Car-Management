@@ -17,9 +17,13 @@ class RegisterAgencyRequest extends FormRequest
     }
     protected function prepareForValidation(): void
     {
-        $this->merge([
-            'email' => strtolower(trim($this->email)),
-        ]);
+        // Runs before validation, so the email is still raw input:
+        // anything other than a string would break trim() with a 500.
+        if (is_string($this->email)) {
+            $this->merge([
+                'email' => strtolower(trim($this->email)),
+            ]);
+        }
     }
     /**
      * Get the validation rules that apply to the request.
@@ -55,7 +59,10 @@ class RegisterAgencyRequest extends FormRequest
                 'confirmed',
                 Password::min(8)
                     ->letters()
-                    ->numbers(),
+                    ->numbers()
+                    // Rejects passwords found in known breaches (Have I Been Pwned).
+                    // Only the first 5 characters of the hash leave the server.
+                    ->uncompromised(),
             ],
 
             'phone' => [

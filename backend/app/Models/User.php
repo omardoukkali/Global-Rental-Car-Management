@@ -27,8 +27,7 @@ class User extends Authenticatable
         'password',
         'phone',
         'avatar_url',
-        'role',
-        'status',
+        // 'role' and 'status' are set by the server only (see F-03)
     ];
 
     /**
