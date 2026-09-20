@@ -60,6 +60,11 @@ MAIL_ENCRYPTION="${MAIL_ENCRYPTION:-tls}"
 MAIL_FROM_ADDRESS="${MAIL_FROM_ADDRESS:-no-reply@globalrental.local}"
 MAIL_FROM_NAME="${MAIL_FROM_NAME:-Global Rental Car}"
 
+# Security settings (F-04 token lifetime, F-06 CORS, F-11 token prefix)
+CORS_ALLOWED_ORIGINS="${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:3333}"
+SANCTUM_TOKEN_PREFIX="${SANCTUM_TOKEN_PREFIX:-grcm_}"
+SANCTUM_TOKEN_EXPIRATION="${SANCTUM_TOKEN_EXPIRATION:-1440}"
+
 AI_SERVICE_URL="${AI_SERVICE_URL:-http://ai_service:5000}"
 EOF
 echo ".env written from container environment."
