@@ -1,7 +1,0 @@
-NAMES               STATUS                    PORTS
-stage-db-1          Up 34 minutes (healthy)   127.0.0.1:55432->5432/tcp
-app_frontend        Up 34 minutes             0.0.0.0:3000->3000/tcp, [::]:3000->3000/tcp
-app_backend         Up 34 minutes             0.0.0.0:8888->8000/tcp, [::]:8888->8000/tcp
-app_database_test   Up 34 minutes (healthy)   0.0.0.0:5434->5432/tcp, [::]:5434->5432/tcp
-app_database        Up 34 minutes (healthy)   0.0.0.0:5432->5432/tcp, [::]:5432->5432/tcp
-app_ai_service      Up 34 minutes             0.0.0.0:5000->5000/tcp, [::]:5000->5000/tcp

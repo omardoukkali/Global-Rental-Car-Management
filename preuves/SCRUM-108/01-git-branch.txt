@@ -1,1 +1,0 @@
-feature/SCRUM-138-139-client-payments

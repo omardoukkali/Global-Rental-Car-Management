@@ -1,5 +1,0 @@
-POST payment 201 a2c86a72-cdd9-4110-ba71-8a3e1298edcb
-POST duplicate 422
-POST pay as agency 403
-POST refund client 403
-POST refund agency 201
