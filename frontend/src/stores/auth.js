@@ -35,6 +35,14 @@ export const useAuthStore = defineStore('auth', () => {
         return api.post('/register/agency', payload)
     }
 
+    async function forgotPassword(email) {
+        return api.post('/forgot-password', { email })
+    }
+
+    async function resetPassword(payload) {
+        return api.post('/reset-password', payload)
+    }
+
     async function logout() {
         try { await api.post('/logout') } catch {}
         finally { clearSession() }
@@ -61,5 +69,5 @@ export const useAuthStore = defineStore('auth', () => {
         return false
     }
 
-    return { token, user, isAuthenticated, setSession, clearSession, login, registerClient, registerAgency, logout, restoreSession }
+    return { token, user, isAuthenticated, setSession, clearSession, login, registerClient, registerAgency, forgotPassword, resetPassword, logout, restoreSession }
 })
