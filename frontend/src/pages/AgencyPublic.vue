@@ -216,13 +216,8 @@ onMounted(loadAll)
 
               <p v-if="agency?.description" class="mt-3 text-sm text-slate-600 max-w-2xl">{{ agency.description }}</p>
 
+              <!-- Contact details (phone / e-mail) stay private: clients go through the platform -->
               <div class="mt-4 flex flex-wrap gap-2 text-xs">
-                <span v-if="agency?.phone" class="px-3 py-1.5 rounded-full bg-slate-100 text-slate-700 font-semibold">
-                  {{ agency.phone }}
-                </span>
-                <span v-if="agency?.email" class="px-3 py-1.5 rounded-full bg-slate-100 text-slate-700 font-semibold">
-                  {{ agency.email }}
-                </span>
                 <span v-if="agency?.created_at" class="px-3 py-1.5 rounded-full bg-slate-100 text-slate-500 font-semibold">
                   Partenaire depuis {{ formatDate(agency.created_at) }}
                 </span>
