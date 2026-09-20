@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import api from '@/services/api'
+import { useAgencyStore } from '@/stores/agency'
 
 export const useAuthStore = defineStore('auth', () => {
     const token = ref(localStorage.getItem('token') || null)
@@ -19,6 +20,8 @@ export const useAuthStore = defineStore('auth', () => {
         user.value = null
         localStorage.removeItem('token')
         localStorage.removeItem('user')
+        // Forget the cached agency profile of the previous session
+        try { useAgencyStore().reset() } catch {}
     }
 
     async function login(credentials) {

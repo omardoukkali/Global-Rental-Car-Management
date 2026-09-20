@@ -2,8 +2,10 @@
 import { computed, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useAgencyStore } from '@/stores/agency'
 
 const auth = useAuthStore()
+const agencyStore = useAgencyStore()
 const menuOpen = ref(false)
 
 let route = null
@@ -24,7 +26,9 @@ watch(path, () => {
 
 const homeTo = computed(() => {
   if (!auth.isAuthenticated) return '/login'
-  if (role.value === 'agency') return '/agency/dashboard'
+  if (role.value === 'agency') {
+    return agencyStore.loaded && !agencyStore.isApproved ? '/agency/pending' : '/agency/dashboard'
+  }
   if (role.value === 'admin') return '/admin/dashboard'
   return '/myreservations'
 })
@@ -82,12 +86,19 @@ function linkClass(active) {
           <RouterLink to="/register" :class="linkClass(isActive('/register'))">S’inscrire</RouterLink>
         </template>
 
+        <template v-else-if="role === 'agency' && agencyStore.loaded && !agencyStore.isApproved">
+          <RouterLink to="/agency/pending" :class="linkClass(isActive('/agency/pending'))">Ma demande</RouterLink>
+          <RouterLink to="/agency/profile" :class="linkClass(isActive('/agency/profile'))">Agence</RouterLink>
+          <RouterLink to="/agency/settings" :class="linkClass(isActive('/agency/settings'))">Paramètres</RouterLink>
+          <RouterLink to="/logout" class="font-semibold text-rose-600 hover:text-rose-700 whitespace-nowrap">Déconnexion</RouterLink>
+        </template>
+
         <template v-else-if="role === 'agency'">
           <RouterLink to="/agency/dashboard" :class="linkClass(isActive('/agency/dashboard'))">Tableau de bord</RouterLink>
           <RouterLink to="/agency/cars" :class="linkClass(isActive('/agency/cars'))">Flotte</RouterLink>
           <RouterLink to="/agency/pickup" :class="linkClass(isActive('/agency/pickup'))">Pickup</RouterLink>
           <RouterLink to="/agency/return" :class="linkClass(isActive('/agency/return'))">Retour</RouterLink>
-          <RouterLink to="/agency/points" :class="linkClass(isActive('/agency/points') || isActive('/agency/locations'))">Points</RouterLink>
+          <RouterLink to="/agency/locations" :class="linkClass(isActive('/agency/points') || isActive('/agency/locations'))">Points</RouterLink>
           <RouterLink to="/agency/profile" :class="linkClass(isActive('/agency/profile'))">Agence</RouterLink>
           <RouterLink to="/agency/settings" :class="linkClass(isActive('/agency/settings'))">Paramètres</RouterLink>
           <RouterLink to="/logout" class="font-semibold text-rose-600 hover:text-rose-700 whitespace-nowrap">Déconnexion</RouterLink>

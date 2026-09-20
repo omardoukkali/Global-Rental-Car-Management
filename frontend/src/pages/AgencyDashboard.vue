@@ -187,7 +187,7 @@
                   {{ points.length }} point(s) enregistré(s)
                 </span>
                 <RouterLink
-                  to="/agency/points"
+                  to="/agency/locations"
                   class="text-xs font-bold text-blue-600 hover:underline"
                 >
                   Gérer
@@ -198,7 +198,7 @@
             <div v-if="points.length === 0" class="p-6 text-center text-slate-400 text-sm bg-slate-50 rounded-xl border border-dashed border-slate-200 space-y-3">
               <p>Aucun point de retrait configuré. Sans point, le client ne peut pas réserver.</p>
               <RouterLink
-                to="/agency/points"
+                to="/agency/locations"
                 class="inline-flex px-4 py-2 rounded-xl bg-[#0F172A] text-white text-xs font-semibold"
               >
                 Ajouter un point
