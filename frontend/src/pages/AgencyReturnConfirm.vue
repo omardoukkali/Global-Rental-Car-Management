@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue'
-import { RouterLink } from 'vue-router'
+import AgencyLayout from '@/components/AgencyLayout.vue'
 import reservationsService from '@/services/reservations'
 
 const reservationId = ref('')
@@ -32,25 +32,8 @@ async function confirmReturn() {
 </script>
 
 <template>
-  <div class="min-h-screen bg-[#F8FAFC]">
-    <header class="bg-white border-b border-slate-200">
-      <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-        <RouterLink
-          to="/agency/dashboard"
-          class="font-bricolage font-extrabold text-lg text-[#0F172A] tracking-tight"
-        >
-          GlobalRental
-        </RouterLink>
-        <RouterLink
-          to="/agency/dashboard"
-          class="text-sm font-semibold text-slate-500 hover:text-slate-800 transition-colors"
-        >
-          ← Retour au tableau de bord
-        </RouterLink>
-      </div>
-    </header>
-
-    <main class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+  <AgencyLayout>
+    <div class="max-w-3xl space-y-6">
       <div>
         <h1 class="text-2xl sm:text-3xl font-extrabold text-[#0F172A] tracking-tight font-bricolage">
           Confirmer le retour
@@ -108,6 +91,6 @@ async function confirmReturn() {
           <span v-if="result.reference"> · {{ result.reference }}</span>
         </p>
       </div>
-    </main>
-  </div>
+    </div>
+  </AgencyLayout>
 </template>

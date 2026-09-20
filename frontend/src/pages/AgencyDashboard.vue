@@ -1,88 +1,6 @@
 <template>
-  <div class="min-h-screen bg-[#F8FAFC]">
-    
-    <!-- CONTENEUR GLOBAL AVEC SIDEBAR -->
-    <div class="max-w-7xl mx-auto flex flex-col md:flex-row gap-8 py-8 px-4 sm:px-6 lg:px-8">
-      
-      <!-- 1. SIDEBAR NAVIGATION -->
-      <aside class="w-full md:w-64 flex-shrink-0 space-y-6">
-        
-        <!-- PROFIL AGENCE SIDEBAR -->
-        <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm text-center">
-          <div class="w-16 h-16 bg-[#0F172A] text-white rounded-full flex items-center justify-center font-extrabold text-xl mx-auto mb-3">
-            {{ agency.name ? agency.name.substring(0, 2).toUpperCase() : 'AG' }}
-          </div>
-          <h3 class="font-bricolage font-bold text-lg text-[#0F172A]">{{ agency.name || 'Mon Agence' }}</h3>
-          
-          <span 
-            v-if="agency.status === 'approved'" 
-            class="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full mt-1"
-          >
-            ✓ Agence Certifiée
-          </span>
-          <span 
-            v-else 
-            class="inline-flex items-center gap-1 text-xs font-bold text-amber-600 bg-amber-50 px-2.5 py-0.5 rounded-full mt-1"
-          >
-            ⏳ En attente de validation
-          </span>
-
-          <p class="text-xs text-slate-500 mt-2 font-medium">
-            📍 {{ agency.city?.name || agency.address || 'Localisation non renseignée' }}
-          </p>
-        </div>
-
-        <!-- LIENS DE NAVIGATION -->
-        <nav class="bg-white rounded-2xl p-3 border border-slate-200 shadow-sm space-y-1">
-          <RouterLink to="/agency/dashboard" class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-bold bg-[#0F172A] text-white">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
-            Tableau de bord
-          </RouterLink>
-
-          <RouterLink to="/agency/cars" class="flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-[#0F172A] transition-colors">
-            <span class="flex items-center gap-3">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h11a2 2 0 012 2v3m-7 9a3 3 0 100-6 3 3 0 000 6zm9 0a3 3 0 100-6 3 3 0 000 6z"/></svg>
-              Ma flotte
-            </span>
-            <span class="text-xs bg-slate-100 px-2 py-0.5 rounded-full font-bold text-slate-600">{{ totalCars }}</span>
-          </RouterLink>
-
-          <RouterLink to="/agency/pickup" class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-[#0F172A] transition-colors">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            Confirmer pickup
-          </RouterLink>
-
-          <RouterLink to="/agency/return" class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-[#0F172A] transition-colors">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
-            Confirmer retour
-          </RouterLink>
-
-          <RouterLink to="/agency/points" class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-[#0F172A] transition-colors">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-            Points de retrait
-          </RouterLink>
-
-          <RouterLink to="/agency/profile" class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-[#0F172A] transition-colors">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
-            Mon agence
-          </RouterLink>
-
-          <RouterLink to="/agency/settings" class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-[#0F172A] transition-colors">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/></svg>
-            Paramètres
-          </RouterLink>
-
-          <div class="border-t border-slate-100 my-2"></div>
-
-          <RouterLink to="/logout" class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold text-rose-600 hover:bg-rose-50 transition-colors">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
-            Se déconnecter
-          </RouterLink>
-        </nav>
-      </aside>
-
-      <!-- 2. CONTENU PRINCIPAL DU DASHBOARD -->
-      <main class="flex-1 space-y-8">
+  <AgencyLayout :agency="agency" :total-cars="totalCars">
+      <main class="space-y-8">
         
         <!-- EN-TÊTE BIENVENUE -->
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -315,14 +233,13 @@
         </template>
 
       </main>
-
-    </div>
-  </div>
+  </AgencyLayout>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
+import AgencyLayout from '@/components/AgencyLayout.vue'
 import api from '@/services/api'
 import carsService from '@/services/cars'
 

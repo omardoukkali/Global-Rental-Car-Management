@@ -40,6 +40,11 @@ function mountAgencyProfile() {
         global: {
             stubs: {
                 RouterLink: true,
+                AgencyNav: true,
+                AgencyLayout: {
+                    props: ['agency', 'totalCars'],
+                    template: '<div><slot /></div>',
+                },
             }
         }
     })

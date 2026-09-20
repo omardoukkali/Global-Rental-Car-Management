@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import reservationsService from '@/services/reservations'
 import paymentsService from '@/services/payments'
 
@@ -79,21 +79,7 @@ onMounted(loadReservation)
 </script>
 
 <template>
-  <div class="min-h-screen bg-[#F8FAFC]">
-    <header class="bg-white border-b border-slate-200">
-      <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-        <RouterLink to="/myreservations" class="font-bricolage font-extrabold text-lg text-[#0F172A] tracking-tight">
-          GlobalRental
-        </RouterLink>
-        <RouterLink
-          to="/myreservations"
-          class="text-sm font-semibold text-slate-500 hover:text-slate-800 transition-colors"
-        >
-          ← Mes réservations
-        </RouterLink>
-      </div>
-    </header>
-
+  <div class="min-h-[calc(100vh-4rem)] bg-[#F8FAFC]">
     <main class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       <div>
         <h1 class="text-2xl sm:text-3xl font-extrabold text-[#0F172A] tracking-tight font-bricolage">
@@ -159,6 +145,9 @@ onMounted(loadReservation)
           <div class="pt-2 flex gap-3">
             <button type="button" class="font-semibold underline underline-offset-4" @click="router.push('/myreservations')">
               Mes réservations
+            </button>
+            <button type="button" class="font-semibold underline underline-offset-4" @click="router.push('/payments')">
+              Historique des paiements
             </button>
           </div>
         </div>

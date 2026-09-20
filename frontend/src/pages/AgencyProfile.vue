@@ -1,24 +1,6 @@
 <template>
-  <div class="min-h-screen flex flex-col" style="background: var(--bg);">
-
-    <header class="p-6 flex justify-between items-center w-full bg-white border-b" style="border-color: var(--border);">
-      <RouterLink to="/" class="gr-logo" style="color: var(--ink);">
-        <span class="gr-logo-dot" style="background: var(--ink);"></span>GlobalRental
-      </RouterLink>
-      <div class="flex items-center gap-4">
-        <RouterLink to="/agency/settings" class="btn-outline text-sm py-2 px-4">
-          Modifier le profil
-        </RouterLink>
-        <RouterLink to="/" class="text-sm font-semibold flex items-center gap-2" style="color: var(--ink-muted);">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-          </svg>
-          Accueil
-        </RouterLink>
-      </div>
-    </header>
-
-    <main class="flex-1 max-w-4xl w-full mx-auto p-6 lg:p-12">
+  <AgencyLayout :agency="agency">
+    <div class="space-y-6 fade-up fade-up-1">
       <div v-if="loading" class="text-center py-20">
         <p class="text-lg font-medium" style="color: var(--ink-muted);">Chargement du profil...</p>
       </div>
@@ -106,14 +88,14 @@
         </div>
 
       </div>
-    </main>
-
-  </div>
+    </div>
+  </AgencyLayout>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
+import AgencyLayout from '@/components/AgencyLayout.vue'
 import agencyService from '@/services/agency'
 
 const agency = ref({})
