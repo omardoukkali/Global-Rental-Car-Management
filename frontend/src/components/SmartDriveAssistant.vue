@@ -51,7 +51,9 @@ function carImage(car) {
 
 function extractCities(response) {
   if (Array.isArray(response?.cities)) return response.cities
+  if (Array.isArray(response?.value)) return response.value
   if (Array.isArray(response?.data?.cities)) return response.data.cities
+  if (Array.isArray(response?.data?.value)) return response.data.value
   if (Array.isArray(response?.data)) return response.data
   return Array.isArray(response) ? response : []
 }
@@ -70,6 +72,8 @@ async function loadCities() {
 }
 
 function scoreCar(car) {
+  if (Number.isFinite(Number(car.score))) return Number(car.score)
+
   const choice = preferences.value
   let score = 52
   const type = car.type || car.category
@@ -123,7 +127,7 @@ async function analyze() {
     }
   } catch (err) {
     error.value = err?.message || 'Aucun véhicule disponible pour ces critères.'
-    view.value = 'empty'
+    view.value = 'error'
   } finally {
     loading.value = false
   }
@@ -243,6 +247,12 @@ function reserve(car) {
 
           <div v-else-if="view === 'empty'" class="smartdrive-empty" role="status">
             <h3>Aucun véhicule disponible pour ces critères.</h3>
+            <p>Essayez d’élargir vos critères de recherche.</p>
+            <button type="button" class="smartdrive-secondary" @click="editPreferences">Modifier mes critères</button>
+          </div>
+
+          <div v-else-if="view === 'error'" class="smartdrive-empty" role="alert">
+            <h3>SmartDrive AI est momentanément indisponible.</h3>
             <p>{{ error }}</p>
             <button type="button" class="smartdrive-secondary" @click="editPreferences">Modifier mes critères</button>
           </div>
