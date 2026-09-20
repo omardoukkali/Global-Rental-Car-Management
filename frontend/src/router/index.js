@@ -1,8 +1,10 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useAgencyStore } from '@/stores/agency'
 import AgencySettings from '@/pages/AgencySettings.vue'
 import AgencyProfile from '@/pages/AgencyProfile.vue'
 import AgencyLocations from '@/pages/AgencyLocations.vue'
+import AgencyPending from '@/pages/AgencyPending.vue'
 import AdminAgencyValidation from '@/pages/AdminAgencyValidation.vue'
 import AdminAgencies from '@/pages/AdminAgencies.vue'
 import AdminAgencyDetail from '@/pages/AdminAgencyDetail.vue'
@@ -19,7 +21,6 @@ import AgencyDashboard from '@/pages/AgencyDashboard.vue'
 import ReservationForm from '@/pages/ReservationForm.vue'
 import ClientReservations from '@/pages/ClientReservations.vue'
 import AgencyPickupConfirm from '@/pages/AgencyPickupConfirm.vue'
-import AgencyPoints from '@/pages/AgencyPoints.vue'
 import AgencyReturnConfirm from '@/pages/AgencyReturnConfirm.vue'
 import PaymentHistory from '@/pages/PaymentHistory.vue'
 import PaymentCheckout from '@/pages/PaymentCheckout.vue'
@@ -65,22 +66,32 @@ const routes = [{
         meta: { requiresAuth: true }
     },
     {
+        path: '/agency/pending',
+        name: 'AgencyPending',
+        component: AgencyPending,
+        meta: { requiresAuth: true, allowPendingAgency: true }
+    },
+    {
         path: '/agency/settings',
         name: 'AgencySettings',
         component: AgencySettings,
-        meta: { requiresAuth: true }
+        meta: { requiresAuth: true, allowPendingAgency: true }
     },
     {
         path: '/agency/profile',
         name: 'AgencyProfile',
         component: AgencyProfile,
-        meta: { requiresAuth: true }
+        meta: { requiresAuth: true, allowPendingAgency: true }
     },
     {
         path: '/agency/locations',
         name: 'AgencyLocations',
         component: AgencyLocations,
         meta: { requiresAuth: true }
+    },
+    {
+        path: '/agency/points',
+        redirect: '/agency/locations',
     },
     {
         path: '/admin',
@@ -184,12 +195,6 @@ const routes = [{
         meta: { requiresAuth: true }
     },
     {
-        path: '/agency/points',
-        name: 'AgencyPoints',
-        component: AgencyPoints,
-        meta: { requiresAuth: true }
-    },
-    {
         path: '/reservations/new',
         name: 'ReservationCreate',
         component: ReservationForm,
@@ -234,7 +239,36 @@ function homeForRole(user) {
     return { name: 'ClientReservations' }
 }
 
-router.beforeEach((to, from, next) => {
+/**
+ * Agencies that are not approved yet only get the waiting screen,
+ * their profile and their settings. Everything else under /agency
+ * needs an approved agency (the API answers 403 otherwise).
+ */
+async function agencyGate(to) {
+    if (!to.path.startsWith('/agency')) return null
+
+    const agencyStore = useAgencyStore()
+    if (!agencyStore.loaded) {
+        await agencyStore.fetchProfile()
+    }
+
+    // Could not load the profile (network): let the page handle it
+    if (!agencyStore.loaded) return null
+
+    const approved = agencyStore.isApproved
+
+    if (approved && to.name === 'AgencyPending') {
+        return { name: 'AgencyDashboard' }
+    }
+
+    if (!approved && !to.meta.allowPendingAgency) {
+        return { name: 'AgencyPending' }
+    }
+
+    return null
+}
+
+router.beforeEach(async (to, from, next) => {
     const auth = useAuthStore()
     const isAuthenticated = auth.isAuthenticated
 
@@ -251,6 +285,14 @@ router.beforeEach((to, from, next) => {
     if (to.meta.guestOnly && isAuthenticated) {
         next(homeForRole(auth.user))
         return
+    }
+
+    if (isAuthenticated && auth.user?.role === 'agency') {
+        const redirect = await agencyGate(to)
+        if (redirect) {
+            next(redirect)
+            return
+        }
     }
 
     next()

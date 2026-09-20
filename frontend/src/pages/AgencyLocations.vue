@@ -1,224 +1,395 @@
-<template>
-  <div class="agency-shell">
-    <div class="agency-layout">
-      <aside class="agency-sidebar">
-        <div class="sb-profile">
-          <div class="sb-avatar">AC</div>
-          <div>
-            <div class="sb-name">Atlas Cars</div>
-            <div class="sb-verified">✓ Agence Certifiée</div>
-          </div>
-          <div class="sb-city">📍 Casablanca</div>
-        </div>
-
-        <nav class="sb-nav" aria-label="Navigation agence">
-          <RouterLink to="/agency/dashboard" class="sb-link">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-            Tableau de bord
-          </RouterLink>
-          <RouterLink to="/agency/cars" class="sb-link">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v3"/><path d="M9 17H5m0 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/><path d="M13 17h5m0 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/></svg>
-            Ma flotte
-          </RouterLink>
-          <RouterLink to="/agency/pickup" class="sb-link">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg>
-            Confirmer pickup
-          </RouterLink>
-          <RouterLink to="/agency/return" class="sb-link">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            Confirmer retour
-          </RouterLink>
-          <RouterLink to="/agency/points" class="sb-link">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-            Points de retrait
-          </RouterLink>
-
-          <div class="sb-separator"></div>
-
-          <RouterLink to="/agency/profile" class="sb-link">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            Mon agence
-          </RouterLink>
-
-          <RouterLink to="/agency/settings" class="sb-link">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-            Paramètres
-          </RouterLink>
-
-          <div class="sb-separator"></div>
-
-          <RouterLink to="/logout" class="sb-link sb-logout">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-            Se déconnecter
-          </RouterLink>
-        </nav>
-      </aside>
-
-      <main class="agency-main">
-        <div class="anim d1">
-          <h1 class="page-greeting">Bonjour, Atlas Cars</h1>
-          <p class="page-sub">Voici les performances de votre flotte ce mois-ci.</p>
-        </div>
-
-        <div class="stats-grid anim d2">
-          <div v-for="stat in stats" :key="stat.label" class="stat-card">
-            <div class="stat-label">{{ stat.label }}</div>
-            <div class="stat-value">{{ stat.value }}</div>
-            <div v-if="stat.trend" class="stat-badge">{{ stat.trend }}</div>
-            <div v-else class="stat-meta">{{ stat.meta }}</div>
-          </div>
-        </div>
-
-        <div class="section-title anim d3">
-          <h2>Demandes en attente</h2>
-          <a href="#" class="section-link">Voir tout →</a>
-        </div>
-
-        <div class="req-grid anim d3">
-          <div v-for="request in requests" :key="request.id" class="req-card">
-            <div class="req-head">
-              <div class="req-avatar" :style="request.avatarStyle">{{ request.initials }}</div>
-              <div>
-                <div class="req-name">
-                  {{ request.name }}
-                  <span class="req-verified">✓</span>
-                </div>
-                <div class="req-car">{{ request.car }}</div>
-              </div>
-            </div>
-
-            <div class="req-box">
-              <div v-for="detail in request.details" :key="detail.label" class="req-row">
-                <span class="req-label">{{ detail.label }}</span>
-                <span>{{ detail.value }}</span>
-              </div>
-            </div>
-
-            <div class="req-actions">
-              <button type="button" class="btn btn-primary">✓ Accepter</button>
-              <button type="button" class="btn btn-outline">✗ Refuser</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="section-title anim d4">
-          <h2>Ma flotte</h2>
-          <button type="button" class="btn btn-primary inline-btn">+ Ajouter</button>
-        </div>
-
-        <div class="table-wrap anim d4">
-          <table>
-            <thead>
-              <tr>
-                <th style="width: 50px;">Photo</th>
-                <th>Véhicule</th>
-                <th>Statut</th>
-                <th>Voyages</th>
-                <th>Note</th>
-                <th>Prix/jour</th>
-                <th style="text-align: right;">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="vehicle in fleet" :key="vehicle.name">
-                <td><div class="table-thumb"></div></td>
-                <td class="vehicle-name">{{ vehicle.name }}</td>
-                <td><span :class="['pill', vehicle.statusClass]">{{ vehicle.status }}</span></td>
-                <td class="muted-value">{{ vehicle.trips }}</td>
-                <td class="vehicle-name">{{ vehicle.rating }} ★</td>
-                <td class="vehicle-name">{{ vehicle.price }}</td>
-                <td style="text-align: right;">
-                  <a href="#" class="action-link">Modifier</a>
-                  <a href="#" class="action-link muted">Désactiver</a>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div class="section-title anim d5">
-          <h2>Revenus</h2>
-        </div>
-
-        <div class="chart-card anim d5">
-          <div class="chart-flex">
-            <div v-for="month in revenue" :key="month.label" class="chart-col">
-              <div :class="['chart-val', { active: month.active }]">{{ month.value }}</div>
-              <div class="bar-bg">
-                <div :class="['bar', { active: month.active } ]" :style="{ height: month.height }"></div>
-              </div>
-              <div class="chart-lbl">{{ month.label }}</div>
-            </div>
-          </div>
-        </div>
-      </main>
-    </div>
-  </div>
-</template>
-
 <script setup>
-import { RouterLink } from 'vue-router'
+import { computed, onMounted, reactive, ref } from 'vue'
+import AgencyLayout from '@/components/AgencyLayout.vue'
+import agencyService from '@/services/agency'
+import api from '@/services/api'
 
-const stats = [
-  { label: 'Revenus du mois', value: '14 520', trend: '↑ +12%' },
-  { label: 'Voyages complétés', value: '8', meta: 'Ce mois' },
-  { label: 'Taux d\'occupation', value: '73%' },
-  { label: 'Note moyenne', value: '5.0 ★' },
-]
+const points = ref([])
+const cities = ref([])
+const loading = ref(true)
+const saving = ref(false)
+const togglingId = ref(null)
+const error = ref('')
+const success = ref('')
+const fieldErrors = reactive({})
 
-const requests = [
-  {
-    id: 1,
-    initials: 'ME',
-    avatarStyle: 'background:#E0E7FF; color:#3730A3;',
-    name: 'Mohammed El Fassi',
-    car: 'Dacia Logan II',
-    details: [
-      { label: 'Dates', value: '15-20 Août 2026' },
-      { label: 'Durée', value: '5 jours' },
-      { label: 'Total', value: '1 350 MAD' },
-    ],
-  },
-  {
-    id: 2,
-    initials: 'SL',
-    avatarStyle: 'background:#F3E8FF; color:#7E22CE;',
-    name: 'Sophie Laurent',
-    car: 'Range Rover Sport',
-    details: [
-      { label: 'Dates', value: '18-22 Août 2026' },
-      { label: 'Durée', value: '4 jours' },
-      { label: 'Total', value: '5 200 MAD' },
-    ],
-  },
-  {
-    id: 3,
-    initials: 'YA',
-    avatarStyle: 'background:#FFEDD5; color:#C2410C;',
-    name: 'Youssef Amrani',
-    car: 'Renault Clio 5',
-    details: [
-      { label: 'Dates', value: '25-28 Août 2026' },
-      { label: 'Durée', value: '3 jours' },
-      { label: 'Total', value: '900 MAD' },
-    ],
-  },
-]
+const filter = ref('all')
 
-const fleet = [
-  { name: 'Dacia Logan II', status: 'Disponible', statusClass: 'pill-green', trips: '42', rating: '5.0', price: '270 MAD' },
-  { name: 'Renault Clio 5', status: 'Disponible', statusClass: 'pill-green', trips: '28', rating: '4.9', price: '300 MAD' },
-  { name: 'Peugeot 208', status: 'En location', statusClass: 'pill-red', trips: '19', rating: '4.8', price: '280 MAD' },
-  { name: 'Range Rover Evoque', status: 'Disponible', statusClass: 'pill-green', trips: '56', rating: '5.0', price: '1200 MAD' },
-  { name: 'BMW Série 3', status: 'Maintenance', statusClass: 'pill-yellow', trips: '15', rating: '4.7', price: '750 MAD' },
-]
+const emptyForm = () => ({
+  id: null,
+  city_id: '',
+  name: '',
+  address: '',
+  instructions: '',
+  allows_pickup: true,
+  allows_return: true,
+})
+const form = ref(emptyForm())
+const isEditing = computed(() => !!form.value.id)
 
-const revenue = [
-  { label: 'Mar', value: '8.4k', height: '58%' },
-  { label: 'Avr', value: '10.2k', height: '70%' },
-  { label: 'Mai', value: '11.8k', height: '81%' },
-  { label: 'Juin', value: '13.2k', height: '91%' },
-  { label: 'Juil', value: '12.9k', height: '89%' },
-  { label: 'Août', value: '14.5k', height: '100%', active: true },
-]
+function extractPoints(data) {
+  if (Array.isArray(data?.points)) return data.points
+  if (Array.isArray(data?.data?.points)) return data.data.points
+  if (Array.isArray(data)) return data
+  return []
+}
+
+function extractCities(data) {
+  if (Array.isArray(data?.cities)) return data.cities
+  if (Array.isArray(data?.data)) return data.data
+  if (Array.isArray(data)) return data
+  return []
+}
+
+const activeCount = computed(() => points.value.filter((p) => p.is_active).length)
+const pickupCount = computed(() => points.value.filter((p) => p.is_active && p.allows_pickup).length)
+const returnCount = computed(() => points.value.filter((p) => p.is_active && p.allows_return).length)
+
+const visiblePoints = computed(() => {
+  if (filter.value === 'active') return points.value.filter((p) => p.is_active)
+  if (filter.value === 'inactive') return points.value.filter((p) => !p.is_active)
+  return points.value
+})
+
+function cityName(point) {
+  if (point?.city?.name) return point.city.name
+  const city = cities.value.find((c) => c.id === point?.city_id)
+  return city?.name || ''
+}
+
+function clearMessages() {
+  error.value = ''
+  success.value = ''
+  Object.keys(fieldErrors).forEach((k) => delete fieldErrors[k])
+}
+
+async function load() {
+  loading.value = true
+  error.value = ''
+  try {
+    const [pointsRes, citiesRes] = await Promise.all([
+      agencyService.getPoints(),
+      api.get('/cities'),
+    ])
+    points.value = extractPoints(pointsRes)
+    cities.value = extractCities(citiesRes)
+    if (!form.value.city_id && cities.value[0]?.id) {
+      form.value.city_id = cities.value[0].id
+    }
+  } catch (err) {
+    error.value = err?.message || 'Impossible de charger les points.'
+    points.value = []
+  } finally {
+    loading.value = false
+  }
+}
+
+function startEdit(point) {
+  clearMessages()
+  form.value = {
+    id: point.id,
+    city_id: point.city_id || '',
+    name: point.name || '',
+    address: point.address || '',
+    instructions: point.instructions || '',
+    allows_pickup: !!point.allows_pickup,
+    allows_return: !!point.allows_return,
+  }
+  if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+function cancelEdit() {
+  clearMessages()
+  const cityId = form.value.city_id || cities.value[0]?.id || ''
+  form.value = { ...emptyForm(), city_id: cityId }
+}
+
+function payloadFromForm() {
+  return {
+    city_id: form.value.city_id,
+    name: form.value.name.trim(),
+    address: form.value.address.trim(),
+    instructions: form.value.instructions.trim() || null,
+    allows_pickup: !!form.value.allows_pickup,
+    allows_return: !!form.value.allows_return,
+  }
+}
+
+async function submit() {
+  if (saving.value) return
+  clearMessages()
+
+  if (!form.value.allows_pickup && !form.value.allows_return) {
+    fieldErrors.allows_pickup = ['Autorisez au moins la prise en charge ou la restitution.']
+    return
+  }
+
+  saving.value = true
+  try {
+    if (isEditing.value) {
+      await agencyService.updatePoint(form.value.id, payloadFromForm())
+      success.value = 'Point mis à jour.'
+    } else {
+      await agencyService.createPoint(payloadFromForm())
+      success.value = 'Point créé. Il apparaîtra dans le formulaire de réservation.'
+    }
+    cancelEdit()
+    await load()
+  } catch (err) {
+    if (err?.errors) Object.assign(fieldErrors, err.errors)
+    error.value = err?.message || 'Enregistrement impossible.'
+  } finally {
+    saving.value = false
+  }
+}
+
+async function toggle(point) {
+  if (togglingId.value) return
+  clearMessages()
+  togglingId.value = point.id
+  try {
+    const data = await agencyService.togglePointStatus(point.id)
+    const updated = data?.point || data?.data?.point
+    if (updated) {
+      points.value = points.value.map((p) => (p.id === point.id ? { ...p, ...updated } : p))
+    } else {
+      await load()
+    }
+    success.value = point.is_active
+      ? 'Point désactivé : il n’est plus proposé aux clients.'
+      : 'Point réactivé.'
+  } catch (err) {
+    error.value = err?.message || 'Changement de statut impossible.'
+  } finally {
+    togglingId.value = null
+  }
+}
+
+onMounted(load)
 </script>
+
+<template>
+  <AgencyLayout>
+    <div class="space-y-6" data-testid="agency-locations">
+      <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+        <div>
+          <h1 class="text-2xl sm:text-3xl font-extrabold text-[#0F172A] tracking-tight font-bricolage">
+            Points de retrait & restitution
+          </h1>
+          <p class="text-sm text-slate-500 mt-1">
+            Ces lieux alimentent les listes « Prise en charge » et « Restitution » du formulaire client.
+          </p>
+        </div>
+        <div class="flex gap-3 text-xs">
+          <div class="px-3 py-2 rounded-xl bg-white border border-slate-200">
+            <div class="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Actifs</div>
+            <div class="font-extrabold text-[#0F172A] text-base">{{ activeCount }}<span class="text-slate-400 font-medium"> / {{ points.length }}</span></div>
+          </div>
+          <div class="px-3 py-2 rounded-xl bg-white border border-slate-200">
+            <div class="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Prise en charge</div>
+            <div class="font-extrabold text-[#0F172A] text-base">{{ pickupCount }}</div>
+          </div>
+          <div class="px-3 py-2 rounded-xl bg-white border border-slate-200">
+            <div class="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Restitution</div>
+            <div class="font-extrabold text-[#0F172A] text-base">{{ returnCount }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="error" class="p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">
+        {{ error }}
+      </div>
+      <div v-if="success" class="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm">
+        {{ success }}
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        <form
+          class="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4 self-start"
+          data-testid="point-form"
+          @submit.prevent="submit"
+        >
+          <div class="flex items-center justify-between">
+            <h2 class="font-bold text-[#0F172A]">{{ isEditing ? 'Modifier le point' : 'Ajouter un point' }}</h2>
+            <button
+              v-if="isEditing"
+              type="button"
+              class="text-xs font-semibold text-slate-500 hover:text-slate-800"
+              @click="cancelEdit"
+            >
+              Annuler
+            </button>
+          </div>
+
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-1.5" for="point-city">Ville</label>
+            <select
+              id="point-city"
+              v-model="form.city_id"
+              required
+              class="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm"
+            >
+              <option disabled value="">Choisir une ville</option>
+              <option v-for="city in cities" :key="city.id" :value="city.id">{{ city.name }}</option>
+            </select>
+            <p v-if="fieldErrors.city_id" class="text-xs text-red-500 mt-1">{{ fieldErrors.city_id[0] }}</p>
+          </div>
+
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-1.5" for="point-name">Nom</label>
+            <input
+              id="point-name"
+              v-model="form.name"
+              required
+              type="text"
+              placeholder="Ex: Agence Anfa"
+              class="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm"
+            />
+            <p v-if="fieldErrors.name" class="text-xs text-red-500 mt-1">{{ fieldErrors.name[0] }}</p>
+          </div>
+
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-1.5" for="point-address">Adresse</label>
+            <input
+              id="point-address"
+              v-model="form.address"
+              required
+              type="text"
+              placeholder="Ex: Boulevard d'Anfa, Casablanca"
+              class="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm"
+            />
+            <p v-if="fieldErrors.address" class="text-xs text-red-500 mt-1">{{ fieldErrors.address[0] }}</p>
+          </div>
+
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-1.5" for="point-instructions">
+              Instructions pour le client <span class="text-slate-400 font-normal">(optionnel)</span>
+            </label>
+            <textarea
+              id="point-instructions"
+              v-model="form.instructions"
+              rows="2"
+              placeholder="Ex: Parking niveau -1, présentez votre pièce d'identité."
+              class="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm"
+            ></textarea>
+          </div>
+
+          <div class="flex flex-wrap gap-4 text-sm">
+            <label class="inline-flex items-center gap-2 font-semibold text-slate-700">
+              <input v-model="form.allows_pickup" type="checkbox" class="rounded border-slate-300" />
+              Prise en charge
+            </label>
+            <label class="inline-flex items-center gap-2 font-semibold text-slate-700">
+              <input v-model="form.allows_return" type="checkbox" class="rounded border-slate-300" />
+              Restitution
+            </label>
+          </div>
+          <p v-if="fieldErrors.allows_pickup" class="text-xs text-red-500 -mt-2">{{ fieldErrors.allows_pickup[0] }}</p>
+
+          <button
+            type="submit"
+            class="w-full px-5 py-2.5 rounded-xl bg-[#0F172A] text-white text-sm font-semibold disabled:opacity-50"
+            :disabled="saving"
+          >
+            <template v-if="saving">Enregistrement…</template>
+            <template v-else>{{ isEditing ? 'Enregistrer les modifications' : 'Créer le point' }}</template>
+          </button>
+        </form>
+
+        <section class="lg:col-span-3 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div class="p-5 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
+            <h2 class="font-bold text-[#0F172A]">Mes points ({{ visiblePoints.length }})</h2>
+            <div class="inline-flex rounded-xl border border-slate-200 p-0.5 text-xs font-semibold">
+              <button
+                v-for="opt in [
+                  { value: 'all', label: 'Tous' },
+                  { value: 'active', label: 'Actifs' },
+                  { value: 'inactive', label: 'Inactifs' },
+                ]"
+                :key="opt.value"
+                type="button"
+                class="px-3 py-1.5 rounded-lg"
+                :class="filter === opt.value ? 'bg-[#0F172A] text-white' : 'text-slate-500 hover:text-slate-800'"
+                @click="filter = opt.value"
+              >
+                {{ opt.label }}
+              </button>
+            </div>
+          </div>
+
+          <div v-if="loading" class="text-sm text-slate-500 py-12 text-center">Chargement…</div>
+          <div
+            v-else-if="visiblePoints.length === 0"
+            class="text-sm text-slate-500 py-12 text-center"
+          >
+            <p v-if="points.length === 0">
+              Aucun point pour le moment. Sans point actif, vos véhicules ne peuvent pas être réservés.
+            </p>
+            <p v-else>Aucun point dans ce filtre.</p>
+          </div>
+          <ul v-else class="divide-y divide-slate-100">
+            <li
+              v-for="point in visiblePoints"
+              :key="point.id"
+              class="p-5 flex flex-col sm:flex-row sm:items-center gap-4"
+              :class="{ 'bg-slate-50/60': !point.is_active }"
+              data-testid="point-item"
+            >
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <p class="font-bold text-sm text-[#0F172A]">{{ point.name }}</p>
+                  <span
+                    class="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                    :class="point.is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-200 text-slate-600'"
+                  >
+                    {{ point.is_active ? 'Actif' : 'Inactif' }}
+                  </span>
+                </div>
+                <p class="text-xs text-slate-500 mt-1">
+                  📍 {{ point.address }}<span v-if="cityName(point)"> · {{ cityName(point) }}</span>
+                </p>
+                <p v-if="point.instructions" class="text-xs text-slate-400 mt-1 italic">{{ point.instructions }}</p>
+                <div class="flex gap-2 mt-2">
+                  <span
+                    class="text-[10px] font-bold px-2 py-0.5 rounded-md"
+                    :class="point.allows_pickup ? 'bg-blue-50 text-blue-700' : 'bg-slate-100 text-slate-400 line-through'"
+                  >
+                    Prise en charge
+                  </span>
+                  <span
+                    class="text-[10px] font-bold px-2 py-0.5 rounded-md"
+                    :class="point.allows_return ? 'bg-violet-50 text-violet-700' : 'bg-slate-100 text-slate-400 line-through'"
+                  >
+                    Restitution
+                  </span>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  class="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                  @click="startEdit(point)"
+                >
+                  Modifier
+                </button>
+                <button
+                  type="button"
+                  class="px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-50"
+                  :class="point.is_active
+                    ? 'border border-rose-200 text-rose-600 hover:bg-rose-50'
+                    : 'border border-emerald-200 text-emerald-700 hover:bg-emerald-50'"
+                  :disabled="togglingId === point.id"
+                  @click="toggle(point)"
+                >
+                  <template v-if="togglingId === point.id">…</template>
+                  <template v-else>{{ point.is_active ? 'Désactiver' : 'Réactiver' }}</template>
+                </button>
+              </div>
+            </li>
+          </ul>
+        </section>
+      </div>
+    </div>
+  </AgencyLayout>
+</template>
