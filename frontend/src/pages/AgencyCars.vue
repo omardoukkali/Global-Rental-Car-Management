@@ -1,6 +1,6 @@
 <template>
-  <div class="min-h-screen bg-[#F8FAFC] py-8 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-7xl mx-auto space-y-6 fade-up">
+  <AgencyLayout>
+    <div class="space-y-6 fade-up">
       
       <!-- HEADER DE SECTION -->
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -132,12 +132,13 @@
       </div>
 
     </div>
-  </div>
+  </AgencyLayout>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
+import AgencyLayout from '@/components/AgencyLayout.vue'
 import carsService from '@/services/cars'
 
 const cars = ref([])

@@ -17,8 +17,28 @@ export default {
         return api.get(`/cars/${carId}/availability`, { params })
     },
 
+    /** Client: change dates and/or pickup & return points (pending / confirmed, unpaid) */
+    updateReservation(id, payload) {
+        return api.put(`/reservations/${id}`, payload)
+    },
+
+    /** Client: open a dispute on a picked-up reservation */
+    disputeReservation(id) {
+        return api.patch(`/reservations/${id}/dispute`)
+    },
+
     cancelReservation(id) {
         return api.patch(`/reservations/${id}/cancel`)
+    },
+
+    /** Agency: every reservation of the agency (filters: status, car_id, from/to window) */
+    getAgencyReservations(params = {}) {
+        return api.get('/agency/reservations', { params })
+    },
+
+    /** Agency: decline a confirmed & paid reservation (client is refunded 100%) */
+    rejectReservation(id, reason) {
+        return api.patch(`/reservations/${id}/reject`, { reason })
     },
 
     confirmPickupClient(id) {

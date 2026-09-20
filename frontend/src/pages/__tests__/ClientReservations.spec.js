@@ -51,7 +51,7 @@ describe('ClientReservations.vue (SCRUM-110)', () => {
 
   it('charge et affiche la liste des réservations client', async () => {
     const wrapper = mount(ClientReservations, {
-      global: { stubs: ['RouterLink'] },
+      global: { stubs: ['RouterLink', 'ClientNav'] },
     })
 
     await flushPromises()
@@ -68,7 +68,7 @@ describe('ClientReservations.vue (SCRUM-110)', () => {
     reservationsService.getReservations.mockResolvedValueOnce({ reservations: [] })
 
     const wrapper = mount(ClientReservations, {
-      global: { stubs: ['RouterLink'] },
+      global: { stubs: ['RouterLink', 'ClientNav'] },
     })
 
     await flushPromises()
@@ -83,7 +83,7 @@ describe('ClientReservations.vue (SCRUM-110)', () => {
     })
 
     const wrapper = mount(ClientReservations, {
-      global: { stubs: ['RouterLink'] },
+      global: { stubs: ['RouterLink', 'ClientNav'] },
     })
 
     await flushPromises()
@@ -98,7 +98,7 @@ describe('ClientReservations.vue (SCRUM-110)', () => {
     })
 
     const wrapper = mount(ClientReservations, {
-      global: { stubs: ['RouterLink'] },
+      global: { stubs: ['RouterLink', 'ClientNav'] },
     })
 
     await flushPromises()
@@ -132,7 +132,7 @@ describe('ClientReservations.vue (SCRUM-110)', () => {
     })
 
     const wrapper = mount(ClientReservations, {
-      global: { stubs: ['RouterLink'] },
+      global: { stubs: ['RouterLink', 'ClientNav'] },
     })
     await flushPromises()
 
@@ -173,7 +173,7 @@ describe('ClientReservations.vue (SCRUM-110)', () => {
     })
 
     const wrapper = mount(ClientReservations, {
-      global: { stubs: ['RouterLink'] },
+      global: { stubs: ['RouterLink', 'ClientNav'] },
     })
     await flushPromises()
 
@@ -204,7 +204,7 @@ describe('ClientReservations.vue (SCRUM-110)', () => {
     })
 
     const wrapper = mount(ClientReservations, {
-      global: { stubs: ['RouterLink'] },
+      global: { stubs: ['RouterLink', 'ClientNav'] },
     })
     await flushPromises()
 
@@ -245,7 +245,7 @@ describe('ClientReservations.vue (SCRUM-110)', () => {
     })
 
     const wrapper = mount(ClientReservations, {
-      global: { stubs: ['RouterLink'] },
+      global: { stubs: ['RouterLink', 'ClientNav'] },
     })
     await flushPromises()
 
