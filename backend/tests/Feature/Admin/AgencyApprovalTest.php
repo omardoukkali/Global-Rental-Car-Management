@@ -410,12 +410,17 @@ class AgencyApprovalTest extends TestCase
         $admin = $this->createAdmin();
         [, $agency] = $this->createAgencyWithOwner('approved');
 
-        $this->actingAs($admin)
-            ->getJson("/api/admin/agencies/{$agency->id}")
-            ->assertStatus(200)
+        $response = $this->actingAs($admin)
+            ->getJson("/api/admin/agencies/{$agency->id}");
+
+        $response->assertStatus(200)
             ->assertJsonPath('agency.id', $agency->id)
-            ->assertJsonPath('agency.name', $agency->name)
-            ->assertJsonPath('agency.commission_rate', (float) $agency->commission_rate);
+            ->assertJsonPath('agency.name', $agency->name);
+
+        $this->assertEquals(
+            (float) $agency->commission_rate,
+            $response->json('agency.commission_rate')
+        );
     }
 
     public function test_admin_can_update_agency_commission(): void
