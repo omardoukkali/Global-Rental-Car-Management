@@ -87,7 +87,8 @@ onMounted(async () => {
 <template>
   <div class="bg-white" data-testid="home-page">
     <!-- HERO -->
-    <section class="relative overflow-hidden">
+    <section class="relative">
+      <div class="absolute inset-0 overflow-hidden">
       <div class="absolute inset-0 hero-bg"></div>
       <video
         class="hero-video absolute inset-0 w-full h-full object-cover"
@@ -103,6 +104,7 @@ onMounted(async () => {
         data-testid="hero-video"
       ></video>
       <div class="absolute inset-0 bg-gradient-to-b from-black/70 via-black/45 to-[#F8FAFC]"></div>
+      </div>
 
       <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-12 lg:pt-28 lg:pb-20 text-white">
         <p class="text-xs font-bold uppercase tracking-[0.2em] text-white/70 mb-4 fade-up">Location de voitures au Maroc</p>
@@ -114,11 +116,11 @@ onMounted(async () => {
           Réservez en ligne, récupérez à l’agence ou à l’aéroport.
         </p>
 
-        <div class="mt-10 fade-up fade-up-1">
+        <div class="mt-10 fade-up fade-up-1 relative z-20">
           <CarSearchBar v-model="search" @search="goSearch" />
         </div>
 
-        <div class="mt-6 flex flex-wrap gap-2 text-xs font-semibold fade-up fade-up-1">
+        <div class="mt-6 flex flex-wrap gap-2 text-xs font-semibold fade-up fade-up-1 relative z-0">
           <span class="px-3 py-1.5 rounded-full bg-white/90 text-slate-700 border border-slate-200">
             <strong class="text-[#0F172A]">{{ loading ? '…' : cars.length }}</strong> véhicules disponibles
           </span>
