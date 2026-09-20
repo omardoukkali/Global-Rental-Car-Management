@@ -35,7 +35,7 @@
             <div>
               <div class="flex justify-between items-center mb-1">
                 <label class="form-label mb-0" for="login-password">Mot de passe</label>
-                <a href="#" class="text-sm font-medium hover:underline" style="color: var(--ink);" @click.prevent>Mot de passe oublié ?</a>
+                <RouterLink to="/forgot-password" class="text-sm font-medium hover:underline" style="color: var(--ink);">Mot de passe oublié ?</RouterLink>
               </div>
               <input v-model="form.password" type="password" id="login-password" class="form-input" placeholder="••••••••" required />
             </div>
