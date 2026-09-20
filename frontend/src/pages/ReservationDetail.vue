@@ -450,7 +450,6 @@ onMounted(load)
                       {{ agency.name }}
                     </RouterLink>
                     <span v-else>{{ agency?.name || 'Agence' }}</span>
-                    <span v-if="agency?.phone"> · {{ agency.phone }}</span>
                   </p>
                 </div>
                 <span data-testid="status-badge" class="inline-flex px-3 py-1 rounded-full text-xs font-bold border" :class="statusClass(status)">
