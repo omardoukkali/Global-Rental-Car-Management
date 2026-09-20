@@ -127,56 +127,26 @@
         </div>
 
         <div>
-          <h2 class="font-bricolage text-lg font-bold text-[#0F172A] border-b border-slate-100 pb-2 mb-4">
-            3. Photo du véhicule
-          </h2>
+          <div class="flex items-center justify-between border-b border-slate-100 pb-2 mb-4">
+            <h2 class="font-bricolage text-lg font-bold text-[#0F172A]">
+              3. Galerie photos
+            </h2>
+            <span v-if="isEditMode" class="text-[11px] font-semibold text-slate-400">
+              Enregistrement immédiat
+            </span>
+          </div>
 
-          <input 
-            type="file" 
-            ref="fileInput" 
-            accept="image/*" 
-            class="hidden" 
-            @change="handleFileSelected" 
+          <p v-if="galleryError" class="mb-3 text-xs font-semibold text-red-600">{{ galleryError }}</p>
+          <p v-if="galleryNotice" class="mb-3 text-xs font-semibold text-emerald-700">{{ galleryNotice }}</p>
+
+          <CarImageGallery
+            :images="images"
+            :busy="galleryBusy"
+            @add="addImage"
+            @remove="removeImage"
+            @primary="setPrimaryImage"
+            @move="moveImage"
           />
-
-          <div 
-            v-if="!imagePreview"
-            @click="triggerFileInput" 
-            class="border-2 border-dashed border-slate-300 hover:border-slate-400 bg-slate-50 hover:bg-slate-100/80 rounded-2xl p-8 text-center cursor-pointer transition-colors"
-          >
-            <div class="w-12 h-12 bg-white rounded-full shadow-sm flex items-center justify-center mx-auto mb-3 text-slate-500">
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-              </svg>
-            </div>
-            <p class="text-sm font-bold text-[#0F172A]">Cliquez pour importer une photo</p>
-            <p class="text-xs text-slate-500 mt-1">PNG, JPG ou WEBP (Max 5 Mo)</p>
-          </div>
-
-          <div v-else class="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 rounded-2xl border border-slate-200 bg-slate-50">
-            <div class="w-40 h-28 rounded-xl overflow-hidden bg-slate-200 border border-slate-300 flex-shrink-0">
-              <img :src="imagePreview" alt="Aperçu voiture" class="w-full h-full object-cover" />
-            </div>
-            <div class="space-y-2">
-              <p class="text-xs font-semibold text-slate-700">Photo sélectionnée</p>
-              <div class="flex gap-2">
-                <button 
-                  type="button" 
-                  @click="triggerFileInput" 
-                  class="text-xs font-bold px-3 py-1.5 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
-                >
-                  Changer la photo
-                </button>
-                <button 
-                  type="button" 
-                  @click="removeImage" 
-                  class="text-xs font-bold px-3 py-1.5 text-rose-600 bg-rose-50 border border-rose-200 rounded-lg hover:bg-rose-100 transition-colors"
-                >
-                  Supprimer
-                </button>
-              </div>
-            </div>
-          </div>
         </div>
 
         <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
@@ -200,6 +170,7 @@
 import { reactive, ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import AgencyLayout from '@/components/AgencyLayout.vue'
+import CarImageGallery from '@/components/CarImageGallery.vue'
 import carsService from '@/services/cars'
 import api from '@/services/api'
 
@@ -209,8 +180,10 @@ const router = useRouter()
 const carId = route.params.id
 const isEditMode = computed(() => !!carId)
 
-const fileInput = ref(null)
-const imagePreview = ref('')
+const images = ref([])
+const galleryBusy = ref(false)
+const galleryError = ref('')
+const galleryNotice = ref('')
 const cities = ref([])
 const initialLoading = ref(false)
 const saving = ref(false)
@@ -233,25 +206,148 @@ const form = reactive({
   fuel_consumption: null,
 })
 
-function triggerFileInput() {
-  fileInput.value?.click()
-}
+// ---------------------------------------------------------------------------
+// Galerie photos
+// Création : la liste reste locale et part avec le véhicule (images[]).
+// Édition : chaque action appelle l'API images du véhicule.
+// ---------------------------------------------------------------------------
 
-function handleFileSelected(event) {
-  const file = event.target.files?.[0]
-  if (!file) return
-
-  const reader = new FileReader()
-  reader.onload = (e) => {
-    imagePreview.value = e.target.result
+function normalizeImage(image, index) {
+  return {
+    id: image.id ?? null,
+    url: image.url || image.image_url || '',
+    is_primary: !!image.is_primary,
+    display_order: image.display_order ?? index,
   }
-  reader.readAsDataURL(file)
 }
 
-function removeImage() {
-  imagePreview.value = ''
-  if (fileInput.value) {
-    fileInput.value.value = ''
+function sortImages(list) {
+  return [...list]
+    .sort((a, b) => {
+      if (!!a.is_primary !== !!b.is_primary) return a.is_primary ? -1 : 1
+      return (a.display_order ?? 0) - (b.display_order ?? 0)
+    })
+    .map((img, index) => ({ ...img, display_order: index }))
+}
+
+function ensurePrimary(list) {
+  if (list.length > 0 && !list.some((img) => img.is_primary)) {
+    list[0].is_primary = true
+  }
+  return list
+}
+
+function galleryPayload() {
+  return sortImages(images.value).map((img, index) => ({
+    url: img.url,
+    is_primary: !!img.is_primary,
+    display_order: index,
+  }))
+}
+
+function clearGalleryMessages() {
+  galleryError.value = ''
+  galleryNotice.value = ''
+}
+
+async function loadImages() {
+  if (!isEditMode.value) return
+  try {
+    const res = await carsService.getCarImages(carId)
+    const list = res.images || res.data?.images || []
+    images.value = sortImages(ensurePrimary(list.map(normalizeImage)))
+  } catch (err) {
+    galleryError.value = err.message || 'Impossible de charger les photos.'
+  }
+}
+
+async function addImage(url) {
+  clearGalleryMessages()
+  const isFirst = images.value.length === 0
+
+  if (!isEditMode.value) {
+    images.value = sortImages([
+      ...images.value,
+      { id: null, url, is_primary: isFirst, display_order: images.value.length },
+    ])
+    return
+  }
+
+  galleryBusy.value = true
+  try {
+    await carsService.addCarImage(carId, {
+      url,
+      is_primary: isFirst,
+      display_order: images.value.length,
+    })
+    await loadImages()
+    galleryNotice.value = 'Photo ajoutée.'
+  } catch (err) {
+    galleryError.value = err.errors?.url?.[0] || err.message || 'Ajout de la photo impossible.'
+  } finally {
+    galleryBusy.value = false
+  }
+}
+
+async function removeImage(image) {
+  clearGalleryMessages()
+
+  if (!isEditMode.value || !image.id) {
+    const rest = images.value.filter((img) => img !== image && img.url !== image.url)
+    images.value = sortImages(ensurePrimary(rest))
+    return
+  }
+
+  galleryBusy.value = true
+  try {
+    await carsService.deleteCarImage(carId, image.id)
+    const rest = images.value.filter((img) => img.id !== image.id)
+    // Si la principale a été supprimée, promouvoir la suivante côté API
+    if (image.is_primary && rest.length > 0) {
+      await carsService.setPrimaryCarImage(carId, sortImages(rest)[0].id)
+    }
+    await loadImages()
+    galleryNotice.value = 'Photo supprimée.'
+  } catch (err) {
+    galleryError.value = err.message || 'Suppression impossible.'
+  } finally {
+    galleryBusy.value = false
+  }
+}
+
+async function setPrimaryImage(image) {
+  clearGalleryMessages()
+
+  if (!isEditMode.value || !image.id) {
+    images.value = sortImages(
+      images.value.map((img) => ({ ...img, is_primary: img === image || img.url === image.url }))
+    )
+    return
+  }
+
+  galleryBusy.value = true
+  try {
+    await carsService.setPrimaryCarImage(carId, image.id)
+    await loadImages()
+    galleryNotice.value = 'Photo principale mise à jour.'
+  } catch (err) {
+    galleryError.value = err.message || 'Changement de photo principale impossible.'
+  } finally {
+    galleryBusy.value = false
+  }
+}
+
+function moveImage({ image, direction }) {
+  clearGalleryMessages()
+  const list = sortImages(images.value)
+  const from = list.findIndex((img) => img === image || (img.id && img.id === image.id) || img.url === image.url)
+  const to = from + direction
+  if (from < 0 || to < 0 || to >= list.length || list[to].is_primary) return
+  const [moved] = list.splice(from, 1)
+  list.splice(to, 0, moved)
+  images.value = list.map((img, index) => ({ ...img, display_order: index }))
+  if (isEditMode.value) {
+    galleryNotice.value = 'Ordre modifié pour l’affichage local. L’ordre enregistré suit l’ordre d’ajout.'
   }
 }
 
@@ -287,9 +383,10 @@ async function loadCarDetails() {
     form.energy_type = car.energy_type || 'diesel'
     form.fuel_consumption = car.fuel_consumption
 
-    if (car.images && car.images.length > 0) {
-      imagePreview.value = car.images[0].url || car.images[0].image_url
+    if (Array.isArray(car.images) && car.images.length > 0) {
+      images.value = sortImages(ensurePrimary(car.images.map(normalizeImage)))
     }
+    await loadImages()
   } catch (err) {
     globalError.value = 'Impossible de charger les détails du véhicule.'
   } finally {
@@ -303,20 +400,9 @@ async function handleSubmit() {
   successMsg.value = ''
   Object.keys(errors).forEach(k => delete errors[k])
 
-  // Prépare l'URL d'image valide pour l'API Laravel
-  let imageUrl = ''
-  if (imagePreview.value) {
-    if (imagePreview.value.startsWith('http://') || imagePreview.value.startsWith('https://')) {
-      imageUrl = imagePreview.value
-    } else {
-      // Pour les fichiers locaux sélectionnés, on envoie une URL d'image valide supportée par le backend
-      imageUrl = 'https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?w=800'
-    }
-  }
-
   const payload = {
     ...form,
-    images: imageUrl ? [{ url: imageUrl, is_primary: true, display_order: 1 }] : []
+    images: galleryPayload(),
   }
 
   try {
