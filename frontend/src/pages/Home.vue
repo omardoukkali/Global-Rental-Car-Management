@@ -5,9 +5,14 @@ import CarSearchBar from '@/components/CarSearchBar.vue'
 import PublicCarCard from '@/components/PublicCarCard.vue'
 import carsService from '@/services/cars'
 import { useAuthStore } from '@/stores/auth'
+import heroPoster from '@/assets/hero.png'
 
 const router = useRouter()
 const auth = useAuthStore()
+
+// Hero background video (Mixkit free license, /public/videos). The poster image
+// stays as fallback while it loads, on slow connections and for reduced-motion users.
+const heroVideo = '/videos/hero-highway.mp4'
 
 const search = ref({ q: '', city_id: '', start_at: '', end_at: '' })
 const cars = ref([])
@@ -84,7 +89,20 @@ onMounted(async () => {
     <!-- HERO -->
     <section class="relative overflow-hidden">
       <div class="absolute inset-0 hero-bg"></div>
-      <div class="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-[#F8FAFC]"></div>
+      <video
+        class="hero-video absolute inset-0 w-full h-full object-cover"
+        :src="heroVideo"
+        :poster="heroPoster"
+        autoplay
+        muted
+        loop
+        playsinline
+        preload="metadata"
+        aria-hidden="true"
+        tabindex="-1"
+        data-testid="hero-video"
+      ></video>
+      <div class="absolute inset-0 bg-gradient-to-b from-black/70 via-black/45 to-[#F8FAFC]"></div>
 
       <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-12 lg:pt-28 lg:pb-20 text-white">
         <p class="text-xs font-bold uppercase tracking-[0.2em] text-white/70 mb-4 fade-up">Location de voitures au Maroc</p>
@@ -225,5 +243,17 @@ onMounted(async () => {
   background-image: url('@/assets/hero.png');
   background-size: cover;
   background-position: center 60%;
+}
+
+.hero-video {
+  object-position: center 55%;
+  pointer-events: none;
+}
+
+/* No motion for users who asked for it: keep the still image */
+@media (prefers-reduced-motion: reduce) {
+  .hero-video {
+    display: none;
+  }
 }
 </style>
