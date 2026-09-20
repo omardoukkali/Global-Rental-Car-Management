@@ -1,13 +1,17 @@
 import api from '@/services/api'
 
 export default {
-  /** Public catalog for clients (booking) */
-  getPublicCars() {
-    return api.get('/cars')
+  /** Public catalog (guests and clients). `params` = search filters of GET /cars */
+  getPublicCars(params = {}) {
+    return api.get('/cars', { params })
   },
 
   getPublicCar(id) {
     return api.get(`/cars/${id}`)
+  },
+
+  getCarReviews(id) {
+    return api.get(`/cars/${id}/reviews`)
   },
 
   getCars() {

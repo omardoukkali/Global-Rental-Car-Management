@@ -25,13 +25,17 @@ watch(path, () => {
 })
 
 const homeTo = computed(() => {
-  if (!auth.isAuthenticated) return '/login'
+  if (!auth.isAuthenticated) return '/'
   if (role.value === 'agency') {
     return agencyStore.loaded && !agencyStore.isApproved ? '/agency/pending' : '/agency/dashboard'
   }
   if (role.value === 'admin') return '/admin/dashboard'
-  return '/myreservations'
+  return '/'
 })
+
+function isCatalogNav(p) {
+  return p === '/cars' || (p.startsWith('/cars/') && !p.endsWith('/reserve'))
+}
 
 function isActive(match) {
   if (!path.value) return false
@@ -82,6 +86,7 @@ function linkClass(active) {
         aria-label="Navigation principale"
       >
         <template v-if="!auth.isAuthenticated">
+          <RouterLink to="/cars" :class="linkClass(isActive(isCatalogNav))">Voitures</RouterLink>
           <RouterLink to="/login" :class="linkClass(isActive('/login'))">Se connecter</RouterLink>
           <RouterLink to="/register" :class="linkClass(isActive('/register'))">S’inscrire</RouterLink>
         </template>
@@ -127,10 +132,11 @@ function linkClass(active) {
         </template>
 
         <template v-else>
+          <RouterLink to="/cars" :class="linkClass(isActive(isCatalogNav))">Voitures</RouterLink>
           <RouterLink to="/myreservations" :class="linkClass(isActive('/myreservations'))">Mes réservations</RouterLink>
           <RouterLink
             to="/reservations/new"
-            :class="linkClass(isActive((p) => p === '/reservations/new' || p.startsWith('/cars/')))"
+            :class="linkClass(isActive((p) => p === '/reservations/new' || p.endsWith('/reserve')))"
           >
             Réserver
           </RouterLink>
