@@ -9,6 +9,11 @@ export default {
         return api.put('/agency/profile', payload)
     },
 
+    /** Yearly revenue, monthly breakdown, reservations by status, occupancy, rating */
+    getStats(params = {}) {
+        return api.get('/agency/stats', { params })
+    },
+
     getAgencies(params = {}) {
         return api.get('/agencies', { params })
     },
