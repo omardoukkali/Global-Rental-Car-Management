@@ -29,6 +29,11 @@ export default {
         return api.delete(`/agencies/${id}`)
     },
 
+    /** Public reviews of an agency (paginated) */
+    getPublicAgencyReviews(agencyId, params = {}) {
+        return api.get(`/agencies/${agencyId}/reviews`, { params })
+    },
+
     getPoints() {
         return api.get('/agency/points')
     },

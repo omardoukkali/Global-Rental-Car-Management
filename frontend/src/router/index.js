@@ -45,6 +45,14 @@ const routes = [{
         props: true,
     },
     {
+        // Public agency page: fleet, pickup points and reviews
+        path: '/agencies/:agencyId',
+        name: 'AgencyPublic',
+        component: () =>
+            import ('@/pages/AgencyPublic.vue'),
+        props: true,
+    },
+    {
         path: '/login',
         name: 'login',
         component: () =>
@@ -264,7 +272,8 @@ function isBackOffice(user) {
  * needs an approved agency (the API answers 403 otherwise).
  */
 async function agencyGate(to) {
-    if (!to.path.startsWith('/agency')) return null
+    // Only the agency back-office (/agency/...), not the public /agencies/:id pages
+    if (!to.path.startsWith('/agency/')) return null
 
     const agencyStore = useAgencyStore()
     if (!agencyStore.loaded) {
