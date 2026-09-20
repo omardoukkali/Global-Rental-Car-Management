@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Controllers\Admin\AdminDashboardController;
+use App\Http\Controllers\Admin\AdminDirectoryController;
+use App\Http\Controllers\Admin\AdminProfileController;
 use App\Http\Controllers\Admin\AgencyApprovalController;
 use App\Http\Controllers\Agency\AgencyController;
 use App\Http\Controllers\Agency\AgencyPointController;
@@ -195,6 +198,18 @@ Route::middleware(['auth:sanctum', 'role:agency', 'agency.approved'])->group(fun
 */
 
 Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
+    Route::get('/admin/dashboard', [AdminDashboardController::class, 'show']);
+    Route::get('/admin/agencies', [AgencyApprovalController::class, 'index']);
+    Route::get('/admin/agencies/{agency}', [AgencyApprovalController::class, 'show']);
+    Route::patch('/admin/agencies/{agency}', [AgencyApprovalController::class, 'update']);
+    Route::delete('/admin/agencies/{agency}', [AgencyApprovalController::class, 'destroy']);
     Route::patch('/admin/agencies/{agency}/approve', [AgencyApprovalController::class, 'approve']);
     Route::patch('/admin/agencies/{agency}/reject', [AgencyApprovalController::class, 'reject']);
+    Route::get('/admin/users', [AdminDirectoryController::class, 'users']);
+    Route::get('/admin/cars', [AdminDirectoryController::class, 'cars']);
+    Route::get('/admin/reservations', [AdminDirectoryController::class, 'reservations']);
+    Route::get('/admin/revenue', [AdminDirectoryController::class, 'revenue']);
+    Route::get('/admin/reviews', [AdminDirectoryController::class, 'reviews']);
+    Route::get('/admin/profile', [AdminProfileController::class, 'show']);
+    Route::patch('/admin/profile', [AdminProfileController::class, 'update']);
 });

@@ -10,7 +10,7 @@ class CarSeeder extends Seeder
 {
     /**
      * 8 cars per approved agency (one of them in maintenance).
-     * The pending agency also gets 2 cars, which must NOT appear in the public catalogue.
+     * Pending agencies cannot manage a fleet until they are approved.
      */
     public function run(): void
     {
@@ -26,15 +26,6 @@ class CarSeeder extends Seeder
                 'agency_id' => $agency->id,
                 'city_id' => $agency->city_id,
                 'status' => 'maintenance',
-            ]);
-        }
-
-        $pendingAgencies = Agency::where('status', 'pending')->get();
-
-        foreach ($pendingAgencies as $agency) {
-            Car::factory()->count(2)->create([
-                'agency_id' => $agency->id,
-                'city_id' => $agency->city_id,
             ]);
         }
     }
