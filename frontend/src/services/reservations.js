@@ -17,6 +17,16 @@ export default {
         return api.get(`/cars/${carId}/availability`, { params })
     },
 
+    /** Client: change dates and/or pickup & return points (pending / confirmed, unpaid) */
+    updateReservation(id, payload) {
+        return api.put(`/reservations/${id}`, payload)
+    },
+
+    /** Client: open a dispute on a picked-up reservation */
+    disputeReservation(id) {
+        return api.patch(`/reservations/${id}/dispute`)
+    },
+
     cancelReservation(id) {
         return api.patch(`/reservations/${id}/cancel`)
     },
