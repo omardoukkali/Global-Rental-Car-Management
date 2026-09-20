@@ -38,9 +38,14 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 
-Route::post('/register/client', [AuthController::class, 'registerClient']);
-Route::post('/register/agency', [AuthController::class, 'registerAgency']);
-Route::post('/login', [AuthController::class, 'login']);
+// Registration: 3 requests per minute (a real user registers once)
+Route::middleware('throttle:3,1')->group(function () {
+    Route::post('/register/client', [AuthController::class, 'registerClient']);
+    Route::post('/register/agency', [AuthController::class, 'registerAgency']);
+});
+
+// Login: 5 requests per minute, against brute force
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1');
 
 // Password reset (max 5 requests per minute)
 Route::middleware('throttle:5,1')->group(function () {
