@@ -10,7 +10,7 @@ const state = {
   progress: 0,
   results: null,
   preferences: {
-    city: '', startDate: '', endDate: '', budget: 450, passengers: 2,
+    cityId: '', startDate: '', endDate: '', budget: 450, passengers: 2,
     type: '', transmission: '', energy: ''
   }
 }
@@ -58,13 +58,13 @@ function panel() {
 
 function form() {
   const p = state.preferences
-  const chips = (key, items) => items.map(item => `<button type="button" class="chip ${p[key] === item ? 'active' : ''}" data-chip="${key}" data-value="${item}">${item}</button>`).join('')
+  const chips = (key, items) => items.map(([value, label]) => `<button type="button" class="chip ${p[key] === value ? 'active' : ''}" data-chip="${key}" data-value="${value}">${label}</button>`).join('')
   return `<div class="intro"><span class="soft-tag">✦ Recommandations personnalisées</span><h3>Trouvez la voiture qui vous ressemble.</h3><p>Répondez à quelques questions et nous trouverons votre meilleur match.</p></div>
-  <form id="preferences-form"><div class="field wide"><label for="city">Ville de départ</label><select id="city" name="city" required ${state.loadingCities || !state.cities.length ? 'disabled' : ''}><option value="">${state.loadingCities ? 'Chargement des villes…' : 'Choisir une ville'}</option>${state.cities.map(city => `<option value="${esc(city.name)}" ${p.city === city.name ? 'selected' : ''}>${esc(city.name)}</option>`).join('')}</select>${!state.loadingCities && !state.cities.length ? '<small class="field-error">Les villes sont indisponibles pour le moment.</small>' : ''}</div>
+  <form id="preferences-form"><div class="field wide"><label for="city">Ville de départ</label><select id="city" name="city" required ${state.loadingCities || !state.cities.length ? 'disabled' : ''}><option value="">${state.loadingCities ? 'Chargement des villes…' : 'Choisir une ville'}</option>${state.cities.map(city => `<option value="${esc(city.id)}" ${p.cityId === city.id ? 'selected' : ''}>${esc(city.name)}</option>`).join('')}</select>${!state.loadingCities && !state.cities.length ? '<small class="field-error">Les villes sont indisponibles pour le moment.</small>' : ''}</div>
   <div class="field"><label for="startDate">Départ</label><input id="startDate" type="date" value="${p.startDate}" required></div><div class="field"><label for="endDate">Retour</label><input id="endDate" type="date" value="${p.endDate}" required></div>
   <div class="control-block wide"><div class="control-label"><label for="budget">Budget quotidien</label><strong><output id="budget-output">${money(p.budget)} MAD</output><span>/ jour</span></strong></div><input id="budget" type="range" min="150" max="1500" step="25" value="${p.budget}"><div class="range-labels"><span>150 MAD</span><span>1 500 MAD</span></div></div>
   <div class="control-block wide"><div class="control-label"><label>Voyageurs</label><span class="stepper"><button type="button" data-passenger="-1" aria-label="Retirer un voyageur">−</button><b>${p.passengers}</b><button type="button" data-passenger="1" aria-label="Ajouter un voyageur">+</button></span></div></div>
-  <div class="control-block wide"><label>Type de véhicule</label><div class="chips">${chips('type', ['Citadine', 'Berline', 'SUV', 'Luxe'])}</div></div><div class="control-block wide"><label>Boîte</label><div class="chips">${chips('transmission', ['Automatique', 'Manuelle'])}</div></div><div class="control-block wide"><label>Énergie</label><div class="chips">${chips('energy', ['Essence', 'Diesel', 'Hybride', 'Electrique'])}</div></div>
+  <div class="control-block wide"><label>Type de véhicule</label><div class="chips">${chips('type', [['hatchback', 'Citadine'], ['sedan', 'Berline'], ['suv', 'SUV'], ['van', 'Utilitaire']])}</div></div><div class="control-block wide"><label>Boîte</label><div class="chips">${chips('transmission', [['automatic', 'Automatique'], ['manual', 'Manuelle']])}</div></div><div class="control-block wide"><label>Énergie</label><div class="chips">${chips('energy', [['gasoline', 'Essence'], ['diesel', 'Diesel'], ['hybrid', 'Hybride'], ['electric', 'Électrique']])}</div></div>
   <button class="primary wide" type="submit">Voir mes recommandations <span>→</span></button></form>`
 }
 
@@ -75,7 +75,7 @@ function loading() {
 
 function results() {
   const [best, ...alternatives] = state.results || []
-  if (!best) return `<div class="empty"><h3>Aucun véhicule trouvé</h3><p>Ajustez vos critères pour élargir la recherche.</p><button class="secondary" data-action="form">Ajuster mes critères</button></div>`
+  if (!best) return `<div class="empty"><h3>Aucun véhicule disponible pour ces critères.</h3><p>Ajustez vos critères pour élargir la recherche.</p><button class="secondary" data-action="form">Ajuster mes critères</button></div>`
   const feature = (icon, value, label) => `<div class="spec"><span>${icon}</span><strong>${esc(value)}</strong><small>${label}</small></div>`
   return `<button class="back-link" data-action="form">← Ajuster mes critères</button><div class="result-heading"><div><span class="soft-tag">Votre recommandation</span><h3>Voici votre meilleur match.</h3><p>Un choix calculé à partir de vos préférences.</p></div><div class="score-ring" style="--score:${best.score * 3.6}deg"><svg viewBox="0 0 42 42"><circle cx="21" cy="21" r="16"/><circle class="ring-value" cx="21" cy="21" r="16"/></svg><strong>${best.score}%</strong><small>match</small></div></div>
   <article class="hero-car"><div class="hero-image"><img src="${esc(best.image || '')}" alt="${esc(title(best))}" onerror="this.style.display='none'"><span class="image-fallback">🚙</span><b>Meilleur choix</b></div><div class="hero-details"><h4>${esc(title(best))}</h4><p>${esc(best.type || 'Véhicule')} · ${esc(best.daily_price)} MAD / jour</p><div class="spec-grid">${feature('⌂', `${best.seats || '—'}`, 'places')}${feature('⇄', best.transmission || '—', 'boîte')}${feature('◌', best.economy || '—', 'efficacité')}${feature('★', Number(best.rating || 0).toFixed(1), 'avis')}</div><h5>Pourquoi ce véhicule ?</h5><ul class="reasons"><li>Respecte au mieux votre budget quotidien</li><li>Adapté à votre nombre de voyageurs</li><li>Correspond à vos préférences de conduite</li></ul><button class="primary" data-action="choose" data-id="${esc(best.id)}">Choisir ce véhicule <span>→</span></button></div></article>
@@ -89,11 +89,11 @@ function bind() {
   const formElement = root.querySelector('#preferences-form')
   if (formElement) {
     formElement.addEventListener('submit', submitPreferences)
-    root.querySelector('#city').addEventListener('change', event => { state.preferences.city = event.target.value })
+    root.querySelector('#city').addEventListener('change', event => { state.preferences.cityId = event.target.value })
     root.querySelector('#startDate').addEventListener('change', event => { state.preferences.startDate = event.target.value })
     root.querySelector('#endDate').addEventListener('change', event => { state.preferences.endDate = event.target.value })
     const range = root.querySelector('#budget'); range.addEventListener('input', event => { state.preferences.budget = Number(event.target.value); root.querySelector('#budget-output').textContent = `${money(state.preferences.budget)} MAD` })
-    root.querySelectorAll('[data-passenger]').forEach(button => button.addEventListener('click', () => { state.preferences.passengers = Math.max(1, Math.min(12, state.preferences.passengers + Number(button.dataset.passenger))); render() }))
+    root.querySelectorAll('[data-passenger]').forEach(button => button.addEventListener('click', () => { state.preferences.passengers = Math.max(1, Math.min(9, state.preferences.passengers + Number(button.dataset.passenger))); render() }))
     root.querySelectorAll('[data-chip]').forEach(button => button.addEventListener('click', () => { const key = button.dataset.chip; state.preferences[key] = state.preferences[key] === button.dataset.value ? '' : button.dataset.value; render() }))
   }
   root.querySelector('[data-action="choose"]')?.addEventListener('click', event => { window.location.href = `/reservations/new?car_id=${encodeURIComponent(event.currentTarget.dataset.id)}` })
@@ -111,10 +111,10 @@ async function submitPreferences(event) {
   event.preventDefault(); state.step = 'loading'; state.loading = true; state.progress = 0; render()
   const progressTimer = window.setInterval(() => { state.progress = Math.min(3, state.progress + 1); render(); if (state.progress === 3) window.clearInterval(progressTimer) }, 500)
   try {
-    const response = await fetch(`${API_ROOT}/api/recommend`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...state.preferences, vehicle_type: state.preferences.type, transmission: state.preferences.transmission, energy: state.preferences.energy }) })
+    const response = await fetch(`${API_ROOT}/api/recommend`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ budget_per_day: state.preferences.budget, start_at: state.preferences.startDate, end_at: state.preferences.endDate, city_id: state.preferences.cityId, passengers: state.preferences.passengers, vehicle_type: state.preferences.type || null, transmission: state.preferences.transmission || null, energy_type: state.preferences.energy || null }) })
     if (!response.ok) throw new Error('fallback')
     const data = await response.json(); state.results = (data.results || [data.recommended]).map(car => ({ ...car, score: car.score || 80 }))
-  } catch { state.results = fallbackCars.map(car => ({ ...car, score: score(car) })).sort((a, b) => b.score - a.score).slice(0, 3) }
+  } catch { state.results = [] }
   window.setTimeout(() => { state.loading = false; state.step = 'results'; render() }, 1650)
 }
 
