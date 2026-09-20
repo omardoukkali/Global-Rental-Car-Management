@@ -1,14 +1,20 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import AgencyLayout from '@/components/AgencyLayout.vue'
 import reservationsService from '@/services/reservations'
+
+const route = useRoute()
 
 const loading = ref(true)
 const error = ref('')
 const notice = ref('')
 const reservations = ref([])
 
-const statusFilter = ref('all')
+const VALID_FILTERS = ['all', 'action', 'closed', 'pending', 'confirmed', 'picked_up', 'completed', 'cancelled', 'rejected', 'disputed']
+const queryStatus = typeof route?.query?.status === 'string' && VALID_FILTERS.includes(route.query.status) ? route.query.status : 'all'
+// Cancelled and rejected share one tab
+const statusFilter = ref(['cancelled', 'rejected'].includes(queryStatus) ? 'closed' : queryStatus)
 const carFilter = ref('')
 const search = ref('')
 const expanded = ref(null)
