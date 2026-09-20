@@ -57,7 +57,10 @@ class RegisterClientRequest extends FormRequest
                 'confirmed',
                 Password::min(8)
                     ->letters()
-                    ->numbers(),
+                    ->numbers()
+                    // Rejects passwords found in known breaches (Have I Been Pwned).
+                    // Only the first 5 characters of the hash leave the server.
+                    ->uncompromised(),
             ],
 
             'phone' => [
