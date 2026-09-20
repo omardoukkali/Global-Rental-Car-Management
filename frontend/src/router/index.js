@@ -28,7 +28,21 @@ import PaymentCheckout from '@/pages/PaymentCheckout.vue'
 const routes = [{
         path: '/',
         name: 'home',
-        redirect: '/login'
+        component: () =>
+            import ('@/pages/Home.vue'),
+    },
+    {
+        path: '/cars',
+        name: 'CarCatalog',
+        component: () =>
+            import ('@/pages/CarCatalog.vue'),
+    },
+    {
+        // Public car listing (guests can browse, login is asked at booking time)
+        path: '/cars/:carId',
+        name: 'CarShow',
+        component: ReservationForm,
+        props: true,
     },
     {
         path: '/login',
@@ -205,7 +219,6 @@ const routes = [{
         name: 'CarReserve',
         component: ReservationForm,
         props: true,
-        meta: { requiresAuth: true }
     },
     {
         path: '/myreservations',
@@ -237,6 +250,12 @@ function homeForRole(user) {
     if (role === 'agency') return { name: 'AgencyDashboard' }
     if (role === 'admin') return { name: 'AdminDashboard' }
     return { name: 'ClientReservations' }
+}
+
+// Agencies and admins land on their back-office; clients and guests get the public home
+function isBackOffice(user) {
+    const role = user?.role
+    return role === 'agency' || role === 'admin'
 }
 
 /**
@@ -272,7 +291,7 @@ router.beforeEach(async (to, from, next) => {
     const auth = useAuthStore()
     const isAuthenticated = auth.isAuthenticated
 
-    if (to.path === '/' && isAuthenticated) {
+    if (to.path === '/' && isAuthenticated && isBackOffice(auth.user)) {
         next(homeForRole(auth.user))
         return
     }
