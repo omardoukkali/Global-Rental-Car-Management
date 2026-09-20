@@ -56,7 +56,7 @@ Route::get('/email/verify/{id}/{hash}', [AuthController::class, 'verifyEmail'])
     ->name('verification.verify');
 
 Route::post('/email/resend', [AuthController::class, 'resendVerification'])
-    ->middleware('throttle:3,1');
+    ->middleware('throttle:register');
 
 
 // Password reset (max 5 requests per minute)
