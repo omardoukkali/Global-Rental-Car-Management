@@ -44,17 +44,13 @@ class AgencySeeder extends Seeder
 
         $streets = ['Avenue Mohammed V', 'Boulevard Hassan II', 'Rue Ibn Battouta', 'Avenue des FAR', 'Boulevard Zerktouni'];
 
-        $owner = User::firstOrCreate(
-            ['email' => $email],
-            [
-                'first_name' => $firstName,
-                'last_name' => $lastName,
-                'password' => 'password',
-                'phone' => '+2126' . fake()->numerify('########'),
-            ]
-        );
-
-        // role and status are not mass assignable (F-03)
+        // firstOrNew, because role and status are not mass assignable (F-03)
+        // and the columns cannot be null
+        $owner = User::firstOrNew(['email' => $email]);
+        $owner->first_name = $firstName;
+        $owner->last_name = $lastName;
+        $owner->password = 'password';
+        $owner->phone = '+2126' . fake()->numerify('########');
         $owner->role = 'agency';
         $owner->status = 'active';
         $owner->save();

@@ -14,30 +14,21 @@ class UserSeeder extends Seeder
      */
     public function run(): void
     {
-        $admin = User::firstOrCreate(
-            ['email' => 'admin@example.com'],
-            [
-                'first_name' => 'Admin',
-                'last_name' => 'User',
-                'password' => 'password',
-            ]
-        );
-
-        // role and status are not mass assignable (F-03)
+        // firstOrNew, because role and status are not mass assignable (F-03)
+        // and the columns cannot be null
+        $admin = User::firstOrNew(['email' => 'admin@example.com']);
+        $admin->first_name = 'Admin';
+        $admin->last_name = 'User';
+        $admin->password = 'password';
         $admin->role = 'admin';
         $admin->status = 'active';
         $admin->save();
 
-        $client = User::firstOrCreate(
-            ['email' => 'client@example.com'],
-            [
-                'first_name' => 'Demo',
-                'last_name' => 'Client',
-                'password' => 'password',
-                'phone' => '+212600000001',
-            ]
-        );
-
+        $client = User::firstOrNew(['email' => 'client@example.com']);
+        $client->first_name = 'Demo';
+        $client->last_name = 'Client';
+        $client->password = 'password';
+        $client->phone = '+212600000001';
         $client->role = 'client';
         $client->status = 'active';
         $client->save();
