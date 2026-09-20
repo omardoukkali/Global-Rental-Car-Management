@@ -22,6 +22,7 @@ class UserSeeder extends Seeder
         $admin->password = 'password';
         $admin->role = 'admin';
         $admin->status = 'active';
+        $admin->email_verified_at = now();
         $admin->save();
 
         $client = User::firstOrNew(['email' => 'client@example.com']);
@@ -31,6 +32,7 @@ class UserSeeder extends Seeder
         $client->phone = '+212600000001';
         $client->role = 'client';
         $client->status = 'active';
+        $client->email_verified_at = now();
         $client->save();
 
         // 29 more clients (30 in total)
@@ -48,6 +50,7 @@ class UserSeeder extends Seeder
                 'phone' => '+2126' . fake()->numerify('########'),
                 'role' => 'client',
                 'status' => 'active',
+                'email_verified_at' => now(),
             ]);
         }
     }

@@ -164,8 +164,41 @@ Copy `.env.example` to `.env` and adjust as needed.
 | `DB_USERNAME` | Database user | grader |
 | `DB_PASSWORD` | Database password | — |
 | `AI_SERVICE_URL` | Internal AI service address | http://ai_service:5000 |
+| `FRONTEND_URL` | Address used in e-mail links | http://localhost:3000 |
+| `MAIL_MAILER` | `log` (written to the log file) or `smtp` (really sent) | log |
+| `MAIL_HOST` / `MAIL_PORT` | SMTP server | — / 587 |
+| `MAIL_USERNAME` / `MAIL_PASSWORD` | SMTP credentials | — |
+| `MAIL_FROM_ADDRESS` / `MAIL_FROM_NAME` | Sender of the e-mails | no-reply@globalrental.local |
+| `CORS_ALLOWED_ORIGINS` | Origins allowed to call the API | http://localhost:3000,http://localhost:3333 |
+| `SANCTUM_TOKEN_EXPIRATION` | Token lifetime in minutes | 1440 |
+| `SANCTUM_TOKEN_PREFIX` | Token prefix, for secret scanners | grcm_ |
 
 `.env` is gitignored and must never be committed.
+
+### Sending real e-mails (password reset, e-mail verification)
+
+By default `MAIL_MAILER=log`: no e-mail leaves the machine, the message is written to
+`backend/storage/logs/laravel.log` (search for `reset-password?token=` or `email/verify`).
+
+To really send them, add your SMTP settings to your own `.env` and restart the backend:
+
+```bash
+MAIL_MAILER=smtp
+MAIL_HOST=smtp-relay.brevo.com
+MAIL_PORT=587
+MAIL_USERNAME=<your Brevo SMTP login>
+MAIL_PASSWORD=<your Brevo SMTP key>
+MAIL_ENCRYPTION=tls
+MAIL_FROM_ADDRESS=<a sender verified in Brevo>
+MAIL_FROM_NAME="Global Rental Car"
+```
+
+```bash
+docker compose up -d backend
+```
+
+Ask the team for the shared Brevo credentials — **never commit them**. The CI secret scan
+(TruffleHog) blocks any push that contains them.
 
 ---
 

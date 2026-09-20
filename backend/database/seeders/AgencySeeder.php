@@ -53,6 +53,7 @@ class AgencySeeder extends Seeder
         $owner->phone = '+2126' . fake()->numerify('########');
         $owner->role = 'agency';
         $owner->status = 'active';
+        $owner->email_verified_at = now();
         $owner->save();
 
         Agency::firstOrCreate(

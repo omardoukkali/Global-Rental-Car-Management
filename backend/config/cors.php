@@ -7,9 +7,10 @@ return [
     'allowed_methods' => ['*'],
 
     // Comma-separated list, e.g. "http://localhost:3000,https://app.example.com"
+    // 3000 = frontend in Docker, 3333 = Vite dev server on the host
     'allowed_origins' => explode(',', env(
         'CORS_ALLOWED_ORIGINS',
-        'http://localhost:3000'
+        'http://localhost:3000,http://localhost:3333'
     )),
 
     'allowed_origins_patterns' => [],

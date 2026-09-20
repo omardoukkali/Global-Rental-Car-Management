@@ -42,16 +42,25 @@ use Illuminate\Support\Facades\Route;
 */
 
 // Registration: 3 requests per minute (a real user registers once)
-Route::middleware('throttle:3,1')->group(function () {
+Route::middleware('throttle:register')->group(function () {
     Route::post('/register/client', [AuthController::class, 'registerClient']);
     Route::post('/register/agency', [AuthController::class, 'registerAgency']);
 });
 
 // Login: 5 requests per minute, against brute force
-Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1');
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
+
+// E-mail verification: the link in the e-mail is signed by Laravel
+Route::get('/email/verify/{id}/{hash}', [AuthController::class, 'verifyEmail'])
+    ->middleware(['signed', 'throttle:6,1'])
+    ->name('verification.verify');
+
+Route::post('/email/resend', [AuthController::class, 'resendVerification'])
+    ->middleware('throttle:register');
+
 
 // Password reset (max 5 requests per minute)
-Route::middleware('throttle:5,1')->group(function () {
+Route::middleware('throttle:password-reset')->group(function () {
     Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
     Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 });
