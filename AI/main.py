@@ -117,25 +117,46 @@ def explain_vehicle(car, request):
     breakdown = car["score_breakdown"]
     reasons = []
     tradeoffs = []
-    if breakdown["budget"] >= 25:
-        reasons.append("respecte votre budget quotidien")
-    elif breakdown["budget"] >= 15:
-        tradeoffs.append("dépasse légèrement votre budget")
-    if breakdown["vehicle_suitability"] >= 25:
-        reasons.append("correspond à vos préférences de véhicule")
-    elif breakdown["vehicle_suitability"] < 15:
-        tradeoffs.append("ne correspond pas à toutes vos préférences")
-    if breakdown["comfort"] >= 15:
-        reasons.append("adapté au nombre de passagers")
+    price = float(car.get("daily_price") or 0)
+    vehicle_type = str(car.get("type") or "").lower()
+    transmission = str(car.get("transmission") or "").lower()
+    energy = str(car.get("energy_type") or "").lower()
+    if price <= request.budget_per_day:
+        reasons.append(f"respecte votre budget de {request.budget_per_day:.0f} MAD par jour")
     else:
-        tradeoffs.append("offre une capacité limitée pour votre groupe")
+        tradeoffs.append(f"dépasse votre budget de {price - request.budget_per_day:.0f} MAD par jour")
+    if request.vehicle_type and vehicle_type == request.vehicle_type.lower():
+        reasons.append(f"correspond au type de véhicule demandé ({request.vehicle_type})")
+    elif request.vehicle_type:
+        tradeoffs.append(f"ne correspond pas au type demandé ({request.vehicle_type})")
+    if request.transmission and transmission == request.transmission.lower():
+        reasons.append(f"possède une boîte {request.transmission}")
+    elif request.transmission:
+        tradeoffs.append(f"utilise une boîte {car.get('transmission') or 'non renseignée'}")
+    if request.energy_type and energy == request.energy_type.lower():
+        reasons.append(f"utilise l'énergie {request.energy_type}")
+    elif request.energy_type:
+        tradeoffs.append(f"utilise une énergie différente ({car.get('energy_type') or 'non renseignée'})")
+    if breakdown["comfort"] >= 15:
+        reasons.append(f"accueille confortablement {request.passengers} passagers")
+    else:
+        tradeoffs.append(f"sa capacité de {car.get('seats') or 0} places est inférieure à votre groupe")
+    if breakdown["vehicle_quality"] >= 12:
+        reasons.append("véhicule récent et bien évalué")
+    elif breakdown["vehicle_quality"] < 8:
+        tradeoffs.append("qualité ou ancienneté moins favorable")
     if breakdown["agency_quality"] >= 8:
-        reasons.append("agence très bien notée")
+        reasons.append("agence très bien notée par ses clients")
+    elif breakdown["agency_quality"] < 5:
+        tradeoffs.append("peu d'informations disponibles sur la qualité de l'agence")
     if breakdown["efficiency"] >= 8:
         reasons.append("bonne efficacité énergétique")
+    elif breakdown["efficiency"] < 5:
+        tradeoffs.append("efficacité énergétique plus faible")
     return {
-        "reasons": reasons[:4],
-        "tradeoffs": tradeoffs[:2],
+        "strengths": reasons[:5],
+        "tradeoffs": tradeoffs[:3],
+        "reasons": reasons[:5],
         "summary": " ; ".join(reasons[:3]) or "alternative compatible avec votre recherche",
     }
 

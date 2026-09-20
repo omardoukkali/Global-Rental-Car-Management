@@ -2,7 +2,7 @@ import json
 import unittest
 from pathlib import Path
 
-from main import SCORING_WEIGHTS, RecommendationRequest, analyze_vehicles, load_experimental_vehicles, score_breakdown
+from main import SCORING_WEIGHTS, RecommendationRequest, analyze_vehicles, confidence_for, explain_vehicle, load_experimental_vehicles, score_breakdown
 
 CITY_IDS = {
     "Agadir": "a2c296b8-dd35-43da-b3df-52459a2033f6",
@@ -58,6 +58,16 @@ class SmartDriveEngineTests(unittest.TestCase):
         breakdown = score_breakdown(self.vehicles[0], self.request)
         self.assertEqual(set(breakdown), set(SCORING_WEIGHTS))
         self.assertTrue(all(0 <= value <= SCORING_WEIGHTS[key] for key, value in breakdown.items()))
+
+    def test_explanation_contains_strengths_and_tradeoffs(self):
+        result = analyze_vehicles(self.vehicles, self.request)[0]
+        explanation = explain_vehicle(result, self.request)
+        confidence = confidence_for(result)
+        self.assertGreaterEqual(confidence, 0)
+        self.assertLessEqual(confidence, 100)
+        self.assertTrue(explanation["strengths"])
+        self.assertIn("tradeoffs", explanation)
+        self.assertTrue(explanation["summary"])
 
     def test_large_passenger_request_prefers_nine_seat_vehicle(self):
         if hasattr(self.request, "model_copy"):
