@@ -31,6 +31,16 @@ export default {
         return api.patch(`/reservations/${id}/cancel`)
     },
 
+    /** Agency: every reservation of the agency (filters: status, car_id, from/to window) */
+    getAgencyReservations(params = {}) {
+        return api.get('/agency/reservations', { params })
+    },
+
+    /** Agency: decline a confirmed & paid reservation (client is refunded 100%) */
+    rejectReservation(id, reason) {
+        return api.patch(`/reservations/${id}/reject`, { reason })
+    },
+
     confirmPickupClient(id) {
         return api.patch(`/reservations/${id}/pickup/confirm-client`)
     },

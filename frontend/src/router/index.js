@@ -205,6 +205,14 @@ const routes = [{
         meta: { requiresAuth: true }
     },
     {
+        // Agency inbox: every booking, decline / confirm pickup & return
+        path: '/agency/reservations',
+        name: 'AgencyReservations',
+        component: () =>
+            import ('@/pages/AgencyReservations.vue'),
+        meta: { requiresAuth: true }
+    },
+    {
         path: '/agency/pickup',
         name: 'AgencyPickupConfirm',
         component: AgencyPickupConfirm,
