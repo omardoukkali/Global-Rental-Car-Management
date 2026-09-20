@@ -131,7 +131,11 @@ class AuthController extends Controller
                 'message' => 'Your account has been suspended.',
             ], 403);
         }
-        $token = $user->createToken('auth_token')->plainTextToken;
+        // The token can only do what this role allows (see F-05)
+        $token = $user->createToken(
+            'auth_token',
+            ['role:' . $user->role]
+        )->plainTextToken;
         return response()->json([
             'message' => 'Login successful.',
             'token' => $token,
