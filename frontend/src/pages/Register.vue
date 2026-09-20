@@ -31,7 +31,7 @@
           </ul>
 
           <div class="flex items-center gap-3 pt-6 border-t border-white/20">
-            <div class="flex text-yellow-400 text-xl">★★★★★</div>
+            <div class="flex text-amber-500 text-xl">★★★★★</div>
             <span class="font-medium">5.0 — Noté excellent par nos utilisateurs</span>
           </div>
       </div>

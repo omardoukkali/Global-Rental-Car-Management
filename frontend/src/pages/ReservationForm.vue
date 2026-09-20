@@ -211,7 +211,7 @@
                     <div>
                       <div class="turo-host-name">{{ agency.name }}</div>
                       <div class="turo-host-meta">
-                        <span v-if="agency.avg_rating">★ {{ Number(agency.avg_rating).toFixed(1) }}</span>
+                        <span v-if="agency.avg_rating"><span class="turo-star">★</span> {{ Number(agency.avg_rating).toFixed(1) }}</span>
                         <span v-if="agency.total_reviews"> · {{ agency.total_reviews }} avis</span>
                         <span v-if="locationLabel"> · {{ locationLabel }}</span>
                       </div>
@@ -262,7 +262,7 @@
                   <p class="turo-review-text">{{ review.comment || 'Séjour recommandé.' }}</p>
                   <p class="turo-review-meta">
                     {{ review.user?.first_name || 'Client' }}
-                    <template v-if="review.car_rating"> · {{ Number(review.car_rating).toFixed(1) }}★</template>
+                    <template v-if="review.car_rating"> · {{ Number(review.car_rating).toFixed(1) }}<span class="turo-star">★</span></template>
                   </p>
                 </li>
               </ul>
@@ -1055,7 +1055,7 @@ onMounted(async () => {
   --turo-surface: var(--bg);
   --turo-divider: var(--border);
   --turo-error: #ef4444;
-  --turo-star: var(--ink);
+  --turo-star: #f59e0b; /* same amber as PublicCarCard / AgencyPublic / ReservationDetail */
 
   min-height: 100vh;
   background: #fff;
@@ -1596,7 +1596,7 @@ onMounted(async () => {
   font-weight: 600;
 }
 .turo-card-star {
-  color: var(--turo-purple);
+  color: var(--turo-star);
   font-size: 0.78rem;
   line-height: 1;
 }

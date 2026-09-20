@@ -77,7 +77,7 @@
             <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
               <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Note moyenne</div>
               <div class="font-bricolage text-3xl font-extrabold text-[#0F172A] mt-2">
-                {{ Number(agency.avg_rating || 5.0).toFixed(1) }} ★
+                {{ Number(agency.avg_rating || 5.0).toFixed(1) }} <span class="text-amber-500">★</span>
               </div>
               <div class="text-xs text-slate-400 mt-2 font-medium">
                 Sur {{ agency.total_reviews ?? 0 }} avis clients

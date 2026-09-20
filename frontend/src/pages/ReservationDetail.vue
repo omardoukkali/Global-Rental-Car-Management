@@ -614,9 +614,9 @@ onMounted(load)
               <h2 class="font-bold text-[#0F172A] mb-1">Votre avis</h2>
 
               <div v-if="review" class="mt-3 p-4 rounded-xl bg-slate-50 border border-slate-100" data-testid="review-existing">
-                <p class="text-amber-500 text-sm">
-                  Véhicule {{ '★'.repeat(Math.round(Number(review.car_rating || 0))) }}
-                  <span class="text-slate-400 ml-2">Agence {{ '★'.repeat(Math.round(Number(review.agency_rating || 0))) }}</span>
+                <p class="text-sm text-slate-500">
+                  Véhicule <span class="text-amber-500">{{ '★'.repeat(Math.round(Number(review.car_rating || 0))) }}</span>
+                  <span class="ml-2">Agence <span class="text-amber-500">{{ '★'.repeat(Math.round(Number(review.agency_rating || 0))) }}</span></span>
                 </p>
                 <p v-if="review.comment" class="text-sm text-slate-700 mt-2">{{ review.comment }}</p>
                 <p class="text-xs text-slate-400 mt-2">Publié le {{ formatDate(review.created_at, false) }}</p>
