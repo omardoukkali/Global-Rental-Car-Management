@@ -82,7 +82,7 @@ Route::post('/smartdrive/eligible-vehicles', [SmartDriveController::class, 'elig
 |--------------------------------------------------------------------------
 */
 
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'user.active'])->group(function () {
 
     Route::get('/me', function (Request $request) {
         return response()->json([
@@ -100,7 +100,7 @@ Route::middleware('auth:sanctum')->group(function () {
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth:sanctum', 'role:client'])->group(function () {
+Route::middleware(['auth:sanctum', 'user.active', 'role:client'])->group(function () {
 
     Route::get('/client/test', function () {
         return response()->json([
@@ -139,7 +139,7 @@ Route::middleware(['auth:sanctum', 'role:client'])->group(function () {
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth:sanctum', 'role:agency'])->group(function () {
+Route::middleware(['auth:sanctum', 'user.active', 'role:agency'])->group(function () {
 
     // Profile
     Route::get('/agency/profile', [AgencyController::class, 'show']);
@@ -160,7 +160,7 @@ Route::middleware(['auth:sanctum', 'role:agency'])->group(function () {
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth:sanctum', 'role:agency', 'agency.approved'])->group(function () {
+Route::middleware(['auth:sanctum', 'user.active', 'role:agency', 'agency.approved'])->group(function () {
 
     // Dashboard
     Route::get('/agency/reservations', [ReservationController::class, 'agencyIndex']);
@@ -199,7 +199,7 @@ Route::middleware(['auth:sanctum', 'role:agency', 'agency.approved'])->group(fun
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
+Route::middleware(['auth:sanctum', 'user.active', 'role:admin'])->group(function () {
     Route::patch('/admin/agencies/{agency}/approve', [AgencyApprovalController::class, 'approve']);
     Route::patch('/admin/agencies/{agency}/reject', [AgencyApprovalController::class, 'reject']);
 });
