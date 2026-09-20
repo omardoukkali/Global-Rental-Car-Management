@@ -101,6 +101,7 @@ function linkClass(active) {
         <template v-else-if="role === 'agency'">
           <RouterLink to="/agency/dashboard" :class="linkClass(isActive('/agency/dashboard'))">Tableau de bord</RouterLink>
           <RouterLink to="/agency/reservations" :class="linkClass(isActive('/agency/reservations'))">Réservations</RouterLink>
+          <RouterLink to="/agency/refunds" :class="linkClass(isActive('/agency/refunds'))">Remboursements</RouterLink>
           <RouterLink to="/agency/cars" :class="linkClass(isActive('/agency/cars'))">Flotte</RouterLink>
           <RouterLink to="/agency/pickup" :class="linkClass(isActive('/agency/pickup'))">Pickup</RouterLink>
           <RouterLink to="/agency/return" :class="linkClass(isActive('/agency/return'))">Retour</RouterLink>
