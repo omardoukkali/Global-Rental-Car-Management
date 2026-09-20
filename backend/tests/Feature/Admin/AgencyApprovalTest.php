@@ -3,6 +3,8 @@
 namespace Tests\Feature\Admin;
 
 use App\Models\Agency;
+use App\Models\Car;
+use App\Models\Reservation;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -351,5 +353,152 @@ class AgencyApprovalTest extends TestCase
 
         $response->assertStatus(403)
             ->assertJsonPath('message', 'Your agency is awaiting approval.');
+    }
+
+    public function test_unauthenticated_user_cannot_list_agencies(): void
+    {
+        $this->getJson('/api/admin/agencies')->assertStatus(401);
+    }
+
+    public function test_client_cannot_list_agencies(): void
+    {
+        $client = User::factory()->create([
+            'role' => 'client',
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($client)
+            ->getJson('/api/admin/agencies')
+            ->assertStatus(403);
+    }
+
+    public function test_admin_can_list_pending_agencies(): void
+    {
+        $admin = $this->createAdmin();
+        [, $pending] = $this->createAgencyWithOwner('pending');
+        $this->createAgencyWithOwner('approved');
+        $this->createAgencyWithOwner('rejected');
+
+        $response = $this->actingAs($admin)
+            ->getJson('/api/admin/agencies?status=pending');
+
+        $response->assertStatus(200)
+            ->assertJsonCount(1, 'agencies')
+            ->assertJsonPath('agencies.0.id', $pending->id)
+            ->assertJsonPath('agencies.0.status', 'pending')
+            ->assertJsonPath('agencies.0.name', $pending->name);
+
+        $this->assertArrayHasKey('checks', $response->json('agencies.0'));
+        $this->assertArrayHasKey('manager', $response->json('agencies.0'));
+    }
+
+    public function test_admin_can_list_all_agencies_without_status_filter(): void
+    {
+        $admin = $this->createAdmin();
+        $this->createAgencyWithOwner('pending');
+        $this->createAgencyWithOwner('approved');
+        $this->createAgencyWithOwner('rejected');
+
+        $this->actingAs($admin)
+            ->getJson('/api/admin/agencies')
+            ->assertStatus(200)
+            ->assertJsonCount(3, 'agencies');
+    }
+
+    public function test_admin_can_show_agency(): void
+    {
+        $admin = $this->createAdmin();
+        [, $agency] = $this->createAgencyWithOwner('approved');
+
+        $this->actingAs($admin)
+            ->getJson("/api/admin/agencies/{$agency->id}")
+            ->assertStatus(200)
+            ->assertJsonPath('agency.id', $agency->id)
+            ->assertJsonPath('agency.name', $agency->name)
+            ->assertJsonPath('agency.commission_rate', (float) $agency->commission_rate);
+    }
+
+    public function test_admin_can_update_agency_commission(): void
+    {
+        $admin = $this->createAdmin();
+        [, $agency] = $this->createAgencyWithOwner('approved');
+
+        $this->actingAs($admin)
+            ->patchJson("/api/admin/agencies/{$agency->id}", [
+                'commission_rate' => 22.5,
+            ])
+            ->assertStatus(200)
+            ->assertJsonPath('agency.commission_rate', 22.5);
+
+        $this->assertDatabaseHas('agencies', [
+            'id' => $agency->id,
+            'commission_rate' => 22.50,
+        ]);
+    }
+
+    public function test_admin_cannot_set_invalid_commission(): void
+    {
+        $admin = $this->createAdmin();
+        [, $agency] = $this->createAgencyWithOwner('approved');
+
+        $this->actingAs($admin)
+            ->patchJson("/api/admin/agencies/{$agency->id}", [
+                'commission_rate' => 140,
+            ])
+            ->assertStatus(422);
+    }
+
+    public function test_admin_can_delete_agency_without_active_reservations(): void
+    {
+        $admin = $this->createAdmin();
+        [$owner, $agency] = $this->createAgencyWithOwner('approved');
+        $car = Car::factory()->create([
+            'agency_id' => $agency->id,
+            'city_id' => $agency->city_id,
+        ]);
+
+        $this->actingAs($admin)
+            ->deleteJson("/api/admin/agencies/{$agency->id}")
+            ->assertStatus(200);
+
+        $this->assertSoftDeleted('agencies', ['id' => $agency->id]);
+        $this->assertSoftDeleted('cars', ['id' => $car->id]);
+        $this->assertDatabaseHas('users', [
+            'id' => $owner->id,
+            'status' => 'suspended',
+        ]);
+    }
+
+    public function test_admin_cannot_delete_agency_with_active_reservations(): void
+    {
+        $admin = $this->createAdmin();
+        [, $agency] = $this->createAgencyWithOwner('approved');
+        $car = Car::factory()->create([
+            'agency_id' => $agency->id,
+            'city_id' => $agency->city_id,
+        ]);
+        Reservation::factory()->create([
+            'car_id' => $car->id,
+            'agency_id' => $agency->id,
+            'status' => 'confirmed',
+        ]);
+
+        $this->actingAs($admin)
+            ->deleteJson("/api/admin/agencies/{$agency->id}")
+            ->assertStatus(422);
+
+        $this->assertDatabaseHas('agencies', [
+            'id' => $agency->id,
+            'deleted_at' => null,
+        ]);
+    }
+
+    public function test_non_admin_cannot_show_agency(): void
+    {
+        [$owner, $agency] = $this->createAgencyWithOwner('approved');
+
+        $this->actingAs($owner)
+            ->getJson("/api/admin/agencies/{$agency->id}")
+            ->assertStatus(403);
     }
 }
