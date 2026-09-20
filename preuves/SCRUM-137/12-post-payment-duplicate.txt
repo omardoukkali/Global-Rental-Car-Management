@@ -1,2 +1,0 @@
-HTTP 422
-{"message":"Only pending reservations can be paid."}

@@ -1,8 +1,0 @@
-6dcc96b Merge pull request #68 from omardoukkali/test/scrum-qa-suite
-aa1b5cc fix(SCRUM-160): reject duplicate pickup and return confirmations
-3df2b1d test: align car authorization test namespace
-1df4112 test: place car authorization test in Car domain folder
-f04aa62 test: align namespaces with test folders
-a324d28 test: align PHPUnit class names with test files
-bfa6161 test: align Scrum test files with project naming conventions
-0196777 test(SCRUM-165): block confirmations for disputed reservations
