@@ -20,6 +20,12 @@ use Illuminate\Support\Facades\Password;
 class AuthController extends Controller
 {
     /**
+     * Bcrypt hash of a random value nobody can submit. Used on the failed
+     * login path so it costs the same time whether the email exists or not.
+     */
+    private const DUMMY_HASH = '$2y$12$K7sDT1Djz/Zm9W4cBUjcDOvNw04p6PR2lzUOOPVCdsmxClm.1//zW';
+
+    /**
      * Register a new client.
      */
     public function registerClient(RegisterClientRequest $request): JsonResponse // Specify that this method returns a JSON response.
@@ -100,7 +106,18 @@ class AuthController extends Controller
     {
         $validated = $request->validated();
         $user = User::where('email', $validated['email'])->first();
-        if (!$user || !Hash::check($validated['password'], $user->password)) {
+
+        // Always run Hash::check, even when the email does not exist, so the
+        // two cases take the same time and nobody can guess existing emails.
+        $hash = self::DUMMY_HASH;
+
+        if ($user) {
+            $hash = $user->password;
+        }
+
+        $passwordValid = Hash::check($validated['password'], $hash);
+
+        if (!$user || !$passwordValid) {
             return response()->json([
                 'message' => 'Invalid email or password.',
             ], 401);
