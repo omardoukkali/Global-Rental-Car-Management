@@ -4,6 +4,7 @@ import { RouterLink, useRoute, useRouter } from 'vue-router'
 import reservationsService from '@/services/reservations'
 import reviewsService from '@/services/reviews'
 import carsService from '@/services/cars'
+import paymentsService from '@/services/payments'
 
 const route = useRoute()
 const router = useRouter()
@@ -24,6 +25,10 @@ const editForm = reactive({ start_at: '', end_at: '', pickup_point_id: '', retur
 const editErrors = reactive({})
 
 const disputeOpen = ref(false)
+const cancelOpen = ref(false)
+
+// GET /reservations/{id} does not embed the payment: it comes from GET /payments
+const payment = ref(null)
 
 const reviewForm = reactive({ car_rating: 5, agency_rating: 5, comment: '' })
 const reviewErrors = reactive({})
@@ -69,7 +74,58 @@ const days = computed(() => {
   return diff > 0 ? Math.max(1, Math.ceil(diff / 86400000)) : 0
 })
 
-const isPaid = computed(() => reservation.value?.payment?.status === 'paid')
+const isPaid = computed(() => ['paid', 'refunded'].includes(payment.value?.status))
+const refund = computed(() => payment.value?.refund || null)
+
+// Cancellation policy (mirrors the API): ≥ 24 h before pickup → 100 % back, otherwise ≥ 50 % and the agency decides
+const hoursUntilPickup = computed(() => {
+  if (!reservation.value?.start_at) return null
+  return (new Date(reservation.value.start_at) - Date.now()) / 3600000
+})
+const cancelPolicy = computed(() => {
+  if (!payment.value || payment.value.status !== 'paid') {
+    return { kind: 'free', title: 'Annulation sans frais', text: 'Aucun paiement n’a été effectué : rien ne vous sera facturé.' }
+  }
+  const amount = Number(payment.value.amount || 0)
+  if (hoursUntilPickup.value !== null && hoursUntilPickup.value >= 24) {
+    return {
+      kind: 'full',
+      title: 'Remboursement intégral',
+      text: `Le départ est dans plus de 24 h : ${formatMoney(amount)} MAD (100 %) vous seront remboursés automatiquement.`,
+    }
+  }
+  return {
+    kind: 'late',
+    title: 'Annulation tardive',
+    text: `Le départ est dans moins de 24 h : ${formatMoney(amount / 2)} MAD (50 %) minimum vous seront remboursés. L’agence peut décider d’aller jusqu’à 100 %.`,
+  }
+})
+
+const refundSummary = computed(() => {
+  const r = refund.value
+  if (!r) return null
+  const pct = Number(r.percentage || 0)
+  const amount = formatMoney(r.refunded_amount)
+  if (r.status === 'pending') {
+    return {
+      tone: 'amber',
+      title: 'Remboursement en attente de l’agence',
+      text: `Annulation tardive : ${amount} MAD (${pct} %) sont garantis. L’agence peut porter le remboursement jusqu’à 100 %.`,
+    }
+  }
+  if (r.status === 'processed') {
+    return {
+      tone: 'emerald',
+      title: `Remboursé à ${pct} %`,
+      text: `${amount} MAD remboursés le ${formatDate(r.processed_at || r.decided_at, true)}.`,
+      reason: r.decision_source === 'agency' ? r.reason : null,
+    }
+  }
+  if (r.status === 'failed') {
+    return { tone: 'rose', title: 'Remboursement échoué', text: 'Contactez le support GlobalRental.' }
+  }
+  return { tone: 'slate', title: 'Remboursement en cours', text: `${amount} MAD (${pct} %) sont en cours de traitement.` }
+})
 
 const canPay = computed(() => status.value === 'pending')
 const canCancel = computed(() => ['pending', 'confirmed'].includes(status.value))
@@ -206,6 +262,16 @@ async function loadReview() {
   }
 }
 
+async function loadPayment() {
+  try {
+    const res = await paymentsService.getPayments()
+    const list = res?.payments || res?.data?.payments || []
+    payment.value = list.find((p) => p.reservation_id === reservation.value.id) || null
+  } catch {
+    payment.value = null
+  }
+}
+
 async function load() {
   loading.value = true
   error.value = ''
@@ -213,7 +279,7 @@ async function load() {
     const data = await reservationsService.getReservation(reservationId.value)
     reservation.value = extractReservation(data)
     if (!reservation.value) throw new Error('Réservation introuvable.')
-    await Promise.all([loadReview(), loadPoints()])
+    await Promise.all([loadReview(), loadPoints(), loadPayment()])
   } catch (err) {
     error.value = err?.status === 403 || err?.status === 404
       ? 'Cette réservation n’existe pas ou ne vous appartient pas.'
@@ -242,10 +308,16 @@ async function run(action, key, successMessage) {
   }
 }
 
-function cancel() {
+async function cancel() {
   if (!canCancel.value) return
-  if (typeof window !== 'undefined' && !window.confirm('Annuler cette réservation ?')) return
-  run(() => reservationsService.cancelReservation(reservation.value.id), 'cancel', 'Réservation annulée.')
+  const ok = await run(() => reservationsService.cancelReservation(reservation.value.id), 'cancel', 'Réservation annulée.')
+  if (ok) {
+    cancelOpen.value = false
+    // The cancel response embeds payment.refund when the reservation was paid
+    const embedded = reservation.value?.payment
+    if (embedded) payment.value = { ...(payment.value || {}), ...embedded }
+    else await loadPayment()
+  }
 }
 
 function confirmPickup() {
@@ -500,14 +572,14 @@ onMounted(load)
                   Signaler un problème
                 </button>
                 <button
-                  v-if="canCancel"
+                  v-if="canCancel && !cancelOpen"
                   type="button"
                   class="px-4 py-2 rounded-xl border border-rose-200 text-rose-600 text-sm font-semibold hover:bg-rose-50 disabled:opacity-50"
                   :disabled="!!busy"
                   data-testid="cancel-button"
-                  @click="cancel"
+                  @click="cancelOpen = true; editing = false; disputeOpen = false"
                 >
-                  {{ busy === 'cancel' ? 'Annulation…' : 'Annuler la réservation' }}
+                  Annuler la réservation
                 </button>
               </div>
 
@@ -588,6 +660,38 @@ onMounted(load)
                 </div>
               </form>
 
+              <!-- CANCEL (with refund policy) -->
+              <div v-if="cancelOpen" class="mt-5 pt-5 border-t border-slate-100 space-y-3" data-testid="cancel-panel">
+                <div
+                  class="rounded-xl border p-4 text-sm"
+                  :class="{
+                    'bg-emerald-50 border-emerald-200 text-emerald-900': cancelPolicy.kind === 'full',
+                    'bg-amber-50 border-amber-200 text-amber-900': cancelPolicy.kind === 'late',
+                    'bg-slate-50 border-slate-200 text-slate-700': cancelPolicy.kind === 'free',
+                  }"
+                  data-testid="cancel-policy"
+                >
+                  <p class="font-bold">{{ cancelPolicy.title }}</p>
+                  <p class="mt-1">{{ cancelPolicy.text }}</p>
+                  <p v-if="cancelPolicy.kind !== 'free'" class="text-xs mt-2 opacity-80">
+                    Règle GlobalRental : 100 % à plus de 24 h du départ, 50 % minimum ensuite (décision de l’agence jusqu’à 100 %).
+                  </p>
+                </div>
+                <p class="text-sm text-slate-700">Cette action est définitive : le véhicule sera libéré pour d’autres clients.</p>
+                <div class="flex gap-2">
+                  <button type="button" class="px-4 py-2 rounded-xl text-sm font-semibold text-slate-500" @click="cancelOpen = false">Garder ma réservation</button>
+                  <button
+                    type="button"
+                    class="px-4 py-2 rounded-xl bg-rose-600 text-white text-sm font-semibold disabled:opacity-50"
+                    :disabled="!!busy"
+                    data-testid="cancel-confirm"
+                    @click="cancel"
+                  >
+                    {{ busy === 'cancel' ? 'Annulation…' : 'Confirmer l’annulation' }}
+                  </button>
+                </div>
+              </div>
+
               <!-- DISPUTE -->
               <div v-if="disputeOpen" class="mt-5 pt-5 border-t border-slate-100 space-y-3" data-testid="dispute-panel">
                 <p class="text-sm text-slate-700">
@@ -607,6 +711,47 @@ onMounted(load)
                   </button>
                 </div>
               </div>
+            </div>
+
+            <!-- PAYMENT & REFUND -->
+            <div v-if="payment" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6" data-testid="payment-section">
+              <div class="flex items-start justify-between gap-4">
+                <div>
+                  <h2 class="font-bold text-[#0F172A]">Paiement</h2>
+                  <p class="text-xs text-slate-500 mt-0.5">
+                    Payé le {{ formatDate(payment.paid_at, true) }}
+                    <span v-if="payment.transaction_id" class="font-mono"> · {{ payment.transaction_id }}</span>
+                  </p>
+                </div>
+                <div class="text-right">
+                  <p class="font-extrabold text-[#0F172A]">{{ formatMoney(payment.amount) }} <span class="text-xs font-normal text-slate-500">MAD</span></p>
+                  <span
+                    class="inline-flex mt-1 px-2 py-0.5 rounded-full text-[11px] font-bold"
+                    :class="payment.status === 'refunded' ? 'bg-amber-50 text-amber-800' : payment.status === 'paid' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'"
+                    data-testid="payment-status"
+                  >
+                    {{ payment.status === 'refunded' ? 'Remboursé' : payment.status === 'paid' ? 'Payé' : payment.status }}
+                  </span>
+                </div>
+              </div>
+
+              <div
+                v-if="refundSummary"
+                class="mt-4 rounded-xl border p-4 text-sm"
+                :class="{
+                  'bg-amber-50 border-amber-200 text-amber-900': refundSummary.tone === 'amber',
+                  'bg-emerald-50 border-emerald-200 text-emerald-900': refundSummary.tone === 'emerald',
+                  'bg-rose-50 border-rose-200 text-rose-900': refundSummary.tone === 'rose',
+                  'bg-slate-50 border-slate-200 text-slate-700': refundSummary.tone === 'slate',
+                }"
+                data-testid="refund-summary"
+              >
+                <p class="font-bold">{{ refundSummary.title }}</p>
+                <p class="mt-1">{{ refundSummary.text }}</p>
+                <p v-if="refundSummary.reason" class="mt-2 text-xs italic opacity-80">Message de l’agence : « {{ refundSummary.reason }} »</p>
+              </div>
+
+              <RouterLink to="/payments" class="inline-block mt-3 text-xs font-bold text-blue-600 hover:underline">Historique des paiements →</RouterLink>
             </div>
 
             <!-- REVIEW -->

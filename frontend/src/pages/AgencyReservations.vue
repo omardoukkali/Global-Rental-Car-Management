@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { RouterLink, useRoute } from 'vue-router'
 import AgencyLayout from '@/components/AgencyLayout.vue'
 import reservationsService from '@/services/reservations'
 
@@ -590,6 +590,13 @@ onMounted(load)
                   <span v-if="r.payment.refund.reason" class="block text-xs text-slate-500">{{ r.payment.refund.reason }}</span>
                 </li>
               </ul>
+              <RouterLink
+                v-if="r.payment?.refund?.status === 'pending'"
+                to="/agency/refunds"
+                class="inline-block mt-2 text-xs font-bold text-blue-600 hover:underline"
+              >
+                Décider du remboursement →
+              </RouterLink>
             </div>
           </div>
         </li>

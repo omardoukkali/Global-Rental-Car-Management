@@ -213,6 +213,14 @@ const routes = [{
         meta: { requiresAuth: true }
     },
     {
+        // Agency refunds: pending late-cancellation decisions and history
+        path: '/agency/refunds',
+        name: 'AgencyRefunds',
+        component: () =>
+            import ('@/pages/AgencyRefunds.vue'),
+        meta: { requiresAuth: true }
+    },
+    {
         path: '/agency/pickup',
         name: 'AgencyPickupConfirm',
         component: AgencyPickupConfirm,
