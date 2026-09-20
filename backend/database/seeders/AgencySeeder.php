@@ -51,10 +51,13 @@ class AgencySeeder extends Seeder
                 'last_name' => $lastName,
                 'password' => 'password',
                 'phone' => '+2126' . fake()->numerify('########'),
-                'role' => 'agency',
-                'status' => 'active',
             ]
         );
+
+        // role and status are not mass assignable (F-03)
+        $owner->role = 'agency';
+        $owner->status = 'active';
+        $owner->save();
 
         Agency::firstOrCreate(
             ['owner_id' => $owner->id],

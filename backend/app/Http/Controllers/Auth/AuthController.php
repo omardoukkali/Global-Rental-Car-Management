@@ -32,16 +32,18 @@ class AuthController extends Controller
     {
         $validated = $request->validated();
 
-        $user = User::create([
+        $user = new User([
             'first_name' => $validated['first_name'],
             'last_name' => $validated['last_name'],
             'email' => $validated['email'],
             'password' => $validated['password'],
             'phone' => $validated['phone'] ?? null,
-
-            'role' => 'client',
-            'status' => 'active',
         ]);
+
+        // Set by the server, never taken from the request
+        $user->role = 'client';
+        $user->status = 'active';
+        $user->save();
 
         return response()->json([
             'message' => 'Client registered successfully.',
@@ -61,16 +63,18 @@ class AuthController extends Controller
         $result = DB::transaction(function () use ($validated) {
 
             // Create agency owner account
-            $user = User::create([
+            $user = new User([
                 'first_name' => $validated['first_name'],
                 'last_name' => $validated['last_name'],
                 'email' => $validated['email'],
                 'password' => $validated['password'],
                 'phone' => $validated['phone'],
-
-                'role' => 'agency',
-                'status' => 'active',
             ]);
+
+            // Set by the server, never taken from the request
+            $user->role = 'agency';
+            $user->status = 'active';
+            $user->save();
 
             // Create agency profile
             $agency = Agency::create([

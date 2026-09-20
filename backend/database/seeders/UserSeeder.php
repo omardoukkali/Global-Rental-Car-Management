@@ -14,28 +14,33 @@ class UserSeeder extends Seeder
      */
     public function run(): void
     {
-        User::firstOrCreate(
+        $admin = User::firstOrCreate(
             ['email' => 'admin@example.com'],
             [
                 'first_name' => 'Admin',
                 'last_name' => 'User',
                 'password' => 'password',
-                'role' => 'admin',
-                'status' => 'active',
             ]
         );
 
-        User::firstOrCreate(
+        // role and status are not mass assignable (F-03)
+        $admin->role = 'admin';
+        $admin->status = 'active';
+        $admin->save();
+
+        $client = User::firstOrCreate(
             ['email' => 'client@example.com'],
             [
                 'first_name' => 'Demo',
                 'last_name' => 'Client',
                 'password' => 'password',
                 'phone' => '+212600000001',
-                'role' => 'client',
-                'status' => 'active',
             ]
         );
+
+        $client->role = 'client';
+        $client->status = 'active';
+        $client->save();
 
         // 29 more clients (30 in total)
         $firstNames = ['Youssef', 'Amina', 'Mohamed', 'Salma', 'Omar', 'Khadija', 'Hamza', 'Imane', 'Ayoub', 'Sara', 'Mehdi', 'Hiba', 'Yassine', 'Meryem', 'Othmane', 'Zineb', 'Karim', 'Houda', 'Reda', 'Ghita'];
