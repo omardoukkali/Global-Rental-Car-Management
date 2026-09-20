@@ -8,6 +8,7 @@ use App\Http\Requests\Auth\RegisterClientRequest;
 use App\Models\Agency;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
@@ -45,6 +46,8 @@ class AuthController extends Controller
         $user->status = 'active';
         $user->save();
 
+        $user->sendEmailVerificationNotification();
+
         return response()->json([
             'message' => 'Client registered successfully.',
             'user' => $user,
@@ -75,6 +78,8 @@ class AuthController extends Controller
             $user->role = 'agency';
             $user->status = 'active';
             $user->save();
+
+            $user->sendEmailVerificationNotification();
 
             // Create agency profile
             $agency = Agency::create([
@@ -131,6 +136,12 @@ class AuthController extends Controller
                 'message' => 'Your account has been suspended.',
             ], 403);
         }
+
+        if (!$user->hasVerifiedEmail()) {
+            return response()->json([
+                'message' => 'Please verify your email address first.',
+            ], 403);
+        }
         // The token can only do what this role allows (see F-05)
         $token = $user->createToken(
             'auth_token',
@@ -158,6 +169,43 @@ class AuthController extends Controller
         // Same answer whether the email exists or not (no account enumeration)
         return response()->json([
             'message' => 'If an account exists for this email, a reset link has been sent.',
+        ]);
+    }
+
+    /**
+     * Opened from the e-mail link. The URL is signed by Laravel, so it cannot
+     * be modified, and it expires after 60 minutes.
+     */
+    public function verifyEmail(Request $request, string $id, string $hash): RedirectResponse
+    {
+        $user = User::find($id);
+        $loginPage = config('app.frontend_url') . '/login';
+
+        if (!$user || !hash_equals($hash, sha1($user->email))) {
+            return redirect($loginPage . '?verified=0');
+        }
+
+        if (!$user->hasVerifiedEmail()) {
+            $user->markEmailAsVerified();
+        }
+
+        return redirect($loginPage . '?verified=1');
+    }
+
+    /**
+     * Sends the verification e-mail again. Always the same answer, so nobody
+     * can find out which e-mails have an account.
+     */
+    public function resendVerification(ForgotPasswordRequest $request): JsonResponse
+    {
+        $user = User::where('email', $request->validated()['email'])->first();
+
+        if ($user && !$user->hasVerifiedEmail()) {
+            $user->sendEmailVerificationNotification();
+        }
+
+        return response()->json([
+            'message' => 'If an account exists for this email, a verification link has been sent.',
         ]);
     }
 
