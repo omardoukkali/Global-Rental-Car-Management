@@ -245,6 +245,14 @@ const routes = [{
         name: 'PaymentCheckout',
         component: PaymentCheckout,
         meta: { requiresAuth: true }
+    },
+    {
+        // Client trip hub: details, edit, dispute, review
+        path: '/reservations/:id',
+        name: 'ReservationDetail',
+        component: () =>
+            import ('@/pages/ReservationDetail.vue'),
+        meta: { requiresAuth: true }
     }
 ]
 

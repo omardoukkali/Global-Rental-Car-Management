@@ -275,6 +275,13 @@ onMounted(loadReservations)
                 <p v-if="res.reference" class="text-xs text-slate-400 mt-1 font-mono">
                   {{ res.reference }}
                 </p>
+                <RouterLink
+                  :to="`/reservations/${res.id}`"
+                  data-testid="detail-link"
+                  class="inline-block mt-2 text-sm font-semibold text-[#0F172A] underline underline-offset-4"
+                >
+                  Voir le voyage →
+                </RouterLink>
               </div>
             </div>
 

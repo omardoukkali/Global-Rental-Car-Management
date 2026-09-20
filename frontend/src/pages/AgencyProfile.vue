@@ -31,7 +31,7 @@
 
           <div class="flex items-center gap-6 border-t md:border-t-0 md:border-l pt-4 md:pt-0 md:pl-6 w-full md:w-auto justify-around md:justify-start" style="border-color: var(--border-soft);">
             <div class="text-center">
-              <div class="font-bricolage text-2xl">{{ agency.avg_rating || '5.0' }} ★</div>
+              <div class="font-bricolage text-2xl">{{ agency.avg_rating || '5.0' }} <span class="text-amber-500">★</span></div>
               <div class="text-xs font-medium" style="color: var(--ink-muted);">Note moyenne</div>
             </div>
             <div class="text-center">

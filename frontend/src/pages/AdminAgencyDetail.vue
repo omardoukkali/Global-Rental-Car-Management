@@ -37,7 +37,8 @@
           <div class="info-row">
             <span>Note</span>
             <strong>
-              {{ agency.avg_rating != null ? agency.avg_rating + ' ★' : '—' }}
+              <template v-if="agency.avg_rating != null">{{ agency.avg_rating }} <span class="text-amber-500">★</span></template>
+              <template v-else>—</template>
               <span v-if="agency.total_reviews" class="muted">({{ agency.total_reviews }})</span>
             </strong>
           </div>
