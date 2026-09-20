@@ -188,36 +188,7 @@ onMounted(loadReservations)
 </script>
 
 <template>
-  <div class="min-h-screen bg-[#F8FAFC]">
-    <header class="bg-white border-b border-slate-200">
-      <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-        <RouterLink to="/" class="font-bricolage font-extrabold text-lg text-[#0F172A] tracking-tight">
-          GlobalRental
-        </RouterLink>
-        <div class="flex items-center gap-3 text-sm">
-          <span class="font-bold text-[#0F172A]">Mes réservations</span>
-          <RouterLink
-            to="/payments"
-            class="font-semibold text-slate-500 hover:text-slate-800 transition-colors"
-          >
-            Paiements
-          </RouterLink>
-          <RouterLink
-            to="/reservations/new"
-            class="font-semibold text-slate-500 hover:text-slate-800 transition-colors"
-          >
-            Nouvelle
-          </RouterLink>
-          <RouterLink
-            to="/logout"
-            class="font-semibold text-rose-600 hover:text-rose-700 transition-colors"
-          >
-            Déconnexion
-          </RouterLink>
-        </div>
-      </div>
-    </header>
-
+  <div class="min-h-[calc(100vh-4rem)] bg-[#F8FAFC]">
     <main class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       <div>
         <h1 class="text-2xl sm:text-3xl font-extrabold text-[#0F172A] tracking-tight font-bricolage">

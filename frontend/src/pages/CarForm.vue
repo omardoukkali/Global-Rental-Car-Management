@@ -1,6 +1,6 @@
 <template>
-  <div class="min-h-screen bg-[#F8FAFC] py-8 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-3xl mx-auto space-y-6 fade-up">
+  <AgencyLayout>
+    <div class="space-y-6 fade-up">
       
       <div class="flex items-center justify-between">
         <div>
@@ -193,12 +193,13 @@
       </form>
 
     </div>
-  </div>
+  </AgencyLayout>
 </template>
 
 <script setup>
 import { reactive, ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
+import AgencyLayout from '@/components/AgencyLayout.vue'
 import carsService from '@/services/cars'
 import api from '@/services/api'
 

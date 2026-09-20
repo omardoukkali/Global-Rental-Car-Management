@@ -13,6 +13,7 @@ vi.mock('vue-router', () => ({
   RouterLink: {
     template: '<a><slot /></a>',
   },
+  useRoute: () => ({ path: '/agency/pickup' }),
 }))
 
 describe('AgencyPickupConfirm.vue (SCRUM-154)', () => {

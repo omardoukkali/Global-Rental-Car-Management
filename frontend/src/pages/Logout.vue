@@ -1,10 +1,6 @@
 <template>
-  <div class="min-h-screen flex items-center justify-center p-6">
+  <div class="min-h-[calc(100vh-4rem)] flex items-center justify-center p-6">
     <div class="w-full max-w-md text-center">
-      <RouterLink to="/" class="gr-logo justify-center mb-8" style="color: var(--ink);">
-        <span class="gr-logo-dot" style="background: var(--ink);"></span>GlobalRental
-      </RouterLink>
-
       <!-- Si connecté -->
       <div v-if="auth.isAuthenticated">
         <h1 class="font-bricolage text-3xl mb-2">Bonjour {{ auth.user?.first_name }} 👋</h1>

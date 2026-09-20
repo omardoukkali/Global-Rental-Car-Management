@@ -4,6 +4,15 @@ import AgencySettings from '@/pages/AgencySettings.vue'
 import AgencyProfile from '@/pages/AgencyProfile.vue'
 import AgencyLocations from '@/pages/AgencyLocations.vue'
 import AdminAgencyValidation from '@/pages/AdminAgencyValidation.vue'
+import AdminAgencies from '@/pages/AdminAgencies.vue'
+import AdminAgencyDetail from '@/pages/AdminAgencyDetail.vue'
+import AdminDashboard from '@/pages/AdminDashboard.vue'
+import AdminUsers from '@/pages/AdminUsers.vue'
+import AdminCars from '@/pages/AdminCars.vue'
+import AdminReservations from '@/pages/AdminReservations.vue'
+import AdminRevenue from '@/pages/AdminRevenue.vue'
+import AdminReviews from '@/pages/AdminReviews.vue'
+import AdminSettings from '@/pages/AdminSettings.vue'
 import AgencyCars from '@/pages/AgencyCars.vue'
 import CarForm from '@/pages/CarForm.vue'
 import AgencyDashboard from '@/pages/AgencyDashboard.vue'
@@ -60,9 +69,68 @@ const routes = [{
         meta: { requiresAuth: true }
     },
     {
+        path: '/admin',
+        redirect: '/admin/dashboard',
+    },
+    {
+        path: '/admin/dashboard',
+        name: 'AdminDashboard',
+        component: AdminDashboard,
+        meta: { requiresAuth: true }
+    },
+    {
+        path: '/admin/agencies',
+        name: 'AdminAgencies',
+        component: AdminAgencies,
+        meta: { requiresAuth: true }
+    },
+    {
         path: '/admin/agencies/validation',
         name: 'AdminAgencyValidation',
         component: AdminAgencyValidation,
+        meta: { requiresAuth: true }
+    },
+    {
+        path: '/admin/agencies/:agencyId',
+        name: 'AdminAgencyDetail',
+        component: AdminAgencyDetail,
+        props: true,
+        meta: { requiresAuth: true }
+    },
+    {
+        path: '/admin/users',
+        name: 'AdminUsers',
+        component: AdminUsers,
+        meta: { requiresAuth: true }
+    },
+    {
+        path: '/admin/cars',
+        name: 'AdminCars',
+        component: AdminCars,
+        meta: { requiresAuth: true }
+    },
+    {
+        path: '/admin/reservations',
+        name: 'AdminReservations',
+        component: AdminReservations,
+        meta: { requiresAuth: true }
+    },
+    {
+        path: '/admin/revenue',
+        name: 'AdminRevenue',
+        component: AdminRevenue,
+        meta: { requiresAuth: true }
+    },
+    {
+        path: '/admin/reviews',
+        name: 'AdminReviews',
+        component: AdminReviews,
+        meta: { requiresAuth: true }
+    },
+    {
+        path: '/admin/settings',
+        name: 'AdminSettings',
+        component: AdminSettings,
         meta: { requiresAuth: true }
     },
     {
@@ -148,7 +216,7 @@ const router = createRouter({
 function homeForRole(user) {
     const role = user?.role
     if (role === 'agency') return { name: 'AgencyDashboard' }
-    if (role === 'admin') return { name: 'AdminAgencyValidation' }
+    if (role === 'admin') return { name: 'AdminDashboard' }
     return { name: 'ClientReservations' }
 }
 

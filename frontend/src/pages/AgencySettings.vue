@@ -1,20 +1,6 @@
 <template>
-  <div class="min-h-screen flex flex-col" style="background: var(--bg);">
-
-    <header class="p-6 flex justify-between items-center w-full bg-white border-b" style="border-color: var(--border);">
-      <RouterLink to="/" class="gr-logo" style="color: var(--ink);">
-        <span class="gr-logo-dot" style="background: var(--ink);"></span>GlobalRental
-      </RouterLink>
-      <RouterLink to="/" class="text-sm font-semibold flex items-center gap-2" style="color: var(--ink-muted);">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-        </svg>
-        Retour au tableau de bord
-      </RouterLink>
-    </header>
-
-    <main class="flex-1 flex items-start justify-center p-6 lg:p-12">
-      <div class="w-full max-w-2xl fade-up fade-up-1">
+  <AgencyLayout>
+    <div class="w-full max-w-2xl fade-up fade-up-1">
 
         <div class="mb-8">
           <h1 class="font-bricolage text-3xl mb-2">Paramètres de l'agence</h1>
@@ -58,14 +44,12 @@
 
         </form>
       </div>
-    </main>
-
-  </div>
+  </AgencyLayout>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { RouterLink } from 'vue-router'
+import AgencyLayout from '@/components/AgencyLayout.vue'
 import agencyService from '@/services/agency'
 
 const formData = ref({

@@ -1,6 +1,5 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { RouterLink } from 'vue-router'
 import reservationsService from '@/services/reservations'
 
 const loading = ref(true)
@@ -93,21 +92,7 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="min-h-screen bg-[#F8FAFC]">
-    <header class="bg-white border-b border-slate-200">
-      <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-        <RouterLink to="/myreservations" class="font-bricolage font-extrabold text-lg text-[#0F172A] tracking-tight">
-          GlobalRental
-        </RouterLink>
-        <div class="flex items-center gap-3 text-sm">
-          <RouterLink to="/myreservations" class="font-semibold text-slate-500 hover:text-slate-800">
-            Réservations
-          </RouterLink>
-          <span class="font-bold text-[#0F172A]">Paiements</span>
-        </div>
-      </div>
-    </header>
-
+  <div class="min-h-[calc(100vh-4rem)] bg-[#F8FAFC]">
     <main class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       <div>
         <h1 class="text-2xl sm:text-3xl font-extrabold text-[#0F172A] tracking-tight font-bricolage">
