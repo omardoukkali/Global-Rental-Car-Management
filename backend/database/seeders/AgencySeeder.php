@@ -6,6 +6,7 @@ use App\Models\Agency;
 use App\Models\City;
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class AgencySeeder extends Seeder
 {
@@ -15,39 +16,20 @@ class AgencySeeder extends Seeder
      */
     public function run(): void
     {
-        $tangier = City::where('name', 'Tangier')->first();
-        $casablanca = City::where('name', 'Casablanca')->first();
-
         // Fixed demo agencies, so the demo logins always work
-        $this->createAgency(
-            'agency@example.com',
-            'Demo',
-            'Agency',
-            'Demo Rent Cars',
-            'demo-rent-cars',
-            $tangier,
-            'approved'
-        );
+        $this->createAgency('agency@example.com', 'Karim', 'Tazi', 'Demo Rent Cars', 'Tangier', 'approved');
+        $this->createAgency('hassan@agency.ma', 'Hassan', 'Alaoui', 'Atlas Cars', 'Casablanca', 'approved');
 
-        $this->createAgency(
-            'hassan@agency.ma',
-            'Hassan',
-            'Atlas',
-            'Atlas Cars',
-            'atlas-cars',
-            $casablanca,
-            'approved'
-        );
-
-        // Random agencies in random cities
-        $cities = City::all();
-
-        for ($i = 0; $i < 8; $i++) {
-            $this->createRandomAgency($cities->random(), 'approved');
-        }
-
-        $this->createRandomAgency($cities->random(), 'pending');
-        $this->createRandomAgency($cities->random(), 'rejected');
+        $this->createAgency('contact@marrakech-car-rent.ma', 'Youssef', 'Bennani', 'Marrakech Car Rent', 'Marrakech', 'approved');
+        $this->createAgency('contact@menara-location.ma', 'Salma', 'Berrada', 'Ménara Location', 'Marrakech', 'approved');
+        $this->createAgency('contact@agadir-location.ma', 'Omar', 'El Idrissi', 'Agadir Location Auto', 'Agadir', 'approved');
+        $this->createAgency('contact@souss-cars.ma', 'Imane', 'Chraibi', 'Souss Cars', 'Agadir', 'approved');
+        $this->createAgency('contact@rabat-drive.ma', 'Mehdi', 'Lahlou', 'Rabat Drive', 'Rabat', 'approved');
+        $this->createAgency('contact@casa-wheels.ma', 'Zineb', 'El Fassi', 'Casa Wheels', 'Casablanca', 'approved');
+        $this->createAgency('contact@tanger-med-cars.ma', 'Reda', 'Benjelloun', 'Tanger Med Cars', 'Tangier', 'approved');
+        $this->createAgency('contact@royal-cars.ma', 'Houda', 'Kettani', 'Royal Cars Maroc', 'Rabat', 'approved');
+        $this->createAgency('contact@riad-location.ma', 'Hamza', 'Benali', 'Riad Location', 'Marrakech', 'pending');
+        $this->createAgency('contact@sahara-auto.ma', 'Meryem', 'El Amrani', 'Sahara Auto Location', 'Agadir', 'rejected');
     }
 
     private function createAgency(
@@ -55,10 +37,13 @@ class AgencySeeder extends Seeder
         string $firstName,
         string $lastName,
         string $agencyName,
-        string $slug,
-        City $city,
+        string $cityName,
         string $status
     ): void {
+        $city = City::where('name', $cityName)->first();
+
+        $streets = ['Avenue Mohammed V', 'Boulevard Hassan II', 'Rue Ibn Battouta', 'Avenue des FAR', 'Boulevard Zerktouni'];
+
         $owner = User::firstOrCreate(
             ['email' => $email],
             [
@@ -76,29 +61,14 @@ class AgencySeeder extends Seeder
             [
                 'city_id' => $city->id,
                 'name' => $agencyName,
-                'slug' => $slug,
-                'address' => fake()->streetAddress() . ', ' . $city->name,
+                'slug' => Str::slug($agencyName),
+                'address' => fake()->numberBetween(1, 200) . ', ' . fake()->randomElement($streets) . ', ' . $city->name,
                 'phone' => '+2125' . fake()->numerify('########'),
                 'email' => $email,
                 'status' => $status,
-                'commission_rate' => 15,
+                // Different commissions, to show that payments use the agency rate
+                'commission_rate' => fake()->randomElement([10, 12.5, 15, 18]),
             ]
         );
-    }
-
-    private function createRandomAgency(City $city, string $status): void
-    {
-        $owner = User::factory()->create([
-            'role' => 'agency',
-            'status' => 'active',
-        ]);
-
-        Agency::factory()->create([
-            'owner_id' => $owner->id,
-            'city_id' => $city->id,
-            'status' => $status,
-            // Different commissions, to show that payments use the agency rate
-            'commission_rate' => fake()->randomElement([10, 12.5, 15, 18]),
-        ]);
     }
 }

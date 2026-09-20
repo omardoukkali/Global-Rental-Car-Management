@@ -13,6 +13,17 @@ class PublicCarIndexRequest extends FormRequest
 
     public function rules(): array
     {
+        $maxPriceRules = [
+            'sometimes',
+            'numeric',
+            'min:0',
+        ];
+
+        // Compare with min_price only when it is sent
+        if ($this->filled('min_price')) {
+            $maxPriceRules[] = 'gte:min_price';
+        }
+
         return [
             'q' => [
                 'sometimes',
@@ -52,12 +63,7 @@ class PublicCarIndexRequest extends FormRequest
                 'min:0',
             ],
 
-            'max_price' => [
-                'sometimes',
-                'numeric',
-                'min:0',
-                'gte:min_price',
-            ],
+            'max_price' => $maxPriceRules,
 
             'start_at' => [
                 'required_with:end_at',
