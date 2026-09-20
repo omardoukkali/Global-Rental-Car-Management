@@ -15,10 +15,10 @@
 
           <div class="flex flex-col sm:flex-row gap-2">
             <RouterLink
-              to="/agency/pickup"
+              to="/agency/reservations"
               class="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm border border-slate-200 bg-white text-[#0F172A] hover:bg-slate-50 transition-all"
             >
-              Prise en charge
+              Réservations
             </RouterLink>
             <RouterLink 
               to="/agency/cars/new" 
