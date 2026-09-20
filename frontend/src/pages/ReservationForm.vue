@@ -222,6 +222,14 @@
                     Agence partenaire GlobalRental.
                     <template v-if="agency.address"> Basée à {{ agency.address }}.</template>
                   </p>
+                  <RouterLink
+                    v-if="agency.id"
+                    :to="`/agencies/${agency.id}`"
+                    class="turo-change-car"
+                    data-testid="agency-link"
+                  >
+                    Voir la flotte et les avis de l’agence →
+                  </RouterLink>
                 </div>
               </div>
             </section>
