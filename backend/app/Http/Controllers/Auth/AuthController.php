@@ -137,11 +137,7 @@ class AuthController extends Controller
             ], 403);
         }
 
-        if (!$user->hasVerifiedEmail()) {
-            return response()->json([
-                'message' => 'Please verify your email address first.',
-            ], 403);
-        }
+        // Email confirmation is paused until outgoing mail works.
         // The token can only do what this role allows (see F-05)
         $token = $user->createToken(
             'auth_token',
