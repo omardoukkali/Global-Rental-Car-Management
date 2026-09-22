@@ -1,0 +1,86 @@
+{
+  "input_columns": [
+    "budget_per_day",
+    "days",
+    "passengers",
+    "seats",
+    "year",
+    "daily_price",
+    "fuel_consumption",
+    "electric_range",
+    "agency_avg_rating",
+    "agency_total_reviews",
+    "price_ratio",
+    "seat_margin",
+    "pref_vehicle_type",
+    "pref_transmission",
+    "pref_energy_type",
+    "vehicle_type",
+    "transmission",
+    "energy_type"
+  ],
+  "numeric_features": [
+    "budget_per_day",
+    "days",
+    "passengers",
+    "seats",
+    "year",
+    "daily_price",
+    "fuel_consumption",
+    "electric_range",
+    "agency_avg_rating",
+    "agency_total_reviews",
+    "price_ratio",
+    "seat_margin"
+  ],
+  "categorical_features": [
+    "pref_vehicle_type",
+    "pref_transmission",
+    "pref_energy_type",
+    "vehicle_type",
+    "transmission",
+    "energy_type"
+  ],
+  "categorical_values": {
+    "pref_vehicle_type": [
+      "any",
+      "coupe",
+      "hatchback",
+      "sedan",
+      "suv",
+      "truck",
+      "van"
+    ],
+    "pref_transmission": [
+      "any",
+      "automatic",
+      "manual"
+    ],
+    "pref_energy_type": [
+      "any",
+      "diesel",
+      "electric",
+      "gasoline",
+      "hybrid"
+    ],
+    "vehicle_type": [
+      "coupe",
+      "hatchback",
+      "sedan",
+      "suv",
+      "truck",
+      "van"
+    ],
+    "transmission": [
+      "automatic",
+      "manual"
+    ],
+    "energy_type": [
+      "diesel",
+      "electric",
+      "gasoline",
+      "hybrid"
+    ]
+  },
+  "target": "compatibility_score"
+}
