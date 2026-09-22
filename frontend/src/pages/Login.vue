@@ -25,6 +25,15 @@
             <p style="color: var(--ink-muted);">Connectez-vous pour accéder à votre espace</p>
           </div>
 
+          <div
+            v-if="sessionNotice"
+            data-testid="session-notice"
+            class="mb-6 p-3 rounded-lg text-sm"
+            :style="sessionNotice.style"
+          >
+            {{ sessionNotice.text }}
+          </div>
+
           <form @submit.prevent="handleSubmit" class="space-y-5" novalidate>
             <div>
               <label class="form-label" for="login-email">Adresse e-mail</label>
@@ -59,7 +68,7 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { RouterLink, useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
@@ -71,6 +80,26 @@ const form = reactive({ email: '', password: '' })
 const errors = reactive({})
 const globalError = ref('')
 const loading = ref(false)
+
+// Why the user landed here (set by the API client on 401 / 403, see services/api.js)
+const WARNING_STYLE = 'background: #FFFBEB; color: #92400E; border: 1px solid #FDE68A;'
+const DANGER_STYLE = 'background: rgba(239,68,68,0.08); color: #B91C1C; border: 1px solid rgba(239,68,68,0.25);'
+
+const sessionNotice = computed(() => {
+  if (route.query.expired) {
+    return { text: 'Votre session a expiré. Veuillez vous reconnecter.', style: WARNING_STYLE }
+  }
+  if (route.query.suspended) {
+    return { text: 'Votre compte a été désactivé. Contactez le support si vous pensez qu’il s’agit d’une erreur.', style: DANGER_STYLE }
+  }
+  if (route.query.verified === '1') {
+    return { text: 'Adresse e-mail confirmée. Vous pouvez vous connecter.', style: 'background: #ECFDF5; color: #047857; border: 1px solid #A7F3D0;' }
+  }
+  if (route.query.verified === '0') {
+    return { text: 'Lien de confirmation invalide ou expiré. Inscrivez-vous à nouveau ou demandez un nouvel e-mail.', style: DANGER_STYLE }
+  }
+  return null
+})
 
 function homeForRole(user) {
   const role = user?.role
@@ -89,6 +118,8 @@ async function handleSubmit() {
     router.push(redirect || homeForRole(user))
   } catch (e) {
     if (e.status === 422 && e.errors) Object.assign(errors, e.errors)
+    else if (e.status === 401) globalError.value = 'E-mail ou mot de passe incorrect.'
+    else if (e.status === 403) globalError.value = 'Votre compte a été suspendu. Contactez le support.'
     else globalError.value = e.message
   } finally {
     loading.value = false
