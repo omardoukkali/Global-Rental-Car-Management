@@ -1,9 +1,13 @@
 import os
 import json
+from datetime import datetime
+from math import ceil
 from urllib.request import Request, urlopen
 from pathlib import Path
 from typing import Optional
 
+import joblib
+import pandas as pd
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -22,6 +26,20 @@ app.add_middleware(
 BASE_DIR = Path(__file__).resolve().parent
 BACKEND_URL = os.environ.get("BACKEND_URL", "http://backend:8000/api")
 EXPERIMENTAL_DATA_PATH = BASE_DIR / "data" / "experimental_vehicles.json"
+MODEL_PATH = BASE_DIR / "ml-training" / "model_smartdrive.pkl"
+COLUMNS_PATH = BASE_DIR / "ml-training" / "model_smartdrive_columns.json"
+ML_MODEL = None
+ML_CONTRACT = {}
+try:
+    ML_MODEL = joblib.load(MODEL_PATH)
+    with COLUMNS_PATH.open(encoding="utf-8") as columns_file:
+        ML_CONTRACT = json.load(columns_file)
+    print(f"SmartDrive ML model loaded from {MODEL_PATH}")
+except Exception as error:
+    ML_MODEL = None
+    ML_CONTRACT = {}
+    print(f"Warning: SmartDrive ML model unavailable; using rule-based scoring only: {error}")
+
 SCORING_WEIGHTS = {
     "budget": 25,
     "vehicle_suitability": 25,
@@ -41,6 +59,25 @@ class RecommendationRequest(BaseModel):
     vehicle_type: Optional[str] = None
     transmission: Optional[str] = None
     energy_type: Optional[str] = None
+
+
+class CompatibilityPredictionRequest(BaseModel):
+    budget_per_day: float = Field(ge=0)
+    days: int = Field(ge=1)
+    passengers: int = Field(ge=1, le=9)
+    type: str
+    vehicle_type: Optional[str] = None
+    transmission: Optional[str] = None
+    energy_type: Optional[str] = None
+    daily_price: float = Field(ge=0)
+    seats: int = Field(ge=1)
+    year: int
+    fuel_consumption: Optional[float] = Field(default=0, ge=0)
+    electric_range: Optional[int] = Field(default=0, ge=0)
+    agency_avg_rating: float = Field(ge=0, le=5)
+    agency_total_reviews: int = Field(ge=0)
+    pref_transmission: Optional[str] = "any"
+    pref_energy_type: Optional[str] = "any"
 
 
 def _preference_score(preference, actual, weight):
@@ -89,6 +126,75 @@ def score_vehicle(car, request):
     return round(sum(score_breakdown(car, request).values()))
 
 
+def _request_days(request):
+    days = getattr(request, "days", None)
+    if days is not None:
+        return int(days)
+    try:
+        start_at = datetime.fromisoformat(request.start_at.replace("Z", "+00:00"))
+        end_at = datetime.fromisoformat(request.end_at.replace("Z", "+00:00"))
+        return max(1, ceil((end_at - start_at).total_seconds() / 86400))
+    except (AttributeError, TypeError, ValueError):
+        return 1
+
+
+def build_ml_features(car, request):
+    if not ML_CONTRACT:
+        raise ValueError("SmartDrive ML contract is not loaded")
+
+    categorical_values = ML_CONTRACT.get("categorical_values", {})
+    preferences = {
+        "pref_vehicle_type": getattr(request, "pref_vehicle_type", None)
+        or getattr(request, "vehicle_type", None)
+        or "any",
+        "pref_transmission": getattr(request, "pref_transmission", None)
+        or getattr(request, "transmission", None)
+        or "any",
+        "pref_energy_type": getattr(request, "pref_energy_type", None)
+        or getattr(request, "energy_type", None)
+        or "any",
+    }
+    for field, value in preferences.items():
+        if value not in categorical_values.get(field, []):
+            raise ValueError(f"Invalid {field}: {value}")
+
+    vehicle_values = {
+        "vehicle_type": car.get("type"),
+        "transmission": car.get("transmission"),
+        "energy_type": car.get("energy_type"),
+    }
+    for field, value in vehicle_values.items():
+        if value not in categorical_values.get(field, []):
+            raise ValueError(f"Invalid vehicle {field}: {value}")
+
+    agency = car.get("agency") or {}
+    budget = float(getattr(request, "budget_per_day", 0) or 0)
+    daily_price = float(car.get("daily_price") or 0)
+    seats = int(car.get("seats") or 0)
+    passengers = int(getattr(request, "passengers", 0) or 0)
+    # A zero budget is valid in the request schema; use zero instead of infinity.
+    price_ratio = daily_price / budget if budget > 0 else 0
+    row = {
+        "budget_per_day": budget,
+        "days": _request_days(request),
+        "passengers": passengers,
+        "seats": seats,
+        "year": int(car.get("year") or 0),
+        "daily_price": daily_price,
+        "fuel_consumption": float(car.get("fuel_consumption") or 0),
+        "electric_range": int(car.get("electric_range") or 0),
+        "agency_avg_rating": float(agency.get("avg_rating") or 0),
+        "agency_total_reviews": int(agency.get("total_reviews") or 0),
+        "price_ratio": price_ratio,
+        "seat_margin": seats - passengers,
+        **preferences,
+        "vehicle_type": vehicle_values["vehicle_type"],
+        "transmission": vehicle_values["transmission"],
+        "energy_type": vehicle_values["energy_type"],
+    }
+    return pd.DataFrame([[row[column] for column in ML_CONTRACT["input_columns"]]], columns=ML_CONTRACT["input_columns"])
+
+
 def load_experimental_vehicles(city_id=None):
     with EXPERIMENTAL_DATA_PATH.open(encoding="utf-8") as data_file:
         vehicles = json.load(data_file)
@@ -101,7 +207,24 @@ def analyze_vehicles(vehicles, request):
     analyzed = []
     for vehicle in vehicles:
         breakdown = score_breakdown(vehicle, request)
-        analyzed.append({**vehicle, "score": round(sum(breakdown.values())), "score_breakdown": breakdown})
+        if ML_MODEL is not None:
+            try:
+                ml_score = float(ML_MODEL.predict(build_ml_features(vehicle, request))[0])
+                score = round(max(0, min(100, ml_score)), 2)
+                score_source = "ml"
+            except Exception as error:
+                print(f"Warning: ML scoring failed for vehicle; using rules fallback: {error}")
+                score = score_vehicle(vehicle, request)
+                score_source = "rules_fallback"
+        else:
+            score = score_vehicle(vehicle, request)
+            score_source = "rules_fallback"
+        analyzed.append({
+            **vehicle,
+            "score": score,
+            "score_source": score_source,
+            "score_breakdown": breakdown,
+        })
     return sorted(analyzed, key=lambda vehicle: (-vehicle["score"], -float(vehicle.get("daily_price") or 0)))
 
 
@@ -209,6 +332,34 @@ def recommend_info():
         "method": "POST",
         "experimental_data": EXPERIMENTAL_DATA_PATH.exists(),
     }
+
+
+@app.post("/predict-compatibility")
+def predict_compatibility(request: CompatibilityPredictionRequest):
+    if ML_MODEL is None:
+        raise HTTPException(status_code=422, detail="SmartDrive ML model is not loaded.")
+
+    car = {
+        "type": request.type,
+        "transmission": request.transmission,
+        "energy_type": request.energy_type,
+        "seats": request.seats,
+        "year": request.year,
+        "daily_price": request.daily_price,
+        "fuel_consumption": request.fuel_consumption,
+        "electric_range": request.electric_range,
+        "agency": {
+            "avg_rating": request.agency_avg_rating,
+            "total_reviews": request.agency_total_reviews,
+        },
+    }
+    try:
+        score = float(ML_MODEL.predict(build_ml_features(car, request))[0])
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    except Exception as error:
+        raise HTTPException(status_code=422, detail=f"Unable to predict compatibility: {error}") from error
+    return {"compatibility_score": round(max(0, min(100, score)), 1)}
 
 
 @app.post("/api/recommend")
