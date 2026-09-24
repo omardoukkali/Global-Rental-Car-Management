@@ -33,6 +33,11 @@
              on the development database and RefreshDatabase erases it. -->
         <server name="DB_HOST" value="database_test" force="true"/>
         <server name="DB_DATABASE" value="globalrental_test" force="true"/>
+        <!-- Same reason: docker-compose passes APP_ENV and MAIL_MAILER to the
+             container, so without these lines the tests run in the "local"
+             environment and really try to send e-mails through SMTP. -->
+        <server name="APP_ENV" value="testing" force="true"/>
+        <server name="MAIL_MAILER" value="array" force="true"/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
