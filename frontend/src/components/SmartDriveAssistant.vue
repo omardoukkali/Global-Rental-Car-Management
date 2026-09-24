@@ -7,10 +7,11 @@ const open = ref(false)
 const view = ref('intro')
 const loading = ref(false)
 const error = ref('')
-const cars = ref([])
 const cities = ref([])
 const citiesLoading = ref(false)
+const trip = ref(null)
 const recommendations = ref([])
+const alternatives = ref([])
 const launcherNote = ref(0)
 
 const launcherNotes = [
@@ -56,10 +57,6 @@ function closeAssistant() {
   open.value = false
 }
 
-function normalize(value) {
-  return String(value || '').trim().toLowerCase()
-}
-
 function carTitle(car) {
   return `${car?.brand || ''} ${car?.model || ''}`.trim() || 'Véhicule'
 }
@@ -91,29 +88,73 @@ async function loadCities() {
   }
 }
 
-function scoreCar(car) {
-  if (Number.isFinite(Number(car.score))) return Number(car.score)
+const TYPE_LABELS = {
+  hatchback: 'Citadine',
+  suv: 'SUV',
+  sedan: 'Berline',
+  coupe: 'Coupé',
+  van: 'Utilitaire',
+  truck: 'Camion',
+}
+const ENERGY_LABELS = {
+  gasoline: 'Essence',
+  diesel: 'Diesel',
+  hybrid: 'Hybride',
+  electric: 'Électrique',
+}
+const TRANSMISSION_LABELS = { automatic: 'Automatique', manual: 'Manuelle' }
 
-  const choice = preferences.value
-  let score = 52
-  const type = car.type || car.category
-  const energy = car.energy_type || car.energy
-
-  if (choice.city && normalize(car.city?.name || car.city) === normalize(choice.city)) score += 18
-  if (choice.vehicleType && normalize(type) === normalize(choice.vehicleType)) score += 18
-  if (choice.transmission && normalize(car.transmission) === normalize(choice.transmission)) score += 14
-  if (choice.energy && normalize(energy) === normalize(choice.energy)) score += 10
-  if (Number(car.seats || 0) >= Number(choice.passengers)) score += 10
-  if (Number(car.daily_price || 0) <= Number(choice.budget)) score += 10
-  else score -= Math.min(20, Math.ceil((Number(car.daily_price) - Number(choice.budget)) / 50))
-
-  return Math.max(1, Math.min(99, score))
+/** Compatibility % comes straight from the ML score (0–100). */
+function compatibility(car) {
+  return Math.round(Math.max(0, Math.min(100, Number(car?.score) || 0)))
 }
 
-function resultReason(car, index) {
-  if (index === 0) return 'Le meilleur équilibre selon vos critères.'
-  if (Number(car.daily_price || 0) <= Number(preferences.value.budget)) return 'Une option qui respecte votre budget.'
-  return 'Une alternative confortable pour votre trajet.'
+/** Estimated total = Laravel's total_price, or daily_price × trip days as a fallback. */
+function totalPrice(car) {
+  const days = Number(trip.value?.days) || 1
+  const total = Number(car?.total_price)
+  return Number.isFinite(total) && total > 0 ? total : Number(car?.daily_price || 0) * days
+}
+
+function money(value) {
+  return `${Number(value || 0).toLocaleString('fr-MA')} MAD`
+}
+
+/** Human specs line: "SUV · Automatique · 5 places · Diesel · 2023". */
+function specs(car) {
+  return [
+    TYPE_LABELS[car?.type] || car?.type,
+    TRANSMISSION_LABELS[car?.transmission] || car?.transmission,
+    car?.seats ? `${car.seats} places` : null,
+    ENERGY_LABELS[car?.energy_type] || car?.energy_type,
+    car?.year || null,
+  ]
+      .filter(Boolean)
+      .join(' · ')
+}
+
+function agencyRating(car) {
+  const rating = Number(car?.agency?.avg_rating)
+  if (!Number.isFinite(rating) || rating <= 0) return null
+  return { rating: rating.toFixed(1), reviews: Number(car?.agency?.total_reviews) || 0, name: car?.agency?.name || '' }
+}
+
+/**
+ * Keeps the "Best Value" / "Most Comfortable" alternatives returned by the AI,
+ * dropping any that duplicate the #1 recommendation so the UI never repeats it.
+ */
+function normalizeAlternatives(raw, ranked) {
+  const best = ranked[0]
+  const out = []
+  const add = (label, car) => {
+    if (!car?.id) return
+    if (best && car.id === best.id) return
+    if (out.some((item) => item.car.id === car.id)) return
+    out.push({ label, car })
+  }
+  add('Meilleur rapport qualité-prix', raw?.best_value)
+  add('Le plus confortable', raw?.most_comfortable)
+  return out
 }
 
 async function analyze() {
@@ -122,36 +163,26 @@ async function analyze() {
   view.value = 'loading'
 
   try {
-    cars.value = await smartdriveService.getEligibleVehicles(preferences.value)
+    const data = await smartdriveService.getRecommendation(preferences.value)
 
-    await new Promise((resolve) => window.setTimeout(resolve, 650))
-    recommendations.value = [...cars.value]
-      .filter((car) => car.status === undefined || car.status === 'available')
-      .map((car) => ({
-        ...car,
-        smartScore: scoreCar(car),
-        smartConfidence: car.confidence ?? null,
-        smartExplanation: car.explanation || { strengths: [resultReason(car, 0)], tradeoffs: [] },
-        smartReason: car.explanation?.summary || resultReason(car, 0),
-      }))
-      .sort((first, second) => second.smartScore - first.smartScore)
-      .slice(0, 3)
+    // Small pause so the analysing animation is perceptible.
+    await new Promise((resolve) => window.setTimeout(resolve, 500))
+
+    trip.value = data?.trip || null
+    const results = Array.isArray(data?.results) ? data.results : []
+    recommendations.value = results.slice(0, 3)
+    alternatives.value = normalizeAlternatives(data?.alternatives, recommendations.value)
 
     if (!recommendations.value.length) {
-      error.value = 'Aucun véhicule disponible pour ces critères.'
+      error.value = data?.message || 'Aucun véhicule disponible pour ces critères.'
       view.value = 'empty'
     } else {
-      recommendations.value = recommendations.value.map((car, index) => ({
-        ...car,
-        smartConfidence: car.confidence ?? null,
-        smartExplanation: car.explanation || { strengths: [resultReason(car, index)], tradeoffs: [] },
-        smartReason: car.explanation?.summary || resultReason(car, index),
-      }))
       view.value = 'results'
     }
   } catch (err) {
-    error.value = err?.message || 'Aucun véhicule disponible pour ces critères.'
-    view.value = 'error'
+    error.value = err?.message || 'SmartDrive AI est momentanément indisponible.'
+    // A validation problem is the user's input: keep the form open to fix it.
+    view.value = err?.code === 'validation' ? 'form' : 'error'
   } finally {
     loading.value = false
   }
@@ -163,8 +194,21 @@ function editPreferences() {
 
 function startOver() {
   recommendations.value = []
+  alternatives.value = []
+  trip.value = null
   preferences.value = { cityId: '', startDate: '', endDate: '', passengers: 2, budget: 450, vehicleType: '', transmission: '', energy: '' }
   view.value = 'form'
+}
+
+/** Promote a picked alternative to the top of the list so its full card shows. */
+function showAlternative(car) {
+  if (!car?.id) return
+  const rest = recommendations.value.filter((item) => item.id !== car.id)
+  recommendations.value = [car, ...rest].slice(0, 3)
+  alternatives.value = normalizeAlternatives(
+      { best_value: alternatives.value.find((a) => a.label.includes('rapport'))?.car, most_comfortable: alternatives.value.find((a) => a.label.includes('confortable'))?.car },
+      recommendations.value,
+  )
 }
 
 function reserve(car) {
@@ -176,23 +220,23 @@ function reserve(car) {
   <div class="smartdrive-root">
     <Transition name="smartdrive-note">
       <button
-        v-if="!open"
-        type="button"
-        class="smartdrive-note"
-        aria-label="Découvrir les recommandations SmartDrive"
-        @click="openAssistant"
+          v-if="!open"
+          type="button"
+          class="smartdrive-note"
+          aria-label="Découvrir les recommandations SmartDrive"
+          @click="openAssistant"
       >
         <span class="smartdrive-note-dot" aria-hidden="true" />
         {{ launcherNotes[launcherNote] }}
       </button>
     </Transition>
     <button
-      v-if="!open"
-      type="button"
-      class="smartdrive-launcher"
-      aria-label="Ouvrir SmartDrive AI pour choisir un véhicule"
-      :aria-expanded="open"
-      @click="openAssistant"
+        v-if="!open"
+        type="button"
+        class="smartdrive-launcher"
+        aria-label="Ouvrir SmartDrive AI pour choisir un véhicule"
+        :aria-expanded="open"
+        @click="openAssistant"
     >
       <span class="smartdrive-launcher-glow" aria-hidden="true" />
       <span class="smartdrive-launcher-icon" aria-hidden="true">
@@ -205,8 +249,8 @@ function reserve(car) {
       <span class="smartdrive-launcher-copy"><strong>SmartDrive</strong><small>Votre copilote location</small></span>
       <span class="smartdrive-live-dot" aria-label="Assistant disponible" />
     </button>
-      <Transition name="smartdrive-fade">
-        <section v-if="open" class="smartdrive-panel" role="dialog" aria-modal="false" aria-labelledby="smartdrive-title">
+    <Transition name="smartdrive-fade">
+      <section v-if="open" class="smartdrive-panel" role="dialog" aria-modal="false" aria-labelledby="smartdrive-title">
         <div class="smartdrive-panel-bar" />
         <header class="smartdrive-header">
           <div class="smartdrive-avatar" aria-hidden="true"><span>✦</span></div>
@@ -293,8 +337,8 @@ function reserve(car) {
           </div>
 
           <template v-else-if="view === 'results' && hasResults">
-            <div class="smartdrive-results-heading"><div><h3>Vos meilleurs matchs</h3><p>Des suggestions adaptées à votre recherche.</p></div><span class="smartdrive-mini-mark">✦</span></div>
-            <article v-for="(car, index) in recommendations" :key="car.id" class="smartdrive-result">
+            <div class="smartdrive-results-heading"><div><h3>Vos meilleurs matchs</h3><p v-if="trip">Estimation sur {{ trip.days }} jour<span v-if="trip.days > 1">s</span> · analyse IA.</p><p v-else>Des suggestions adaptées à votre recherche.</p></div><span class="smartdrive-mini-mark">✦</span></div>
+            <article v-for="(car, index) in recommendations" :key="car.id" class="smartdrive-result" :data-testid="index === 0 ? 'smartdrive-best' : 'smartdrive-alt'">
               <span v-if="index === 0" class="smartdrive-best-badge">Meilleur choix</span>
               <div class="smartdrive-car-image">
                 <img v-if="carImage(car)" :src="carImage(car)" :alt="carTitle(car)" />
@@ -302,23 +346,39 @@ function reserve(car) {
               </div>
               <div class="smartdrive-result-main">
                 <h4>{{ carTitle(car) }}</h4>
-                <p>{{ car.type || 'Véhicule' }} · {{ car.transmission || 'Boîte standard' }}<br /><strong>{{ Number(car.daily_price || 0).toLocaleString('fr-MA') }} MAD</strong> / jour</p>
+                <p>{{ specs(car) }}<br /><strong>{{ money(car.daily_price) }}</strong> / jour · <span class="smartdrive-total">≈ {{ money(totalPrice(car)) }} au total</span></p>
               </div>
-              <div class="smartdrive-score"><strong>{{ car.smartScore }}%</strong><span>match</span></div>
-              <div v-if="car.smartConfidence !== null" class="smartdrive-confidence">Confiance {{ car.smartConfidence }}%</div>
-              <p class="smartdrive-reason"><b v-if="index === 0">Notre choix · </b>{{ car.smartReason }}</p>
-              <ul v-if="car.smartExplanation?.strengths?.length" class="smartdrive-explanation">
-                <li v-for="strength in car.smartExplanation.strengths.slice(0, 3)" :key="strength">{{ strength }}</li>
+              <div class="smartdrive-score"><strong>{{ compatibility(car) }}%</strong><span>match</span></div>
+              <div v-if="car.confidence != null" class="smartdrive-confidence">Confiance {{ car.confidence }}%</div>
+              <p class="smartdrive-reason"><b v-if="index === 0">Notre choix · </b>{{ car.explanation?.summary || 'Compatible avec votre recherche.' }}</p>
+              <ul v-if="car.explanation?.strengths?.length" class="smartdrive-explanation">
+                <li v-for="strength in car.explanation.strengths.slice(0, 3)" :key="strength">{{ strength }}</li>
               </ul>
-              <p v-if="car.smartExplanation?.tradeoffs?.length" class="smartdrive-tradeoff">À savoir : {{ car.smartExplanation.tradeoffs.join(' ; ') }}</p>
+              <p v-if="car.explanation?.tradeoffs?.length" class="smartdrive-tradeoff">À savoir : {{ car.explanation.tradeoffs.join(' ; ') }}</p>
+              <p v-if="agencyRating(car)" class="smartdrive-agency">★ {{ agencyRating(car).rating }}/5 · {{ agencyRating(car).name }}<span v-if="agencyRating(car).reviews"> ({{ agencyRating(car).reviews }} avis)</span></p>
               <RouterLink
-                class="smartdrive-book"
-                :to="{ name: 'ReservationCreate', query: { car_id: car.id } }"
-                @click="reserve(car)"
+                  class="smartdrive-book"
+                  :to="{ name: 'ReservationCreate', query: { car_id: car.id } }"
+                  @click="reserve(car)"
               >
                 Choisir ce véhicule <span aria-hidden="true">→</span>
               </RouterLink>
             </article>
+
+            <div v-if="alternatives.length" class="smartdrive-alternatives" data-testid="smartdrive-alternatives">
+              <p class="smartdrive-alternatives-title">Alternatives intelligentes</p>
+              <button
+                  v-for="alt in alternatives"
+                  :key="alt.label + alt.car.id"
+                  type="button"
+                  class="smartdrive-alt-chip"
+                  @click="showAlternative(alt.car)"
+              >
+                <span class="smartdrive-alt-label">{{ alt.label }}</span>
+                <span class="smartdrive-alt-car">{{ carTitle(alt.car) }} · {{ compatibility(alt.car) }}%</span>
+              </button>
+            </div>
+
             <div class="smartdrive-result-actions"><button type="button" class="smartdrive-secondary" @click="editPreferences">Modifier</button><button type="button" class="smartdrive-secondary" @click="startOver">Nouvelle recherche</button></div>
           </template>
         </div>
@@ -392,6 +452,14 @@ function reserve(car) {
 .smartdrive-confidence { display: inline-flex; align-items: center; justify-self: end; padding: .25rem .42rem; color: #17623e; background: #eaf8ef; border: 1px solid #ccefd9; border-radius: 999px; font-size: .58rem; }
 .smartdrive-explanation { padding: .5rem .65rem .5rem 1.15rem; background: #fafafa; border-radius: .55rem; }
 .smartdrive-tradeoff { padding: .45rem .55rem; background: #fff8e8; border-radius: .45rem; }
+.smartdrive-total { color: #0f172a; font-weight: 700; white-space: nowrap; }
+.smartdrive-agency { grid-column: 1 / -1; margin: 0; color: #b45309; font-size: .66rem; font-weight: 700; }
+.smartdrive-alternatives { margin-top: .9rem; padding-top: .8rem; border-top: 1px dashed #e2e8f0; }
+.smartdrive-alternatives-title { margin: 0 0 .5rem; color: #475569; font-size: .66rem; font-weight: 800; letter-spacing: .02em; text-transform: uppercase; }
+.smartdrive-alt-chip { display: flex; justify-content: space-between; align-items: center; gap: .6rem; width: 100%; margin-bottom: .45rem; padding: .55rem .7rem; color: #0f172a; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: .6rem; font-size: .7rem; text-align: left; transition: border-color .2s ease, background .2s ease; }
+.smartdrive-alt-chip:hover { background: #eef4ff; border-color: #b8c8ef; }
+.smartdrive-alt-label { color: #1d4ed8; font-weight: 800; }
+.smartdrive-alt-car { color: #475569; font-weight: 700; white-space: nowrap; }
 .smartdrive-empty { padding: 2.7rem 1rem; text-align: center; }
 .smartdrive-empty h3 { margin: 0 0 .5rem; color: #0a0a0b; font-family: 'Bricolage Grotesque', sans-serif; font-size: 1.2rem; }
 .smartdrive-empty p { color: #6b6b70; font-size: .75rem; }
