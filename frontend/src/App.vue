@@ -5,7 +5,7 @@
       <RouterView />
     </div>
     <SmartDriveAssistant
-      v-if="auth.isAuthenticated && auth.user?.role !== 'agency' && auth.user?.role !== 'admin'"
+      v-if="auth.isAuthenticated && auth.user?.role === 'client'"
     />
   </div>
 </template>

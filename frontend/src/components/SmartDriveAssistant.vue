@@ -12,6 +12,8 @@ const cities = ref([])
 const citiesLoading = ref(false)
 const recommendations = ref([])
 const launcherNote = ref(0)
+const today = new Date().toISOString().slice(0, 10)
+const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10)
 
 const launcherNotes = [
   'Je connais votre prochaine voiture.',
@@ -22,8 +24,8 @@ let launcherNoteTimer
 
 const preferences = ref({
   cityId: '',
-  startDate: '',
-  endDate: '',
+  startDate: today,
+  endDate: tomorrow,
   passengers: 2,
   budget: 450,
   vehicleType: '',
@@ -38,6 +40,12 @@ function openAssistant() {
   view.value = 'intro'
   error.value = ''
   loadCities()
+}
+
+function errorMessage(err) {
+  if (err?.status === 422) return 'Vérifiez les dates, la ville et le nombre de voyageurs.'
+  if (err?.status >= 500) return 'SmartDrive est momentanément indisponible. Réessayez dans quelques instants.'
+  return err?.message || 'Impossible de charger les recommandations.'
 }
 
 function rotateLauncherNote() {
@@ -122,7 +130,11 @@ async function analyze() {
   view.value = 'loading'
 
   try {
-    cars.value = await smartdriveService.getEligibleVehicles(preferences.value)
+    const selectedCity = cities.value.find((city) => String(city.id) === String(preferences.value.cityId))
+    cars.value = await smartdriveService.getEligibleVehicles({
+      ...preferences.value,
+      cityName: selectedCity?.name || '',
+    })
 
     await new Promise((resolve) => window.setTimeout(resolve, 650))
     recommendations.value = [...cars.value]
@@ -150,7 +162,7 @@ async function analyze() {
       view.value = 'results'
     }
   } catch (err) {
-    error.value = err?.message || 'Aucun véhicule disponible pour ces critères.'
+    error.value = errorMessage(err)
     view.value = 'error'
   } finally {
     loading.value = false
@@ -163,7 +175,7 @@ function editPreferences() {
 
 function startOver() {
   recommendations.value = []
-  preferences.value = { cityId: '', startDate: '', endDate: '', passengers: 2, budget: 450, vehicleType: '', transmission: '', energy: '' }
+  preferences.value = { cityId: '', startDate: today, endDate: tomorrow, passengers: 2, budget: 450, vehicleType: '', transmission: '', energy: '' }
   view.value = 'form'
 }
 
@@ -226,50 +238,60 @@ function reserve(car) {
               <p>Dites-nous ce qui compte. SmartDrive compare les options disponibles et vous explique son choix.</p>
             </div>
             <form class="smartdrive-form" @submit.prevent="analyze">
-              <div class="smartdrive-field">
-                <label for="smartdrive-city">Ville de départ</label>
-                <select id="smartdrive-city" v-model="preferences.cityId" required :disabled="citiesLoading || !cities.length">
-                  <option value="" disabled>{{ citiesLoading ? 'Chargement des villes…' : 'Choisir une ville' }}</option>
-                  <option v-for="city in cities" :key="city.id" :value="city.id">{{ city.name }}</option>
-                </select>
-                <span v-if="!citiesLoading && !cities.length" class="smartdrive-field-hint">Les villes sont momentanément indisponibles.</span>
+              <div class="smartdrive-form-section">
+                <div class="smartdrive-section-heading"><span class="smartdrive-section-index">01</span><div><strong>Votre trajet</strong><small>Les informations essentielles</small></div></div>
+                <div class="smartdrive-form-grid smartdrive-trip-grid">
+                  <div class="smartdrive-field smartdrive-field-city">
+                    <label for="smartdrive-city">Ville de départ</label>
+                    <select id="smartdrive-city" v-model="preferences.cityId" required :disabled="citiesLoading || !cities.length">
+                      <option value="" disabled>{{ citiesLoading ? 'Chargement des villes…' : 'Choisir une ville' }}</option>
+                      <option v-for="city in cities" :key="city.id" :value="city.id">{{ city.name }}</option>
+                    </select>
+                    <span v-if="!citiesLoading && !cities.length" class="smartdrive-field-hint">Les villes sont momentanément indisponibles.</span>
+                  </div>
+                  <div class="smartdrive-field">
+                    <label for="smartdrive-passengers">Voyageurs</label>
+                    <input id="smartdrive-passengers" v-model.number="preferences.passengers" type="number" min="1" max="9" required />
+                  </div>
+                  <div class="smartdrive-field">
+                    <label for="smartdrive-start-date">Départ</label>
+                    <input id="smartdrive-start-date" v-model="preferences.startDate" type="date" :min="today" required />
+                  </div>
+                  <div class="smartdrive-field">
+                    <label for="smartdrive-end-date">Retour</label>
+                    <input id="smartdrive-end-date" v-model="preferences.endDate" type="date" :min="preferences.startDate" required />
+                  </div>
+                  <div class="smartdrive-field smartdrive-field-budget">
+                    <label for="smartdrive-budget">Budget / jour</label>
+                    <div class="smartdrive-input-suffix"><input id="smartdrive-budget" v-model.number="preferences.budget" type="number" min="0" required /><span>MAD</span></div>
+                  </div>
+                </div>
               </div>
-              <div class="smartdrive-field">
-                <label for="smartdrive-passengers">Voyageurs</label>
-                <input id="smartdrive-passengers" v-model.number="preferences.passengers" type="number" min="1" max="9" required />
-              </div>
-              <div class="smartdrive-field">
-                <label for="smartdrive-start-date">Départ</label>
-                <input id="smartdrive-start-date" v-model="preferences.startDate" type="date" required />
-              </div>
-              <div class="smartdrive-field">
-                <label for="smartdrive-end-date">Retour</label>
-                <input id="smartdrive-end-date" v-model="preferences.endDate" type="date" :min="preferences.startDate" required />
-              </div>
-              <div class="smartdrive-field">
-                <label for="smartdrive-budget">Budget / jour</label>
-                <div class="smartdrive-input-suffix"><input id="smartdrive-budget" v-model.number="preferences.budget" type="number" min="0" required /><span>MAD</span></div>
-              </div>
-              <div class="smartdrive-field">
-                <label for="smartdrive-type">Type</label>
-                <select id="smartdrive-type" v-model="preferences.vehicleType">
-                  <option value="">Tous les types</option><option value="hatchback">Citadine</option><option value="suv">SUV</option><option value="sedan">Berline</option><option value="van">Utilitaire</option>
-                </select>
-              </div>
-              <div class="smartdrive-field">
-                <label for="smartdrive-transmission">Boîte</label>
-                <select id="smartdrive-transmission" v-model="preferences.transmission">
-                  <option value="">Indifférent</option><option value="automatic">Automatique</option><option value="manual">Manuelle</option>
-                </select>
-              </div>
-              <div class="smartdrive-field">
-                <label for="smartdrive-energy">Énergie</label>
-                <select id="smartdrive-energy" v-model="preferences.energy">
-                  <option value="">Indifférent</option><option value="gasoline">Essence</option><option value="diesel">Diesel</option><option value="hybrid">Hybride</option><option value="electric">Électrique</option>
-                </select>
+              <div class="smartdrive-form-section">
+                <div class="smartdrive-section-heading"><span class="smartdrive-section-index">02</span><div><strong>Vos préférences</strong><small>Pour affiner la recommandation</small></div></div>
+                <div class="smartdrive-form-grid smartdrive-preference-grid">
+                  <div class="smartdrive-field">
+                    <label for="smartdrive-type">Type de véhicule</label>
+                    <select id="smartdrive-type" v-model="preferences.vehicleType">
+                      <option value="">Tous les types</option><option value="hatchback">Citadine</option><option value="suv">SUV</option><option value="sedan">Berline</option><option value="van">Utilitaire</option>
+                    </select>
+                  </div>
+                  <div class="smartdrive-field">
+                    <label for="smartdrive-transmission">Boîte de vitesses</label>
+                    <select id="smartdrive-transmission" v-model="preferences.transmission">
+                      <option value="">Indifférent</option><option value="automatic">Automatique</option><option value="manual">Manuelle</option>
+                    </select>
+                  </div>
+                  <div class="smartdrive-field">
+                    <label for="smartdrive-energy">Énergie</label>
+                    <select id="smartdrive-energy" v-model="preferences.energy">
+                      <option value="">Indifférent</option><option value="gasoline">Essence</option><option value="diesel">Diesel</option><option value="hybrid">Hybride</option><option value="electric">Électrique</option>
+                    </select>
+                  </div>
+                </div>
               </div>
               <p v-if="error" class="smartdrive-error" role="alert">{{ error }}</p>
-              <button type="submit" class="smartdrive-primary">Voir mes recommandations <span aria-hidden="true">→</span></button>
+              <button type="submit" class="smartdrive-primary">Trouver ma voiture idéale <span aria-hidden="true">→</span></button>
             </form>
           </template>
 
@@ -400,4 +422,70 @@ function reserve(car) {
 @keyframes smartdrive-pulse { 0% { opacity: .7; transform: scale(.98); } 65%, 100% { opacity: 0; transform: scale(1.08); } }
 @media (max-width: 640px) { .smartdrive-note { right: 1rem; bottom: 5.65rem; max-width: calc(100vw - 2rem); }.smartdrive-launcher { right: 1rem; bottom: 1rem; }.smartdrive-launcher-copy { min-width: 7rem; }.smartdrive-panel { right: 1rem; bottom: 4.7rem; width: calc(100vw - 2rem); } }
 @media (prefers-reduced-motion: reduce) { .smartdrive-launcher-glow,.smartdrive-spinner,.smartdrive-progress span,.smartdrive-launcher-icon svg,.smartdrive-spark,.smartdrive-avatar span { animation: none; } .smartdrive-fade-enter-active,.smartdrive-fade-leave-active,.smartdrive-note-enter-active,.smartdrive-note-leave-active { transition: none; } }
+
+/* A calm, editorial layer that keeps the assistant aligned with the main site. */
+.smartdrive-panel { background: #fbfcff; border-color: #dfe5ef; }
+.smartdrive-header { background: linear-gradient(135deg, #ffffff 0%, #f4f8ff 100%); }
+.smartdrive-intro { margin: -.15rem -.15rem 1.15rem; padding: 1rem 1rem .9rem; background: linear-gradient(135deg, #edf4ff 0%, #f5fbf8 100%); border: 1px solid #dce8f7; border-radius: .9rem; }
+.smartdrive-intro h3 { color: #14213d; font-size: 1.62rem; letter-spacing: -.045em; }
+.smartdrive-intro p { margin-bottom: 0; color: #53627a; }
+.smartdrive-form { gap: .95rem .75rem; }
+.smartdrive-field label { color: #34435b; letter-spacing: .01em; }
+.smartdrive-field input,.smartdrive-field select { min-height: 2.55rem; background: rgba(255,255,255,.88); border-color: #d9e1ec; color: #14213d; box-shadow: 0 1px 1px rgba(20,33,61,.02); }
+.smartdrive-field input:hover,.smartdrive-field select:hover { border-color: #b9c9df; }
+.smartdrive-field input:focus,.smartdrive-field select:focus { border-color: #3578d4; box-shadow: 0 0 0 3px rgba(53,120,212,.14); }
+.smartdrive-input-suffix { position: relative; }
+.smartdrive-input-suffix input { padding-right: 3rem; }
+.smartdrive-input-suffix span { position: absolute; top: 50%; right: .72rem; color: #71809a; font-size: .66rem; font-weight: 800; transform: translateY(-50%); }
+.smartdrive-primary { min-height: 2.8rem; margin-top: .25rem; background: #14213d; box-shadow: 0 8px 18px rgba(20,33,61,.16); }
+.smartdrive-primary:hover { background: #24518b; transform: translateY(-1px); }
+.smartdrive-secondary { color: #34527d; background: #f1f5fb; border-color: #d7e2f1; }
+.smartdrive-secondary:hover { color: #14213d; background: #e7eef9; border-color: #b9c9df; }
+.smartdrive-empty { margin: .2rem 0; background: linear-gradient(135deg, #f5f8fd, #f2faf7); border: 1px solid #e1e9f2; border-radius: .9rem; }
+.smartdrive-result { background: rgba(255,255,255,.92); border-color: #dfe5ef; }
+.smartdrive-best-badge { color: #17623e; background: #e8f8ef; border-color: #ccefd9; }
+.smartdrive-book { min-height: 2.5rem; padding: .72rem .8rem; background: #14213d; }
+.smartdrive-book:hover { background: #24518b; }
+@media (max-width: 640px) {
+  .smartdrive-panel { border-radius: 1rem; }
+  .smartdrive-intro h3 { font-size: 1.42rem; }
+  .smartdrive-body { padding: 1.1rem; }
+}
+
+/* The form is deliberately compact on desktop so every decision is visible at once. */
+.smartdrive-panel { width: min(600px, calc(100vw - 2rem)); }
+.smartdrive-body { padding: 1.2rem 1.35rem 1.35rem; }
+.smartdrive-intro { margin-bottom: .9rem; padding: .85rem .95rem; }
+.smartdrive-intro h3 { font-size: 1.38rem; }
+.smartdrive-intro p { font-size: .74rem; }
+.smartdrive-form { display: block; }
+.smartdrive-form-section { padding: .75rem 0 .85rem; border-top: 1px solid #e7edf5; }
+.smartdrive-form-section:first-child { padding-top: 0; border-top: 0; }
+.smartdrive-section-heading { display: flex; align-items: center; gap: .55rem; margin-bottom: .6rem; }
+.smartdrive-section-heading > div { display: flex; flex-direction: column; gap: .08rem; }
+.smartdrive-section-heading strong { color: #14213d; font-size: .76rem; }
+.smartdrive-section-heading small { color: #8290a5; font-size: .62rem; }
+.smartdrive-section-index { display: grid; place-items: center; width: 1.6rem; height: 1.6rem; color: #24518b; background: #eaf2ff; border: 1px solid #d6e5fb; border-radius: .5rem; font-size: .59rem; font-weight: 800; }
+.smartdrive-form-grid { display: grid; gap: .62rem .7rem; }
+.smartdrive-trip-grid { grid-template-columns: 1.35fr .65fr 1fr 1fr; }
+.smartdrive-preference-grid { grid-template-columns: repeat(3, 1fr); }
+.smartdrive-field-city { grid-column: span 2; }
+.smartdrive-field-budget { grid-column: span 2; }
+.smartdrive-field { gap: .25rem; }
+.smartdrive-field label { font-size: .62rem; }
+.smartdrive-field input, .smartdrive-field select { min-height: 2.25rem; padding: .5rem .62rem; font-size: .72rem; }
+.smartdrive-input-suffix span { right: .62rem; font-size: .6rem; }
+.smartdrive-primary { width: 100%; min-height: 2.65rem; margin-top: .25rem; font-size: .75rem; }
+.smartdrive-error { margin: .35rem 0 .55rem; }
+@media (max-width: 640px) {
+  .smartdrive-panel { width: calc(100vw - 2rem); }
+  .smartdrive-body { padding: 1.05rem; }
+  .smartdrive-intro { padding: .8rem; }
+  .smartdrive-form-grid, .smartdrive-trip-grid, .smartdrive-preference-grid { grid-template-columns: 1fr 1fr; }
+  .smartdrive-field-city, .smartdrive-field-budget { grid-column: span 2; }
+}
+@media (max-width: 390px) {
+  .smartdrive-form-grid, .smartdrive-trip-grid, .smartdrive-preference-grid { grid-template-columns: 1fr; }
+  .smartdrive-field-city, .smartdrive-field-budget { grid-column: auto; }
+}
 </style>
