@@ -5,6 +5,7 @@ namespace App\Http\Controllers\SmartDrive;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SmartDrive\SmartDriveRequest;
 use App\Models\Car;
+use App\Services\SmartDriveAiService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 
@@ -20,7 +21,62 @@ class SmartDriveController extends Controller
      */
     public function eligibleVehicles(SmartDriveRequest $request): JsonResponse
     {
-        $data = $request->validated();
+        return response()->json(
+            $this->eligiblePayload($request->validated())
+        );
+    }
+
+    /**
+     * SmartDrive AI (SCRUM-180)
+     *
+     * Same rules as above, but the eligible vehicles are sent to the AI service,
+     * which scores them and returns the recommendation.
+     */
+    public function recommend(SmartDriveRequest $request, SmartDriveAiService $ai): JsonResponse
+    {
+        $payload = $this->eligiblePayload($request->validated());
+
+        // No car can be rented for this trip: the AI has nothing to score
+        if ($payload['total'] === 0) {
+            return response()->json([
+                'message' => 'Aucun véhicule disponible pour ce trajet.',
+                'trip' => $payload['trip'],
+                'preferences' => $payload['preferences'],
+                'total' => 0,
+                'results' => [],
+            ]);
+        }
+
+        // The AI service expects the trip and the preferences as flat fields
+        $recommendation = $ai->recommend([
+            'budget_per_day' => $payload['preferences']['budget_per_day'],
+            'start_at' => $payload['trip']['start_at'],
+            'end_at' => $payload['trip']['end_at'],
+            'city_id' => $payload['trip']['city_id'],
+            'passengers' => $payload['trip']['passengers'],
+            'vehicle_type' => $payload['preferences']['vehicle_type'],
+            'transmission' => $payload['preferences']['transmission'],
+            'energy_type' => $payload['preferences']['energy_type'],
+            'trip' => $payload['trip'],
+            'vehicles' => $payload['vehicles'],
+        ]);
+
+        // AI service down or too slow
+        if ($recommendation === null) {
+            return response()->json([
+                'message' => "Le service de recommandation est momentanément indisponible. Réessayez dans quelques instants.",
+            ], 503);
+        }
+
+        return response()->json($recommendation);
+    }
+
+    /**
+     * Builds the trip, the preferences and the list of vehicles that can
+     * really be rented. Used by both endpoints.
+     */
+    private function eligiblePayload(array $data): array
+    {
 
         $cityId = $data['city_id'];
         $startAt = Carbon::parse($data['start_at']);
@@ -118,7 +174,7 @@ class SmartDriveController extends Controller
             ];
         }
 
-        return response()->json([
+        return [
             'trip' => [
                 'city_id' => $cityId,
                 'start_at' => $startAt->toDateTimeString(),
@@ -134,6 +190,6 @@ class SmartDriveController extends Controller
             ],
             'total' => count($vehicles),
             'vehicles' => $vehicles,
-        ]);
+        ];
     }
 }

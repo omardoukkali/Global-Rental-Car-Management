@@ -87,6 +87,10 @@ Route::get('/agencies/{agency}/reviews', [ReviewController::class, 'agencyReview
 Route::post('/smartdrive/eligible-vehicles', [SmartDriveController::class, 'eligibleVehicles'])
     ->middleware('throttle:30,1');
 
+// SmartDrive AI: eligible vehicles scored by the AI service (max 30 requests per minute)
+Route::post('/smartdrive/recommend', [SmartDriveController::class, 'recommend'])
+    ->middleware('throttle:30,1');
+
 
 /*
 |--------------------------------------------------------------------------
