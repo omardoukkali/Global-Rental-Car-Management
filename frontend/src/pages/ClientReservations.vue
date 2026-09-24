@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import reservationsService from '@/services/reservations'
+import carsService from '@/services/cars'
 
 const reservations = ref([])
 const loading = ref(true)
@@ -37,11 +38,12 @@ async function loadReservations() {
   actionError.value = ''
   try {
     const data = await reservationsService.getReservations()
-    reservations.value = Array.isArray(data?.reservations)
+    const list = Array.isArray(data?.reservations)
       ? data.reservations
       : Array.isArray(data?.data?.reservations)
         ? data.data.reservations
         : []
+    reservations.value = await attachCarImages(list)
   } catch (err) {
     error.value = err?.message || 'Impossible de charger vos réservations.'
     reservations.value = []
@@ -98,9 +100,28 @@ function waitingAgencyReturn(reservation) {
 
 function carImageUrl(car) {
   const images = car?.images
-  if (!images?.length) return null
+  if (!images?.length) return car?.image_url || null
   const primary = images.find((img) => img.is_primary) || images[0]
   return primary.url || primary.image_url || null
+}
+
+// GET /reservations returns the car without its photos. The public catalog has them.
+async function attachCarImages(list) {
+  const missing = list.some((res) => res.car?.id && !carImageUrl(res.car))
+  if (!missing) return list
+  let cars = []
+  try {
+    const catalog = await carsService.getPublicCars()
+    cars = catalog?.cars || catalog?.data?.cars || []
+  } catch {
+    return list
+  }
+  const byId = new Map(cars.map((car) => [car.id, car]))
+  return list.map((res) => {
+    const full = byId.get(res.car?.id)
+    if (!full?.images?.length) return res
+    return { ...res, car: { ...res.car, images: full.images } }
+  })
 }
 
 function formatDate(value) {
@@ -250,7 +271,7 @@ onMounted(loadReservations)
         >
           <div class="p-5 sm:p-6 flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
             <div class="flex items-start gap-4 min-w-0">
-              <div class="h-14 w-14 rounded-xl bg-slate-100 overflow-hidden flex-shrink-0 flex items-center justify-center">
+              <div class="h-20 w-28 rounded-xl bg-slate-100 overflow-hidden flex-shrink-0 flex items-center justify-center">
                 <img
                   v-if="carImageUrl(res.car)"
                   :src="carImageUrl(res.car)"
