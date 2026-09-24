@@ -24,6 +24,12 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    // SmartDrive AI service (FastAPI), reached on the internal Docker network
+    'ai' => [
+        'url' => env('AI_SERVICE_URL', 'http://ai_service:5000'),
+        'timeout' => env('AI_SERVICE_TIMEOUT', 5),
+    ],
+
     'resend' => [
         'key' => env('RESEND_KEY'),
     ],

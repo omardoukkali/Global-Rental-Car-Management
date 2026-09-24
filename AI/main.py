@@ -59,6 +59,10 @@ class RecommendationRequest(BaseModel):
     vehicle_type: Optional[str] = None
     transmission: Optional[str] = None
     energy_type: Optional[str] = None
+    # Laravel (SCRUM-180) sends the eligible vehicles directly; when the list is
+    # absent the service keeps its previous behaviour.
+    vehicles: Optional[list] = None
+    trip: Optional[dict] = None
 
 
 class CompatibilityPredictionRequest(BaseModel):
@@ -364,6 +368,27 @@ def predict_compatibility(request: CompatibilityPredictionRequest):
 
 @app.post("/api/recommend")
 def recommend(request: RecommendationRequest):
+    # Vehicles sent by Laravel: they already respect the rental business rules
+    if request.vehicles:
+        results = analyze_vehicles(request.vehicles, request)
+        for vehicle in results:
+            vehicle["confidence"] = confidence_for(vehicle)
+            vehicle["explanation"] = explain_vehicle(vehicle, request)
+        request_data = request.model_dump() if hasattr(request, "model_dump") else request.dict()
+        return {
+            "trip": request.trip,
+            "preferences": {
+                key: value
+                for key, value in request_data.items()
+                if key not in ("vehicles", "trip")
+            },
+            "total": len(results),
+            "recommended": results[0] if results else None,
+            "results": results,
+            "alternatives": build_alternatives(results),
+            "source": "laravel",
+        }
+
     use_experimental = os.environ.get("SMARTDRIVE_USE_EXPERIMENTAL_DATA", "true").lower() == "true"
     try:
         if use_experimental:
