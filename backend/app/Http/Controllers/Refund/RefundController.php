@@ -14,6 +14,35 @@ use Illuminate\Support\Facades\DB;
 
 class RefundController extends Controller
 {
+    public function index(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'status' => [
+                'sometimes',
+                'in:pending,processing,processed,failed',
+            ],
+        ]);
+
+        $query = $request->user()
+            ->agency
+            ->refunds()
+            ->with([
+                'payment.reservation:id,reference,client_id,car_id,start_at,end_at,status',
+                'payment.reservation.client:id,first_name,last_name',
+                'payment.reservation.car:id,brand,model,plate_number',
+            ]);
+
+        if (isset($validated['status'])) {
+            $query->where('status', $validated['status']);
+        }
+
+        $refunds = $query->latest()->get();
+
+        return response()->json([
+            'refunds' => $refunds,
+        ]);
+    }
+
     public function store(StoreRefundRequest $request): JsonResponse
     {
         $data = $request->validated();

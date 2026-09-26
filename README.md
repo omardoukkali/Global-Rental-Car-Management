@@ -1,20 +1,25 @@
 # Global Rental Car Management
 
-A multi-tier car rental management platform built as a containerized monorepo.
+A multi-tier car rental platform connecting rental agencies and clients, with AI-assisted
+vehicle recommendation. Built as a containerized monorepo.
 
 | Service | Technology | Port |
 |---|---|---|
-| Backend | Laravel 11 / PHP 8.2-FPM (Alpine) — REST API | 8000 |
-| Frontend | Vue 3 SPA (Vite dev server) | 3000 |
-| AI Service | Python FastAPI | 5000 |
+| Backend | Laravel 11 / PHP 8.2 (Alpine) — REST API, 70 endpoints | 8000 |
+| Frontend | Vue 3 SPA (Vite) | 3000 |
+| AI Service | Python FastAPI — SmartDrive recommendation | 5000 |
 | Database | PostgreSQL 15 (Alpine) | 5432 |
-| Test database | PostgreSQL 15 (Alpine) — isolated, used by PHPUnit only | 5434 |
+| Test database | PostgreSQL 15 (Alpine) — used by PHPUnit only | 5434 |
 
-All five services run as Docker containers on a shared bridge network (`app_network`),
-orchestrated with Docker Compose. Nothing needs to be installed on the host except Docker.
+All five services run as Docker containers on a shared bridge network (`app_network`).
+Nothing needs to be installed on the host except Docker.
 
-The backend is **API-only**. The Inertia layer was removed — the Vue SPA consumes the
-REST API at `/api` and authenticates with Sanctum bearer tokens.
+The backend is **API-only**. The Inertia layer was removed; the Vue SPA consumes the REST
+API at `/api` and authenticates with Sanctum bearer tokens.
+
+> **Note on the backend runtime.** The base image is `php:8.2-fpm-alpine`, but PHP-FPM is
+> never started — the container runs `php artisan serve`. This matters for configuration
+> (see *Environment variables*) and for deployment (see *Known limitations*).
 
 ---
 
@@ -23,95 +28,96 @@ REST API at `/api` and authenticates with Sanctum bearer tokens.
 | Requirement | Minimum | Notes |
 |---|---|---|
 | Docker Desktop | 4.30+ | Includes Docker Engine and Compose v2 |
-| RAM | 8 GB | 16 GB recommended; the stack allocates ~4 GB under load |
+| RAM | 8 GB | 16 GB recommended |
 | Disk space | 10 GB free | Images total roughly 1.5 GB plus build cache |
 | Git | 2.40+ | — |
-| OS | Windows 10/11, macOS 12+, or any modern Linux | WSL 2 backend required on Windows |
+| OS | Windows 10/11, macOS 12+, modern Linux | WSL 2 backend required on Windows |
 
-PHP, Node.js, Composer, and PostgreSQL are **not** required on the host — every
-build step runs inside a container.
+PHP, Node.js, Composer and PostgreSQL are **not** required on the host — every build step
+runs inside a container.
 
 ---
 
 ## Quick start
 
 ```bash
-# 1. Clone the repository
 git clone https://github.com/omardoukkali/Global-Rental-Car-Management.git
 cd Global-Rental-Car-Management
 
-# 2. Create your environment file from the template
 cp .env.example .env
-
-# 3. Build and start all services
 docker compose up -d --build
-
-# 4. Confirm everything is healthy
 docker compose ps
 ```
 
-The first build takes 5–10 minutes: it pulls the PHP, Node, Python, and Postgres
-base images and installs Composer and npm dependencies.
-
-You should see five containers with status `Up`, with `app_database` and
-`app_database_test` marked `(healthy)`.
+First build takes 5–10 minutes. You should see five containers `Up`, with `app_database`
+and `app_database_test` marked `(healthy)`.
 
 ### Service URLs
 
 | What | URL |
 |---|---|
-| REST API | http://localhost:8000/api |
-| Backend health check | http://localhost:8000/up |
 | Frontend SPA | http://localhost:3000 |
+| REST API base | http://localhost:8000/api |
+| Backend health check | http://localhost:8000/up |
 | AI service (Swagger UI) | http://localhost:5000/docs |
 | PostgreSQL | localhost:5432 |
 | PostgreSQL (test) | localhost:5434 |
 
-To stop everything: `docker compose down`
+`/api` is a route prefix, not an endpoint — opening it returns 404. Try
+`http://localhost:8000/api/cities`.
+
+Stop everything with `docker compose down`.
 
 ---
 
 ## Why there are two databases
 
-`app_database` holds development data. `app_database_test` is a separate,
-disposable database used only by the PHPUnit suite.
+`app_database` holds development data. `app_database_test` is a disposable instance used
+only by PHPUnit.
 
-Laravel feature tests use `RefreshDatabase`, which drops every table and re-runs
-migrations on each test run. Without the split, running the test suite would wipe
-all development data — registered agencies, cars, and the seeded admin account.
-
-The routing is configured in `backend/phpunit.xml`:
-
-```xml
-<env name="DB_HOST" value="database_test" force="true"/>
-<env name="DB_DATABASE" value="globalrental_test" force="true"/>
-```
-
-`force="true"` means these override `.env`. So `php artisan serve` reaches
-`database`, and `php artisan test` reaches `database_test`. No manual switching.
+Laravel feature tests use `RefreshDatabase`, which drops every table and re-runs migrations
+on each run. Without the split, running the suite would wipe all development data. The
+routing is configured in `backend/phpunit.xml` with `force="true"` overrides, so
+`php artisan serve` reaches `database` and `php artisan test` reaches `database_test`. No
+manual switching.
 
 ---
 
-## What happens automatically on first boot
+## What happens on first boot
 
-The backend container's entrypoint (`backend/docker-entrypoint.sh`) handles setup
-so no manual steps are needed:
+`backend/docker-entrypoint.sh` handles setup in this order:
 
 1. Fixes storage directory permissions
-2. Creates the `public/storage` symlink
-3. Generates an `APP_KEY` if none is set
-4. Waits for PostgreSQL, then runs migrations
-5. Seeds the database on first boot only (guarded by a lock file)
-6. Starts the application server
+2. Recreates the `public/storage` symlink
+3. Generates an ephemeral `APP_KEY` if none is supplied
+4. **Writes `backend/.env` from the container environment**
+5. Retries `php artisan migrate --force` until PostgreSQL accepts connections
+6. Seeds the database on first boot only, guarded by `storage/app/seeder.lock`
+7. Starts `php artisan schedule:work` in the background
+8. Starts the application server
 
-> **Note on `APP_KEY`.** `docker-compose.yml` currently supplies a hardcoded
-> fallback key when `APP_KEY` is unset in `.env`. The app therefore boots with a
-> shared, publicly visible key — acceptable for local development, never for a
-> deployed environment. Set a real key:
+### Why step 4 exists
+
+`php artisan serve` spawns a child `php -S` process that handles every HTTP request, and
+**that child does not inherit the container environment**. Verified via `/proc/<pid>/environ`:
+the wrapper process has the full environment, the request-handling process has only
+`APP_ENV`. Every variable `docker-compose.yml` injects is invisible to the code that
+actually serves requests, so `env('DB_CONNECTION')` returns null and Laravel falls back to
+its built-in SQLite default.
+
+The entrypoint therefore writes `.env` from the container environment at startup.
+`backend/.env` is generated, never edited by hand, and gitignored. Change values in the
+root `.env`, not in `backend/.env`.
+
+This constraint disappears if the backend moves to PHP-FPM, which passes environment to its
+workers correctly.
+
+> **`APP_KEY`.** `docker-compose.yml` supplies a hardcoded fallback when `APP_KEY` is unset.
+> Acceptable for local development, never for a deployed environment:
 >
 > ```bash
 > docker compose exec backend php artisan key:generate --show
-> # paste the output into APP_KEY= in your .env, then:
+> # paste into APP_KEY= in your .env, then:
 > docker compose restart backend
 > ```
 
@@ -119,22 +125,37 @@ so no manual steps are needed:
 
 ## Seeded development accounts
 
-The seeder creates test users for local development.
+Password for every seeded account: `password`
 
 | Email | Role |
 |---|---|
-| admin@test.com | admin |
-| owner@test.com | agency |
-| client@test.com | client |
+| admin@example.com | admin |
+| client@example.com | client |
+| agency@example.com | agency — Demo Rent Cars, Tangier, approved |
+| hassan@agency.ma | agency — Atlas Cars, Casablanca, approved |
 
-These are **development credentials only** and must never exist in a deployed
-environment. The seeder is guarded by a lock file and runs on first boot only.
+The seeders also create 29 generated clients, 10 further agencies (one `pending`, one
+`rejected`), cars with images, agency points, and reservations in every status with their
+payments, refunds and reviews.
+
+Seeder order, defined in `DatabaseSeeder`:
+
+```
+City → User → Agency → AgencyPoint → Car → CarImage → Reservation → Payment → Refund → Review
+```
+
+**Development credentials only.** To reseed from scratch:
+
+```bash
+docker compose exec backend php artisan migrate:fresh --seed
+```
 
 ---
 
 ## Environment variables
 
-Copy `.env.example` to `.env` and adjust as needed.
+Copy `.env.example` to `.env` at the repository root. Compose reads that file and passes
+the values into the containers; the backend entrypoint writes them into `backend/.env`.
 
 | Variable | Description | Default |
 |---|---|---|
@@ -142,21 +163,51 @@ Copy `.env.example` to `.env` and adjust as needed.
 | `APP_ENV` | Environment | local |
 | `APP_KEY` | Laravel encryption key | see note above |
 | `APP_DEBUG` | Verbose error pages | true |
-| `APP_URL` | Base URL | http://localhost:8000 |
-| `FRONTEND_PORT` | Host port for the Vue SPA | 3000 |
+| `APP_URL` | Backend base URL | http://localhost:8000 |
+| `FRONTEND_URL` | Address used in e-mail links | http://localhost:3000 |
+| `FRONTEND_PORT` | Host port for the SPA | 3000 |
 | `BACKEND_PORT` | Host port for Laravel | 8000 |
 | `AI_PORT` | Host port for FastAPI | 5000 |
 | `DB_PORT` | Host port for PostgreSQL | 5432 |
 | `DB_PORT_TEST` | Host port for the test database | 5434 |
-| `DB_CONNECTION` | Laravel database driver | pgsql |
+| `DB_CONNECTION` | Database driver | pgsql |
 | `DB_HOST` | Database hostname (compose service name) | database |
 | `DB_DATABASE` | Database name | globalrental |
 | `DB_DATABASE_TEST` | Test database name | globalrental_test |
 | `DB_USERNAME` | Database user | grader |
-| `DB_PASSWORD` | Database password | — |
+| `DB_PASSWORD` | Database password | secret |
+| `DB_SSLMODE` | PostgreSQL SSL mode (required by Azure) | prefer |
 | `AI_SERVICE_URL` | Internal AI service address | http://ai_service:5000 |
+| `CORS_ALLOWED_ORIGINS` | Comma-separated origins allowed to call the API | http://localhost:3000,http://localhost:3333 |
+| `SANCTUM_TOKEN_EXPIRATION` | Token lifetime in minutes | 1440 |
+| `SANCTUM_TOKEN_PREFIX` | Token prefix, so secret scanners can detect leaks | grcm_ |
+| `MAIL_MAILER` | `log` (written to the log file) or `smtp` (really sent) | log |
+| `MAIL_HOST` / `MAIL_PORT` | SMTP server | — / 587 |
+| `MAIL_USERNAME` / `MAIL_PASSWORD` | SMTP credentials | — |
+| `MAIL_FROM_ADDRESS` / `MAIL_FROM_NAME` | Sender address and name | no-reply@globalrental.local |
 
 `.env` is gitignored and must never be committed.
+
+### Sending real e-mails
+
+By default `MAIL_MAILER=log`: no e-mail leaves the machine, the message is written to
+`backend/storage/logs/laravel.log` — search for `reset-password?token=` or `email/verify`.
+
+To really send them, add SMTP settings to your `.env` and restart the backend:
+
+```bash
+MAIL_MAILER=smtp
+MAIL_HOST=smtp-relay.brevo.com
+MAIL_PORT=587
+MAIL_USERNAME=<SMTP login>
+MAIL_PASSWORD=<SMTP key>
+MAIL_ENCRYPTION=tls
+MAIL_FROM_ADDRESS=<a verified sender>
+MAIL_FROM_NAME="Global Rental Car"
+```
+
+Ask the team for the shared credentials — **never commit them**. The CI secret scan blocks
+any push containing them.
 
 ---
 
@@ -165,34 +216,33 @@ Copy `.env.example` to `.env` and adjust as needed.
 Both suites run in CI as blocking gates. Run them locally before pushing.
 
 ```bash
-# Backend — PHPUnit, 73 tests
+# Backend — PHPUnit, 195 tests (~2 minutes)
 docker compose exec backend php artisan test
 
 # Backend — a single suite
 docker compose exec backend php artisan test --filter=Auth
 
-# Frontend — Vitest, 51 tests
+# Frontend — Vitest, 99 tests across 16 files
 docker compose exec frontend npm run test:run
 ```
 
-Use `npm run test:run`, not `npm test` — the latter starts watch mode and will
-never exit.
+Use `npm run test:run`, not `npm test` — the latter starts watch mode and never exits.
 
 ---
 
 ## Useful commands
 
 ```bash
-# View logs for one service (follow mode)
+# Follow the logs of one service
 docker compose logs -f backend
 
-# Open a shell inside a container
+# Shell into a container
 docker compose exec backend sh
 
-# List all registered routes
-docker compose exec backend php artisan route:list
+# List all API routes
+docker compose exec backend php artisan route:list --path=api
 
-# Rebuild the database from scratch with seed data
+# Rebuild the database with seed data
 docker compose exec backend php artisan migrate:fresh --seed
 
 # Rebuild a single service
@@ -207,22 +257,26 @@ docker compose down -v && docker compose up -d --build
 ## Troubleshooting
 
 **Backend logs loop on "Database not ready, retrying in 2s"**
-Normal for the first 10–20 seconds while PostgreSQL initialises. If it persists
-beyond a minute, check `docker compose logs database`.
+Normal for the first 10–20 seconds. If it persists beyond a minute, check
+`docker compose logs database`.
 
 **`ERR_EMPTY_RESPONSE` on port 8000**
-The container is still booting — migrations and seeding run before the server
-starts. Wait for `Server running on [http://0.0.0.0:8000]` in the logs.
+The container is still booting — migrations and seeding run before the server starts. Wait
+for `Server running on [http://0.0.0.0:8000]`.
+
+**An endpoint returns an empty array**
+The query succeeded and matched nothing. Usually the database was wiped by
+`docker compose down -v` while `storage/app/seeder.lock` survived, so seeding was skipped.
+Run `php artisan migrate:fresh --seed`.
 
 **Frontend tests pass locally but fail in CI**
-The `node_modules` volume is stale. Run `docker compose down`, then
-`docker volume prune -f`, then `docker compose build --no-cache frontend`.
-The Dockerfile uses `npm ci` against the lockfile, so a clean build matches CI
-exactly.
+The `node_modules` volume is stale. `docker compose down`, then `docker volume prune -f`,
+then `docker compose build --no-cache frontend`. The Dockerfile uses `npm ci` against the
+lockfile, so a clean build matches CI exactly.
 
 **Tests fail to connect to the database**
-Confirm `app_database_test` is running and healthy with `docker compose ps`.
-The test suite connects to the `database_test` service, not `database`.
+Confirm `app_database_test` is healthy with `docker compose ps`. The suite connects to
+`database_test`, not `database`.
 
 **Port already in use**
 Change the relevant `*_PORT` value in `.env` and restart.
@@ -234,17 +288,17 @@ Change the relevant `*_PORT` value in `.env` and restart.
 ```
 .
 ├── .github/workflows/     CI and CD pipeline definitions
-├── AI/                    Python FastAPI service
+├── AI/                    Python FastAPI service + ML training data
 ├── backend/               Laravel 11 REST API
 ├── frontend/              Vue 3 SPA
 ├── docs/
+│   ├── api/               SmartDrive endpoint documentation
+│   ├── deployment/        Azure provisioning and deployment guide
 │   ├── postman/           API collection and environment
-│   └── security/          Security review, remediation, and reference docs
+│   └── security/          Security review, remediation, reference docs
 ├── UML/                   Design and modelling artefacts
 ├── docker-compose.yml     Service orchestration
 ├── .env.example           Environment variable template
-├── .dockerignore          Root build-context exclusions
-├── .gitignore             Excludes .env and node_modules
 └── README.md
 ```
 
@@ -252,12 +306,10 @@ Change the relevant `*_PORT` value in `.env` and restart.
 
 ## Branching and contribution workflow
 
-Two permanent branches, plus short-lived topic branches.
-
 | Branch | Role |
 |---|---|
 | `main` | Validated, deployable version. Receives merges only from `develop`. |
-| `develop` | Integration branch. Accumulates reviewed work. |
+| `develop` | Integration branch. |
 | `feature/**` | New functionality |
 | `infra/**` | Infrastructure, Docker, CI/CD |
 | `refactor/**` | Restructuring without behavioural change |
@@ -274,16 +326,14 @@ Two permanent branches, plus short-lived topic branches.
 
 ### Naming and commit conventions
 
-Branch names include the Jira issue key so the integration links them
-automatically:
+Branch names carry the Jira key so the integration links them automatically:
 
 ```
 infra/SCRUM-24-dockerize-monorepo-services
 feature/SCRUM-31-reservation-payment-flow
 ```
 
-Commit messages begin with the Jira issue key, followed by a Conventional Commits
-type prefix:
+Commit messages begin with the Jira key, then a Conventional Commits type:
 
 ```
 SCRUM-24 infra: add multi-stage Node build for Vite assets
@@ -291,8 +341,8 @@ SCRUM-51 ci: run PHPUnit and Vitest as blocking gates
 SCRUM-27 fix: untrack .env and add example template
 ```
 
-Recognised prefixes: `feat:`, `fix:`, `infra:`, `ci:`, `refactor:`, `docs:`,
-`test:`, `chore:`.
+Recognised prefixes: `feat:`, `fix:`, `infra:`, `ci:`, `refactor:`, `docs:`, `test:`,
+`chore:`.
 
 ### Opening a pull request
 
@@ -306,28 +356,38 @@ Recognised prefixes: `feat:`, `fix:`, `infra:`, `ci:`, `refactor:`, `docs:`,
 
 ## Continuous Integration
 
-A single pipeline (`.github/workflows/ci.yaml`) handles build verification,
-testing, and security scanning. It runs on every push to `develop`, `main`, or a
-prefixed topic branch, and on every pull request into `develop` or `main`.
+`.github/workflows/ci.yaml` — a single job, `build-test-security`, running on every push to
+a permanent or prefixed branch and on every pull request into `develop` or `main`.
 
 **Build verification**
 
-1. Builds all three application images
-2. Starts the full stack
-3. Asserts the backend (`/up`) and AI service (`/docs`) respond to HTTP probes
-4. Validates `composer.lock` consistency with `composer validate --strict`
-
-**Testing**
-
-5. PHPUnit — 73 backend tests
-6. Vitest — 51 frontend tests
+1. Checkout with full git history
+2. Build all three application images
+3. Start the full stack
+4. Assert the backend (`/up`) and AI service (`/docs`) respond to HTTP probes
+5. `composer validate --strict`
 
 **Security scanning**
 
-7. TruffleHog scans the code and full git history for verified live credentials
-8. Trivy scans all three built images for CVEs (`CRITICAL,HIGH`, unfixed excluded)
-9. Trivy scans the filesystem with `vuln,secret,misconfig` scanners enabled
-10. Two JSON reports are generated and uploaded as a downloadable artifact
+6. TruffleHog — credentials in source and full git history
+7. Semgrep — static analysis of PHP and JavaScript against the OWASP Top 10 ruleset
+8. Trivy — CVEs in all three built images
+9. Trivy — filesystem scan with `vuln,secret,misconfig` scanners
+10. Two JSON scan reports uploaded as a build artifact
+
+**Testing**
+
+11. PHPUnit — 195 backend tests
+12. Vitest — 99 frontend tests
+
+### Security scanning coverage
+
+| Category | Tool | Examines |
+|---|---|---|
+| Secret detection | TruffleHog | Credentials in source and git history |
+| SAST | Semgrep | OWASP Top 10 patterns in our own PHP and JS |
+| SCA | Trivy | Known vulnerabilities in dependencies |
+| Container scanning | Trivy | Vulnerabilities and misconfiguration in built images |
 
 ### What blocks a merge
 
@@ -339,93 +399,104 @@ prefixed topic branch, and on every pull request into `develop` or `main`.
 | PHPUnit | Yes |
 | Vitest | Yes |
 | TruffleHog | Yes |
-| Trivy (all scans) | **No** — report only |
+| Semgrep | **No** — report only |
+| Trivy (all invocations) | **No** — report only |
 
-Trivy runs with `exit-code: 0`, so findings are reported without blocking merges:
-Alpine and PHP base images routinely carry unfixable CVEs that would otherwise
-prevent every merge. The `ignore-unfixed` flag filters that category on image
-scans. **This is a deliberate trade-off, not an oversight** — making the image
-scans blocking is an open hardening task.
+Trivy runs with `exit-code: 0` and Semgrep with `continue-on-error`. Alpine and PHP base
+images routinely carry unfixable CVEs that would otherwise prevent every merge, and the
+initial SAST findings are still being triaged. **These are deliberate trade-offs, not
+oversights** — making both blocking is an open hardening task.
 
 ### Retrieving a scan report
 
-- **Readable tables** — expand any `Trivy scan —` step in the job log
-- **JSON reports** — at the bottom of the run summary page, under **Artifacts**,
-  named `trivy-reports-<timestamp>`. Retained for 14 days.
+- **Readable tables** — expand any `Trivy scan —` or `Semgrep` step in the job log
+- **JSON reports** — at the bottom of the run summary page, under **Artifacts**, named
+  `trivy-reports-<timestamp>`. Retained for 14 days.
 
 ---
 
 ## Security
 
-Security documentation lives under `docs/security/`.
+Documentation lives under `docs/security/`.
 
 | Document | Purpose |
 |---|---|
-| [`authentication-security.md`](docs/security/authentication-security.md) | **Start here.** How authentication and authorization work, what controls are in place, accepted risks, open items. |
-| [`owasp-auth-review.md`](docs/security/owasp-auth-review.md) | OWASP Top 10 (2021) review of the authentication module. 15 findings with severity and risk analysis. |
-| [`remediation/`](docs/security/remediation/) | Per-finding implementation instructions, split by component (backend / frontend / ai). |
+| [`authentication-security.md`](docs/security/authentication-security.md) | How authentication and authorization work, controls in place, accepted risks |
+| [`owasp-auth-review.md`](docs/security/owasp-auth-review.md) | OWASP Top 10 (2021) review of the authentication module — 15 findings |
+| [`remediation/`](docs/security/remediation/) | Per-finding implementation instructions, split by component |
 
-The authentication module has been reviewed. **The agency module, car module,
-frontend token storage, and the AI service have not.** See the "Open items"
-section of `authentication-security.md` for what is tracked and what has no ticket.
+### Implemented controls
 
-### Known findings
+| Control | Implementation |
+|---|---|
+| Rate limiting | Login, registration, password reset, e-mail verification |
+| Session revocation | Account status verified on every request; tokens revoked on failure |
+| Privilege escalation | `role` and `status` excluded from mass assignment |
+| Token lifetime | Expiry via `SANCTUM_TOKEN_EXPIRATION` |
+| Token scope | Tokens carry an ability naming the account role |
+| Cross-origin access | Restricted to `CORS_ALLOWED_ORIGINS` |
+| Input handling | Type-guarded normalisation in the auth FormRequests |
+| Password strength | Breached-password corpus check at registration |
+| Credential leak detection | `SANCTUM_TOKEN_PREFIX` so secret scanners can match |
 
-**Application** — three High-severity authentication findings are open and tracked
-in Jira (SCRUM-122, SCRUM-123, SCRUM-124). See `owasp-auth-review.md`.
+### Not yet reviewed
 
-**Container configuration** — all three Dockerfiles fail Trivy check DS-0002
-("Image user should not be 'root'"), and all base images use floating tags rather
-than digest pins. Adding non-root `USER` directives and pinning digests is an
-outstanding hardening task with no ticket.
+The authentication module has been reviewed. These have not:
 
-**Dependencies with available fixes** — from the most recent filesystem scan.
-Re-run the pipeline for current figures; this table ages.
+- **Object-level authorization** on agency, car, reservation, payment and review resources.
+  Role middleware proves *what kind of user* is calling, not *whose resource* they touch.
+- **Frontend token storage** — if tokens sit in `localStorage`, XSS yields a credential.
+- **The AI service** — `/docs` is served publicly with no authentication. See
+  `docs/security/remediation/ai/README.md`.
+- **Container hardening** — all three images run as root with floating base image tags.
 
-| Package | Installed | Fixed in | Status |
-|---|---|---|---|
-| symfony/http-foundation | 7.4.8 | 7.4.13 | patch available |
-| symfony/http-kernel | 7.4.11 | 7.4.12 | patch available |
-| symfony/mailer | 7.4.8 | 7.4.12 | patch available |
-| symfony/mime | 7.4.9 | 7.4.12 | patch available |
-| guzzlehttp/guzzle | 7.10.0 | 7.15.2 | patch available |
-| league/commonmark | 2.8.2 | 2.9.0 | patch available |
-| nanoid | 3.3.15 | 3.3.18 | patch available |
-| postcss | 8.5.16 | 8.5.18 | patch available |
-| laravel/framework | 11.51.0 | 12.60.0 | **major upgrade — deferred** |
+### Dependency vulnerabilities
 
-The Laravel finding (CRLF injection in email validation, CVSS 8.9) requires a
-major version upgrade and is deferred pending a planned migration. Several of the
-Symfony findings concern the same class of issue in the mail path.
+Current figures are in the latest CI run's `trivy-reports-<timestamp>` artifact. A static
+table here goes stale within a sprint, so it is not reproduced.
 
-To apply the available patches:
-
-```bash
-docker compose exec backend composer update symfony/http-foundation \
-  symfony/http-kernel symfony/mailer symfony/mime guzzlehttp/guzzle \
-  league/commonmark
-docker compose exec frontend npm update postcss nanoid
-```
+One finding worth naming: `laravel/framework` carries a CRLF injection in email validation
+(CVSS 8.9) fixed only in Laravel 12. That is a major-version upgrade, deferred pending a
+planned migration.
 
 ---
 
 ## Deployment
 
-`.github/workflows/cd.yaml` deploys to a target server on pushes to `main`. It
-connects over SSH, pulls the latest commit, rebuilds the stack, and prunes unused
-images.
+`.github/workflows/cd.yaml` deploys to **Azure Container Apps**.
 
-Required repository secrets: `SERVER_HOST`, `SERVER_USER`, `SERVER_SSH_KEY`.
+It triggers on `workflow_run` when the CI Pipeline completes successfully on `main`, and can
+be run manually via `workflow_dispatch`. **Deployment is gated on CI passing.**
 
-**Current limitations:**
+1. Checks out the exact commit CI verified — not the branch tip
+2. Builds and pushes `grc-api`, `grc-frontend` and `grc-ai` to Docker Hub, tagged with the
+   short commit SHA
+3. Authenticates to Azure via OIDC federated identity — no stored cloud credential
+4. Records the current active revision of each container app
+5. Runs `az containerapp update` for each app
+6. Health-checks the API `/up` and the frontend
+7. Rolls back via `az containerapp revision activate` if a check fails
 
-- The pipeline has not yet executed — no target server has been provisioned
-- No rollback mechanism. A failed deploy leaves the server in a broken state
-- No post-deploy health check
-- Not gated on CI passing — a push to `main` deploys regardless of test results
-- `php artisan serve` is a single-threaded development server; production requires
-  nginx or Apache in front of PHP-FPM
-- The frontend image runs `npm run dev` (Vite dev server), not a production build
+The AI service has internal-only ingress and is deployed but not health-checked from the
+runner.
 
-None of these are suitable for a real deployment. Address them before provisioning
-a server.
+**Required repository secrets:** `DOCKERHUB_TOKEN`, `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`,
+`AZURE_SUBSCRIPTION_ID`. The three Azure values are identifiers, not credentials —
+authentication uses a short-lived OIDC token restricted by subject claim to this repository
+and branch.
+
+**Azure resources:** resource group `rg-globalrentalcar`, France Central. PostgreSQL
+Flexible Server plus a Container Apps environment. Full provisioning steps in
+[`docs/deployment/deployment.md`](docs/deployment/deployment.md).
+
+### Known limitations
+
+- **`php artisan serve` is a single-threaded development server.** Production needs nginx or
+  Apache in front of PHP-FPM. This also forces the `.env` generation described above.
+- **The frontend image runs `npm run dev`** — the Vite dev server, not a production build.
+  No minification, no asset hashing.
+- **No queue worker runs.** `QUEUE_CONNECTION=database` is configured but nothing executes
+  `queue:work`, so queued jobs — including verification and password-reset e-mails —
+  accumulate in the `jobs` table unprocessed.
+- **All three containers run as root.**
+- **Trivy and Semgrep findings do not block deployment.**

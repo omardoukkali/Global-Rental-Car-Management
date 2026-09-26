@@ -14,6 +14,19 @@
   --accent-subtle: #F2F2F3;
 }
 
+/*
+ * The layout is designed for a 1280 px wide viewport (e.g. a 1080p laptop at
+ * 150 % OS scaling). On wider viewports (same monitor at 100 % scaling, large
+ * desktops) everything looked tiny with big empty margins. Tailwind sizes
+ * everything in rem, so scaling the root font size with the viewport scales
+ * the whole UI proportionally: 16px up to 1280px, 18px at 1440px, 24px (1.5x)
+ * from 1920px upwards — a 1920px @ 100 % screen now renders exactly like a
+ * 1280px @ 150 % one.
+ */
+html {
+  font-size: clamp(16px, 1.25vw, 24px);
+}
+
 body {
   font-family: 'DM Sans', sans-serif;
   background-color: var(--surface);

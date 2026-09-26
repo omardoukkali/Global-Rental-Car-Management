@@ -1,549 +1,2247 @@
 {
-  "info": {
-    "_postman_id": "28d9e6fb-d423-459d-90fe-cadccf3aa547",
-    "name": "Global car management API",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "_exporter_id": "51931746",
-    "_collection_link": "https://go.postman.co/collection/51931746-28d9e6fb-d423-459d-90fe-cadccf3aa547?source=collection_link"
-  },
-  "item": [
-    {
-      "name": "Auth",
-      "item": [
-        {
-          "name": "Register Client",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{client_token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "POST",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\r\n    \"first_name\": \"Omar\",\r\n    \"last_name\": \"Agency Owner\",\r\n    \"email\": \"owner@agency.com\",\r\n    \"password\": \"Password123!\",\r\n    \"password_confirmation\": \"Password123!\",\r\n    \"phone\": \"+212611111111\",\r\n\r\n    \"agency_name\": \"Tangier Rent Cars\",\r\n    \"agency_city\": \"a28c2cb6-9049-42d3-946c-67074073bae3\",\r\n    \"address\": \"Tangier, Morocco\",\r\n    \"agency_phone\": \"+212622222222\"\r\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{base_url}}/register/client",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "register",
-                "client"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Register Agency",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{client_token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "POST",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\r\n    \"first_name\": \"Omar\",\r\n    \"last_name\": \"Agency Owner\",\r\n    \"email\": \"owner@agency.com\",\r\n    \"password\": \"Password123!\",\r\n    \"password_confirmation\": \"Password123!\",\r\n    \"phone\": \"+212611111111\",\r\n\r\n    \"agency_name\": \"Tangier Rent Cars\",\r\n    \"agency_city\": \"a28c2cb6-9049-42d3-946c-67074073bae3\",\r\n    \"address\": \"Tangier, Morocco\",\r\n    \"agency_phone\": \"+212622222222\"\r\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{base_url}}/register/client",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "register",
-                "client"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Login",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"email\": \"ahmed@xample.com\",\n    \"password\": \"Password123!\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/login",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "login"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Logout",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "POST",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"email\": \"ahmed@xample.com\",\n    \"password\": \"Password123!\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/logout",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "logout"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Me",
-          "request": {
-            "method": "GET",
-            "header": []
-          },
-          "response": []
-        }
-      ],
-      "description": "Authentication endpoints for client and agency accounts using Laravel Sanctum.\n\n### Client Registration\n\n`POST /api/register/client`\n\nCreates a new client account.\n\nRequired fields:\n\n- first_name\n    \n- last_name\n    \n- email\n    \n- password\n    \n- password_confirmation\n    \n\nOptional fields:\n\n- phone\n    \n\nThe created user receives:\n\n- role: client\n    \n- status: active\n    \n\n### Agency Registration\n\n`POST /api/register/agency`\n\nCreates an agency owner account and the associated agency profile.\n\nRequired fields:\n\n- first_name\n    \n- last_name\n    \n- email\n    \n- password\n    \n- password_confirmation\n    \n- phone\n    \n- agency_name\n    \n- agency_city\n    \n- address\n    \n- agency_phone\n    \n\nThe created user receives:\n\n- role: agency\n    \n- status: active\n    \n\nThe created agency receives:\n\n- status: pending\n    \n\nOptional fields:\n\n- phone\n    \n\nAgency registration is executed inside a database transaction to ensure data consistency.\n\n### Login\n\n`POST /api/login`\n\nAuthenticates a user using email and password.\n\nOn successful authentication, the API returns:\n\n- User information\n    \n- Sanctum access token\n    \n\nSuspended accounts are not allowed to log in.\n\n### Logout\n\n`POST /api/logout`\n\nRequires authentication using a Bearer token.\n\nRevokes the user's current Sanctum access token.\n\n### Authentication\n\nProtected endpoints must include:\n\n`Authorization: Bearer {token}`  \n  \n\n### Status Codes\n\n- `200` Successful request\n    \n- `201` Resource created successfully\n    \n- `401` Invalid credentials or unauthenticated\n    \n- `403` Account suspended or access forbidden\n    \n- `422` Validation error"
+    "info": {
+        "_postman_id": "28d9e6fb-d423-459d-90fe-cadccf3aa547",
+        "name": "Global car management API",
+        "description": "All API routes, organized like backend/routes/api.php.\n\nHow to use:\n1. Select the \"Global car managment env\" environment (base_url = http://localhost:8000/api).\n2. Seed demo data: docker compose exec backend php artisan migrate:fresh --seed\n3. Run \"1. Auth > Login as Client / Agency / Admin\" (password: password). Tokens are saved automatically.\n4. Run \"2. Catalogue > Cities\" and \"Cars\" to fill {{city_id}} and {{car_id}}.\n\nEach folder already uses the right token. Requests that create or list things save the ids used by the next requests.",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+        "_exporter_id": "51931746"
     },
-    {
-      "name": "Cities",
-      "item": [
+    "item": [
         {
-          "name": "Cities List",
-          "request": {
-            "method": "GET",
-            "header": []
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "Admin",
-      "item": [
-        {
-          "name": "Approve agency",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
+            "name": "1. Auth (public)",
+            "description": "Register, login and password reset. No token needed.",
+            "item": [
                 {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
+                    "name": "Register Client",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/register/client",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "register",
+                                "client"
+                            ]
+                        },
+                        "description": "Create a client account.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"first_name\": \"Amina\",\n    \"last_name\": \"Benali\",\n    \"email\": \"amina.benali@example.com\",\n    \"password\": \"Password123\",\n    \"password_confirmation\": \"Password123\",\n    \"phone\": \"+212611111111\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Register Agency",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/register/agency",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "register",
+                                "agency"
+                            ]
+                        },
+                        "description": "Create an agency owner and a PENDING agency (an admin must approve it). Run \"Cities\" first to fill {{city_id}}.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"first_name\": \"Omar\",\n    \"last_name\": \"Owner\",\n    \"email\": \"owner@tangier-rent.ma\",\n    \"password\": \"Password123\",\n    \"password_confirmation\": \"Password123\",\n    \"phone\": \"+212622222222\",\n    \"agency_name\": \"Tangier Rent Cars\",\n    \"agency_city\": \"{{city_id}}\",\n    \"address\": \"Boulevard Pasteur, Tangier\",\n    \"agency_phone\": \"+212539000000\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Login as Client",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/login",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "login"
+                            ]
+                        },
+                        "description": "Seeded client account (password: password). Saves the token in {{client_token}}.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"email\": \"client@example.com\",\n    \"password\": \"password\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "response": [],
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                                    "    const data = pm.response.json();",
+                                    "    const value = data.token;",
+                                    "    if (value) {",
+                                    "        pm.environment.set('client_token', value);",
+                                    "        console.log('client_token =', value);",
+                                    "    }",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Login as Agency",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/login",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "login"
+                            ]
+                        },
+                        "description": "Seeded agency account (password: password). Saves the token in {{agency_token}}.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"email\": \"agency@example.com\",\n    \"password\": \"password\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "response": [],
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                                    "    const data = pm.response.json();",
+                                    "    const value = data.token;",
+                                    "    if (value) {",
+                                    "        pm.environment.set('agency_token', value);",
+                                    "        console.log('agency_token =', value);",
+                                    "    }",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Login as Admin",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/login",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "login"
+                            ]
+                        },
+                        "description": "Seeded admin account (password: password). Saves the token in {{admin_token}}.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"email\": \"admin@example.com\",\n    \"password\": \"password\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "response": [],
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                                    "    const data = pm.response.json();",
+                                    "    const value = data.token;",
+                                    "    if (value) {",
+                                    "        pm.environment.set('admin_token', value);",
+                                    "        console.log('admin_token =', value);",
+                                    "    }",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Forgot Password",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/forgot-password",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "forgot-password"
+                            ]
+                        },
+                        "description": "Sends a reset link by email (log mailer in dev: see storage/logs/laravel.log). Always returns the same message. Max 5 requests / minute.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"email\": \"client@example.com\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Reset Password",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/reset-password",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "reset-password"
+                            ]
+                        },
+                        "description": "Copy the token from the reset link into {{reset_token}}. Max 5 requests / minute.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"token\": \"{{reset_token}}\",\n    \"email\": \"client@example.com\",\n    \"password\": \"NewPassword123\",\n    \"password_confirmation\": \"NewPassword123\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "response": []
                 }
-              ]
-            },
-            "method": "PATCH",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/admin/agencies/{{agency_id}}/approve",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "admin",
-                "agencies",
-                "{{agency_id}}",
-                "approve"
-              ]
+            ],
+            "auth": {
+                "type": "noauth"
             }
-          },
-          "response": []
         },
         {
-          "name": "Reject Agency",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
+            "name": "2. Catalogue (public)",
+            "description": "Cities, cars, reviews and SmartDrive. No token needed.",
+            "item": [
                 {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
+                    "name": "Cities",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/cities",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "cities"
+                            ]
+                        },
+                        "description": "Active cities. Saves the first city id in {{city_id}}."
+                    },
+                    "response": [],
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                                    "    const data = pm.response.json();",
+                                    "    const value = data[0] && data[0].id;",
+                                    "    if (value) {",
+                                    "        pm.environment.set('city_id', value);",
+                                    "        console.log('city_id =', value);",
+                                    "    }",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Cars (search & filters)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/cars",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "cars"
+                            ],
+                            "query": [
+                                {
+                                    "key": "q",
+                                    "value": "clio",
+                                    "description": "Search brand or model",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "city_id",
+                                    "value": "{{city_id}}",
+                                    "description": "City id",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "type",
+                                    "value": "hatchback",
+                                    "description": "sedan, suv, hatchback, coupe, van, truck",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "transmission",
+                                    "value": "automatic",
+                                    "description": "manual, automatic",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "energy_type",
+                                    "value": "diesel",
+                                    "description": "gasoline, diesel, hybrid, electric",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "min_seats",
+                                    "value": "5",
+                                    "description": "Minimum seats",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "min_price",
+                                    "value": "200",
+                                    "description": "Minimum daily price (MAD)",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "max_price",
+                                    "value": "500",
+                                    "description": "Maximum daily price (MAD)",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "start_at",
+                                    "value": "2026-10-10",
+                                    "description": "With end_at: only cars free for the whole period",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "end_at",
+                                    "value": "2026-10-13",
+                                    "description": "With start_at",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "sort",
+                                    "value": "price_asc",
+                                    "description": "price_asc, price_desc, newest",
+                                    "disabled": true
+                                }
+                            ]
+                        },
+                        "description": "Available cars of approved agencies. Enable the filters you need. Saves the first car id in {{car_id}}."
+                    },
+                    "response": [],
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                                    "    const data = pm.response.json();",
+                                    "    const value = data.cars[0] && data.cars[0].id;",
+                                    "    if (value) {",
+                                    "        pm.environment.set('car_id', value);",
+                                    "        console.log('car_id =', value);",
+                                    "    }",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Car details",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/cars/{{car_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "cars",
+                                "{{car_id}}"
+                            ]
+                        },
+                        "description": "One public car with its agency points. Saves a pickup point id in {{pickup_point_id}} (used to create a reservation)."
+                    },
+                    "response": [],
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                                    "    const data = pm.response.json();",
+                                    "    const value = data.car.agency.agency_points[0] && data.car.agency.agency_points[0].id;",
+                                    "    if (value) {",
+                                    "        pm.environment.set('pickup_point_id', value);",
+                                    "        console.log('pickup_point_id =', value);",
+                                    "    }",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Car availability",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/cars/{{car_id}}/availability?start_at=2026-10-10&end_at=2026-10-13",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "cars",
+                                "{{car_id}}",
+                                "availability"
+                            ],
+                            "query": [
+                                {
+                                    "key": "start_at",
+                                    "value": "2026-10-10",
+                                    "description": "Start date"
+                                },
+                                {
+                                    "key": "end_at",
+                                    "value": "2026-10-13",
+                                    "description": "End date"
+                                }
+                            ]
+                        },
+                        "description": "Is the car free between two dates?"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Car reviews",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/cars/{{car_id}}/reviews",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "cars",
+                                "{{car_id}}",
+                                "reviews"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1",
+                                    "description": "Page number",
+                                    "disabled": true
+                                }
+                            ]
+                        },
+                        "description": "Paginated reviews of a car (10 per page)."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Agency reviews",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/agencies/{{agency_id}}/reviews",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "agencies",
+                                "{{agency_id}}",
+                                "reviews"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1",
+                                    "description": "Page number",
+                                    "disabled": true
+                                }
+                            ]
+                        },
+                        "description": "Paginated reviews of an agency (10 per page)."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "SmartDrive - Eligible vehicles",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/smartdrive/eligible-vehicles",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "smartdrive",
+                                "eligible-vehicles"
+                            ]
+                        },
+                        "description": "SCRUM-173. Vehicles that can really be rented for this trip + the client preferences for the AI. See docs/api/smartdrive.md. Max 30 requests / minute.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"budget_per_day\": 360,\n    \"start_at\": \"2026-10-10\",\n    \"end_at\": \"2026-10-13\",\n    \"city_id\": \"{{city_id}}\",\n    \"passengers\": 2,\n    \"vehicle_type\": \"hatchback\",\n    \"transmission\": \"automatic\",\n    \"energy_type\": \"gasoline\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "response": []
                 }
-              ]
-            },
-            "method": "PATCH",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/admin/agencies/{{agency_id}}/reject",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "admin",
-                "agencies",
-                "{{agency_id}}",
-                "reject"
-              ]
+            ],
+            "auth": {
+                "type": "noauth"
             }
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "Agency",
-      "item": [
-        {
-          "name": "Agency Points",
-          "item": [
-            {
-              "name": "Activate/Deactivate point",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{token}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "PATCH",
-                "header": [],
-                "body": {
-                  "mode": "raw",
-                  "raw": "",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
-                "url": {
-                  "raw": "{{base_url}}/agency/points/{{point_id}}/toggle-status",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "agency",
-                    "points",
-                    "{{point_id}}",
-                    "toggle-status"
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "Update point",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{token}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "PUT",
-                "header": [
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  },
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n    \"name\": \"Tangier Airport Updateed\",\n    \"allows_pickup\": false,\n    \"allows_return\": true\n}"
-                },
-                "url": {
-                  "raw": "{{base_url}}/agency/points/{{point_id}}",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "agency",
-                    "points",
-                    "{{point_id}}"
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "Show point",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{token}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{base_url}}/agency/points/{{point_id}}",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "agency",
-                    "points",
-                    "{{point_id}}"
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "List points",
-              "protocolProfileBehavior": {
-                "disableBodyPruning": true
-              },
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{token}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "GET",
-                "header": [],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\r\n    \"city_id\": \"{{city_id}}\",\r\n    \"name\": \"Tangier Airport\",\r\n    \"address\": \"Ibn Battouta Airport, Tangier\",\r\n    \"latitude\": 35.7269,\r\n    \"longitude\": -5.9169,\r\n    \"allows_pickup\": true,\r\n    \"allows_return\": true,\r\n    \"opening_hours\": {\r\n        \"monday\": \"09:00-18:00\",\r\n        \"tuesday\": \"09:00-18:00\"\r\n    },\r\n    \"instructions\": \"Meet at the main entrance.\"\r\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
-                "url": {
-                  "raw": "{{base_url}}/agency/points",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "agency",
-                    "points"
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "Create point",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{token}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "POST",
-                "header": [],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\r\n    \"city_id\": \"{{city_id}}\",\r\n    \"name\": \"Tangier Airport\",\r\n    \"address\": \"Ibn Battouta Airport, Tangier\",\r\n    \"latitude\": 35.7269,\r\n    \"longitude\": -5.9169,\r\n    \"allows_pickup\": true,\r\n    \"allows_return\": true,\r\n    \"opening_hours\": {\r\n        \"monday\": \"09:00-18:00\",\r\n        \"tuesday\": \"09:00-18:00\"\r\n    },\r\n    \"instructions\": \"Meet at the main entrance.\"\r\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
-                "url": {
-                  "raw": "{{base_url}}/agency/points",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "agency",
-                    "points"
-                  ]
-                }
-              },
-              "response": []
-            }
-          ]
         },
         {
-          "name": "Get Agency Profile",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
+            "name": "3. Account (any logged-in user)",
+            "description": "Uses {{client_token}}; change the token to test another role.",
+            "item": [
                 {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
+                    "name": "Me",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/me",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "me"
+                            ]
+                        },
+                        "description": "The logged-in user."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Logout",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/logout",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "logout"
+                            ]
+                        },
+                        "description": "Deletes the current token."
+                    },
+                    "response": []
                 }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/agency/profile",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "agency",
-                "profile"
-              ]
+            ],
+            "auth": {
+                "type": "bearer",
+                "bearer": [
+                    {
+                        "key": "token",
+                        "value": "{{client_token}}",
+                        "type": "string"
+                    }
+                ]
             }
-          },
-          "response": []
         },
         {
-          "name": "Update Agency Profile",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
+            "name": "4. Client",
+            "description": "Run \"Login as Client\" first.",
+            "item": [
                 {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
+                    "name": "Reservations",
+                    "description": "Client reservations.",
+                    "item": [
+                        {
+                            "name": "My reservations",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/reservations",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "reservations"
+                                    ]
+                                },
+                                "description": "Reservations of the logged-in client."
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "Create reservation",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/reservations",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "reservations"
+                                    ]
+                                },
+                                "description": "Run \"Car details\" first to fill {{car_id}} and {{pickup_point_id}}. Saves {{reservation_id}}.",
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"car_id\": \"{{car_id}}\",\n    \"pickup_point_id\": \"{{pickup_point_id}}\",\n    \"return_point_id\": \"{{pickup_point_id}}\",\n    \"start_at\": \"2026-10-10 10:00:00\",\n    \"end_at\": \"2026-10-13 10:00:00\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "response": [],
+                            "event": [
+                                {
+                                    "listen": "test",
+                                    "script": {
+                                        "type": "text/javascript",
+                                        "exec": [
+                                            "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                                            "    const data = pm.response.json();",
+                                            "    const value = data.reservation && data.reservation.id;",
+                                            "    if (value) {",
+                                            "        pm.environment.set('reservation_id', value);",
+                                            "        console.log('reservation_id =', value);",
+                                            "    }",
+                                            "}"
+                                        ]
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "name": "Show reservation",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/reservations/{{reservation_id}}",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "reservations",
+                                        "{{reservation_id}}"
+                                    ]
+                                },
+                                "description": "One of my reservations."
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "Update reservation",
+                            "request": {
+                                "method": "PUT",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/reservations/{{reservation_id}}",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "reservations",
+                                        "{{reservation_id}}"
+                                    ]
+                                },
+                                "description": "Change points or dates. Dates cannot change once the reservation is paid.",
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"start_at\": \"2026-10-11 10:00:00\",\n    \"end_at\": \"2026-10-14 10:00:00\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "Cancel reservation",
+                            "request": {
+                                "method": "PATCH",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/reservations/{{reservation_id}}/cancel",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "reservations",
+                                        "{{reservation_id}}",
+                                        "cancel"
+                                    ]
+                                },
+                                "description": "Paid: 100% refund 24h+ before pickup, otherwise 50% pending agency decision."
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "Dispute reservation",
+                            "request": {
+                                "method": "PATCH",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/reservations/{{reservation_id}}/dispute",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "reservations",
+                                        "{{reservation_id}}",
+                                        "dispute"
+                                    ]
+                                },
+                                "description": "Only for picked up reservations."
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "Confirm pickup (client)",
+                            "request": {
+                                "method": "PATCH",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/reservations/{{reservation_id}}/pickup/confirm-client",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "reservations",
+                                        "{{reservation_id}}",
+                                        "pickup",
+                                        "confirm-client"
+                                    ]
+                                },
+                                "description": "Status becomes picked_up when the agency has confirmed too."
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "Confirm return (client)",
+                            "request": {
+                                "method": "PATCH",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/reservations/{{reservation_id}}/return/confirm-client",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "reservations",
+                                        "{{reservation_id}}",
+                                        "return",
+                                        "confirm-client"
+                                    ]
+                                },
+                                "description": "Status becomes completed when the agency has confirmed too."
+                            },
+                            "response": []
+                        }
+                    ]
+                },
+                {
+                    "name": "Payments",
+                    "description": "Client payments.",
+                    "item": [
+                        {
+                            "name": "Payment history",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/payments",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "payments"
+                                    ]
+                                },
+                                "description": "My payments with reservation, car, agency and refund."
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "Pay reservation",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/payments",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "payments"
+                                    ]
+                                },
+                                "description": "Simulated payment of a pending reservation (status becomes confirmed). Saves {{payment_id}}.",
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"reservation_id\": \"{{reservation_id}}\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "response": [],
+                            "event": [
+                                {
+                                    "listen": "test",
+                                    "script": {
+                                        "type": "text/javascript",
+                                        "exec": [
+                                            "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                                            "    const data = pm.response.json();",
+                                            "    const value = data.payment && data.payment.id;",
+                                            "    if (value) {",
+                                            "        pm.environment.set('payment_id', value);",
+                                            "        console.log('payment_id =', value);",
+                                            "    }",
+                                            "}"
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "name": "Reviews",
+                    "description": "Client reviews (only for completed reservations).",
+                    "item": [
+                        {
+                            "name": "My reviews",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/reviews",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "reviews"
+                                    ]
+                                },
+                                "description": "Reviews written by the logged-in client."
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "Create review",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/reviews",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "reviews"
+                                    ]
+                                },
+                                "description": "The reservation must be completed. Saves {{review_id}}.",
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"reservation_id\": \"{{reservation_id}}\",\n    \"car_rating\": 5,\n    \"agency_rating\": 4.5,\n    \"comment\": \"Voiture propre, agence trÃ¨s professionnelle.\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "response": [],
+                            "event": [
+                                {
+                                    "listen": "test",
+                                    "script": {
+                                        "type": "text/javascript",
+                                        "exec": [
+                                            "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                                            "    const data = pm.response.json();",
+                                            "    const value = data.review && data.review.id;",
+                                            "    if (value) {",
+                                            "        pm.environment.set('review_id', value);",
+                                            "        console.log('review_id =', value);",
+                                            "    }",
+                                            "}"
+                                        ]
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "name": "Show review",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/reviews/{{review_id}}",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "reviews",
+                                        "{{review_id}}"
+                                    ]
+                                },
+                                "description": "One review."
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "Update review",
+                            "request": {
+                                "method": "PUT",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/reviews/{{review_id}}",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "reviews",
+                                        "{{review_id}}"
+                                    ]
+                                },
+                                "description": "Only my own review.",
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"agency_rating\": 5,\n    \"comment\": \"Mise Ã  jour : excellent service.\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "Delete review",
+                            "request": {
+                                "method": "DELETE",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/reviews/{{review_id}}",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "reviews",
+                                        "{{review_id}}"
+                                    ]
+                                },
+                                "description": "Only my own review."
+                            },
+                            "response": []
+                        }
+                    ]
+                },
+                {
+                    "name": "Client access test",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/client/test",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "client",
+                                "test"
+                            ]
+                        },
+                        "description": "Checks the client role middleware."
+                    },
+                    "response": []
                 }
-              ]
-            },
-            "method": "PUT",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\r\n  \"name\": \"Updated Agency Name\",\r\n  \"email\": \"updated@agency.com\"\r\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{base_url}}/agency/profile",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "agency",
-                "profile"
-              ]
+            ],
+            "auth": {
+                "type": "bearer",
+                "bearer": [
+                    {
+                        "key": "token",
+                        "value": "{{client_token}}",
+                        "type": "string"
+                    }
+                ]
             }
-          },
-          "response": []
+        },
+        {
+            "name": "5. Agency (any status)",
+            "description": "Run \"Login as Agency\" first. Works even while the agency is pending.",
+            "item": [
+                {
+                    "name": "Get agency profile",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/agency/profile",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "agency",
+                                "profile"
+                            ]
+                        },
+                        "description": "The agency of the logged-in owner."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update agency profile",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/agency/profile",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "agency",
+                                "profile"
+                            ]
+                        },
+                        "description": "All fields optional.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"Demo Rent Cars\",\n    \"email\": \"agency@example.com\",\n    \"phone\": \"+212539111111\",\n    \"address\": \"Avenue Mohammed V, Tangier\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Reject reservation",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/reservations/{{reservation_id}}/reject",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "reservations",
+                                "{{reservation_id}}",
+                                "reject"
+                            ]
+                        },
+                        "description": "Only confirmed (paid) reservations. Refunds 100%.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"reason\": \"VÃ©hicule indisponible Ã  ces dates.\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Create refund",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/refunds",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "refunds"
+                            ]
+                        },
+                        "description": "Refund a paid payment before pickup. percentage (50-100) is used for late cancellations.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"payment_id\": \"{{payment_id}}\",\n    \"percentage\": 75,\n    \"reason\": \"Geste commercial.\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Refund decision",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/refunds/{{refund_id}}/decision",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "refunds",
+                                "{{refund_id}}",
+                                "decision"
+                            ]
+                        },
+                        "description": "Decide a pending refund (late cancellation) within 2 hours, 50-100%. Get the id from \"Refunds\".",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"percentage\": 80,\n    \"reason\": \"Annulation justifiÃ©e.\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "response": []
+                }
+            ],
+            "auth": {
+                "type": "bearer",
+                "bearer": [
+                    {
+                        "key": "token",
+                        "value": "{{agency_token}}",
+                        "type": "string"
+                    }
+                ]
+            }
+        },
+        {
+            "name": "6. Approved agency",
+            "description": "Run \"Login as Agency\" first. The agency must be approved.",
+            "item": [
+                {
+                    "name": "Dashboard",
+                    "description": "Lists and statistics.",
+                    "item": [
+                        {
+                            "name": "Reservations",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/agency/reservations",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "agency",
+                                        "reservations"
+                                    ],
+                                    "query": [
+                                        {
+                                            "key": "status",
+                                            "value": "confirmed",
+                                            "description": "pending, confirmed, rejected, picked_up, completed, cancelled, disputed",
+                                            "disabled": true
+                                        },
+                                        {
+                                            "key": "car_id",
+                                            "value": "{{car_id}}",
+                                            "description": "One car",
+                                            "disabled": true
+                                        },
+                                        {
+                                            "key": "from",
+                                            "value": "2026-10-01",
+                                            "description": "Calendar start (with to)",
+                                            "disabled": true
+                                        },
+                                        {
+                                            "key": "to",
+                                            "value": "2026-10-31",
+                                            "description": "Calendar end (with from)",
+                                            "disabled": true
+                                        }
+                                    ]
+                                },
+                                "description": "Reservations of my agency. Enable filters as needed (from + to together = calendar view). Saves {{reservation_id}}."
+                            },
+                            "response": [],
+                            "event": [
+                                {
+                                    "listen": "test",
+                                    "script": {
+                                        "type": "text/javascript",
+                                        "exec": [
+                                            "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                                            "    const data = pm.response.json();",
+                                            "    const value = data.reservations[0] && data.reservations[0].id;",
+                                            "    if (value) {",
+                                            "        pm.environment.set('reservation_id', value);",
+                                            "        console.log('reservation_id =', value);",
+                                            "    }",
+                                            "}"
+                                        ]
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "name": "Refunds",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/agency/refunds",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "agency",
+                                        "refunds"
+                                    ],
+                                    "query": [
+                                        {
+                                            "key": "status",
+                                            "value": "pending",
+                                            "description": "pending, processing, processed, failed",
+                                            "disabled": true
+                                        }
+                                    ]
+                                },
+                                "description": "Refunds of my agency. Saves {{refund_id}}."
+                            },
+                            "response": [],
+                            "event": [
+                                {
+                                    "listen": "test",
+                                    "script": {
+                                        "type": "text/javascript",
+                                        "exec": [
+                                            "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                                            "    const data = pm.response.json();",
+                                            "    const value = data.refunds[0] && data.refunds[0].id;",
+                                            "    if (value) {",
+                                            "        pm.environment.set('refund_id', value);",
+                                            "        console.log('refund_id =', value);",
+                                            "    }",
+                                            "}"
+                                        ]
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "name": "Stats",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/agency/stats",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "agency",
+                                        "stats"
+                                    ],
+                                    "query": [
+                                        {
+                                            "key": "year",
+                                            "value": "2026",
+                                            "description": "Default: current year",
+                                            "disabled": true
+                                        }
+                                    ]
+                                },
+                                "description": "Revenue per month, reservations by status, occupancy this month, rating."
+                            },
+                            "response": []
+                        }
+                    ]
+                },
+                {
+                    "name": "Points",
+                    "description": "Pickup / return points.",
+                    "item": [
+                        {
+                            "name": "List points",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/agency/points",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "agency",
+                                        "points"
+                                    ]
+                                },
+                                "description": "My points."
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "Create point",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/agency/points",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "agency",
+                                        "points"
+                                    ]
+                                },
+                                "description": "Saves {{point_id}}.",
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"city_id\": \"{{city_id}}\",\n    \"name\": \"Agence Centre-ville\",\n    \"address\": \"12 Rue de la LibertÃ©\",\n    \"latitude\": 35.7673,\n    \"longitude\": -5.7998,\n    \"allows_pickup\": true,\n    \"allows_return\": true,\n    \"opening_hours\": {\n        \"monday_friday\": \"08:00-19:00\",\n        \"saturday\": \"09:00-13:00\"\n    },\n    \"instructions\": \"Parking devant l'agence.\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "response": [],
+                            "event": [
+                                {
+                                    "listen": "test",
+                                    "script": {
+                                        "type": "text/javascript",
+                                        "exec": [
+                                            "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                                            "    const data = pm.response.json();",
+                                            "    const value = data.point && data.point.id;",
+                                            "    if (value) {",
+                                            "        pm.environment.set('point_id', value);",
+                                            "        console.log('point_id =', value);",
+                                            "    }",
+                                            "}"
+                                        ]
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "name": "Show point",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/agency/points/{{point_id}}",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "agency",
+                                        "points",
+                                        "{{point_id}}"
+                                    ]
+                                },
+                                "description": "One of my points."
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "Update point",
+                            "request": {
+                                "method": "PUT",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/agency/points/{{point_id}}",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "agency",
+                                        "points",
+                                        "{{point_id}}"
+                                    ]
+                                },
+                                "description": "All fields optional.",
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"name\": \"Agence Centre-ville (nouveau)\",\n    \"allows_return\": false\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "Activate / deactivate point",
+                            "request": {
+                                "method": "PATCH",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/agency/points/{{point_id}}/toggle-status",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "agency",
+                                        "points",
+                                        "{{point_id}}",
+                                        "toggle-status"
+                                    ]
+                                },
+                                "description": "Switches is_active."
+                            },
+                            "response": []
+                        }
+                    ]
+                },
+                {
+                    "name": "Cars",
+                    "description": "My fleet.",
+                    "item": [
+                        {
+                            "name": "List cars",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/agency/cars",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "agency",
+                                        "cars"
+                                    ]
+                                },
+                                "description": "My cars with images."
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "Create car",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/agency/cars",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "agency",
+                                        "cars"
+                                    ]
+                                },
+                                "description": "gasoline/diesel need fuel_consumption, electric needs electric_range, hybrid needs both. Saves {{car_id}}.",
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"city_id\": \"{{city_id}}\",\n    \"brand\": \"Renault\",\n    \"model\": \"Clio\",\n    \"year\": 2024,\n    \"color\": \"Blanc\",\n    \"plate_number\": \"12345-A-40\",\n    \"type\": \"hatchback\",\n    \"transmission\": \"automatic\",\n    \"seats\": 5,\n    \"daily_price\": 320,\n    \"energy_type\": \"gasoline\",\n    \"fuel_consumption\": 5.4,\n    \"images\": [\n        {\n            \"url\": \"https://picsum.photos/seed/clio/800/600\",\n            \"is_primary\": true,\n            \"display_order\": 0\n        }\n    ]\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "response": [],
+                            "event": [
+                                {
+                                    "listen": "test",
+                                    "script": {
+                                        "type": "text/javascript",
+                                        "exec": [
+                                            "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                                            "    const data = pm.response.json();",
+                                            "    const value = data.car && data.car.id;",
+                                            "    if (value) {",
+                                            "        pm.environment.set('car_id', value);",
+                                            "        console.log('car_id =', value);",
+                                            "    }",
+                                            "}"
+                                        ]
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "name": "Show car",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/agency/cars/{{car_id}}",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "agency",
+                                        "cars",
+                                        "{{car_id}}"
+                                    ]
+                                },
+                                "description": "One of my cars."
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "Update car",
+                            "request": {
+                                "method": "PUT",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/agency/cars/{{car_id}}",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "agency",
+                                        "cars",
+                                        "{{car_id}}"
+                                    ]
+                                },
+                                "description": "All fields optional.",
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"daily_price\": 350,\n    \"color\": \"Gris\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "Disable car",
+                            "request": {
+                                "method": "PATCH",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/agency/cars/{{car_id}}/disable",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "agency",
+                                        "cars",
+                                        "{{car_id}}",
+                                        "disable"
+                                    ]
+                                },
+                                "description": "Status becomes unavailable."
+                            },
+                            "response": []
+                        }
+                    ]
+                },
+                {
+                    "name": "Car images",
+                    "description": "Images of a car.",
+                    "item": [
+                        {
+                            "name": "List images",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/agency/cars/{{car_id}}/images",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "agency",
+                                        "cars",
+                                        "{{car_id}}",
+                                        "images"
+                                    ]
+                                },
+                                "description": "Sorted by display_order."
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "Add image",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/agency/cars/{{car_id}}/images",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "agency",
+                                        "cars",
+                                        "{{car_id}}",
+                                        "images"
+                                    ]
+                                },
+                                "description": "Saves {{image_id}}.",
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"url\": \"https://picsum.photos/seed/interior/800/600\",\n    \"is_primary\": false,\n    \"display_order\": 1\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "response": [],
+                            "event": [
+                                {
+                                    "listen": "test",
+                                    "script": {
+                                        "type": "text/javascript",
+                                        "exec": [
+                                            "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                                            "    const data = pm.response.json();",
+                                            "    const value = data.image && data.image.id;",
+                                            "    if (value) {",
+                                            "        pm.environment.set('image_id', value);",
+                                            "        console.log('image_id =', value);",
+                                            "    }",
+                                            "}"
+                                        ]
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "name": "Set primary image",
+                            "request": {
+                                "method": "PATCH",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/agency/cars/{{car_id}}/images/{{image_id}}/primary",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "agency",
+                                        "cars",
+                                        "{{car_id}}",
+                                        "images",
+                                        "{{image_id}}",
+                                        "primary"
+                                    ]
+                                },
+                                "description": "The other images become non-primary."
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "Delete image",
+                            "request": {
+                                "method": "DELETE",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/agency/cars/{{car_id}}/images/{{image_id}}",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "agency",
+                                        "cars",
+                                        "{{car_id}}",
+                                        "images",
+                                        "{{image_id}}"
+                                    ]
+                                },
+                                "description": "Removes the image."
+                            },
+                            "response": []
+                        }
+                    ]
+                },
+                {
+                    "name": "Pickup / return",
+                    "description": "Agency side of the two-party confirmation.",
+                    "item": [
+                        {
+                            "name": "Confirm pickup (agency)",
+                            "request": {
+                                "method": "PATCH",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/reservations/{{reservation_id}}/pickup/confirm-agency",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "reservations",
+                                        "{{reservation_id}}",
+                                        "pickup",
+                                        "confirm-agency"
+                                    ]
+                                },
+                                "description": "Status becomes picked_up when the client has confirmed too."
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "Confirm return (agency)",
+                            "request": {
+                                "method": "PATCH",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/reservations/{{reservation_id}}/return/confirm-agency",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "reservations",
+                                        "{{reservation_id}}",
+                                        "return",
+                                        "confirm-agency"
+                                    ]
+                                },
+                                "description": "Status becomes completed when the client has confirmed too."
+                            },
+                            "response": []
+                        }
+                    ]
+                }
+            ],
+            "auth": {
+                "type": "bearer",
+                "bearer": [
+                    {
+                        "key": "token",
+                        "value": "{{agency_token}}",
+                        "type": "string"
+                    }
+                ]
+            }
+        },
+        {
+            "name": "7. Admin",
+            "description": "Run \"Login as Admin\" first. Put a pending agency id in {{agency_id}}.",
+            "item": [
+                {
+                    "name": "Approve agency",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/admin/agencies/{{agency_id}}/approve",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "agencies",
+                                "{{agency_id}}",
+                                "approve"
+                            ]
+                        },
+                        "description": "Only pending agencies."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Reject agency",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/admin/agencies/{{agency_id}}/reject",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "agencies",
+                                "{{agency_id}}",
+                                "reject"
+                            ]
+                        },
+                        "description": "Only pending agencies."
+                    },
+                    "response": []
+                }
+            ],
+            "auth": {
+                "type": "bearer",
+                "bearer": [
+                    {
+                        "key": "token",
+                        "value": "{{admin_token}}",
+                        "type": "string"
+                    }
+                ]
+            }
         }
-      ]
-    }
-  ],
-  "event": [
-    {
-      "listen": "prerequest",
-      "script": {
-        "type": "text/javascript",
-        "packages": {},
-        "requests": {},
-        "exec": [
-          ""
-        ]
-      }
-    },
-    {
-      "listen": "test",
-      "script": {
-        "type": "text/javascript",
-        "packages": {},
-        "requests": {},
-        "exec": [
-          ""
-        ]
-      }
-    }
-  ],
-  "variable": [
-    {
-      "key": "{agency}",
-      "value": ""
-    }
-  ]
+    ]
 }

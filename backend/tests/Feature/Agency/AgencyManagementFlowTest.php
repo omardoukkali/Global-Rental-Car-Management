@@ -70,6 +70,10 @@ class AgencyManagementFlowTest extends TestCase
      */
     private function login(string $email, string $password): string
     {
+        // Since SCRUM-197 a new account must confirm its e-mail before login:
+        // here we simulate the click on the link received by e-mail.
+        User::where('email', $email)->first()?->markEmailAsVerified();
+
         $response = $this->postJson('/api/login', [
             'email'    => $email,
             'password' => $password,

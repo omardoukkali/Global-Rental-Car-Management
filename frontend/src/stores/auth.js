@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import api from '@/services/api'
+import { useAgencyStore } from '@/stores/agency'
 
 export const useAuthStore = defineStore('auth', () => {
     const token = ref(localStorage.getItem('token') || null)
@@ -19,6 +20,8 @@ export const useAuthStore = defineStore('auth', () => {
         user.value = null
         localStorage.removeItem('token')
         localStorage.removeItem('user')
+        // Forget the cached agency profile of the previous session
+        try { useAgencyStore().reset() } catch {}
     }
 
     async function login(credentials) {
@@ -33,6 +36,14 @@ export const useAuthStore = defineStore('auth', () => {
 
     async function registerAgency(payload) {
         return api.post('/register/agency', payload)
+    }
+
+    async function forgotPassword(email) {
+        return api.post('/forgot-password', { email })
+    }
+
+    async function resetPassword(payload) {
+        return api.post('/reset-password', payload)
     }
 
     async function logout() {
@@ -61,5 +72,5 @@ export const useAuthStore = defineStore('auth', () => {
         return false
     }
 
-    return { token, user, isAuthenticated, setSession, clearSession, login, registerClient, registerAgency, logout, restoreSession }
+    return { token, user, isAuthenticated, setSession, clearSession, login, registerClient, registerAgency, forgotPassword, resetPassword, logout, restoreSession }
 })

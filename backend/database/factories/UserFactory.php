@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -15,6 +16,18 @@ class UserFactory extends Factory
      * The current password being used by the factory.
      */
     protected static ?string $password;
+
+    /**
+     * role and status are not mass assignable (F-03), so the factory
+     * writes them directly instead of going through fill().
+     */
+    public function newModel(array $attributes = [])
+    {
+        $user = new User();
+        $user->forceFill($attributes);
+
+        return $user;
+    }
 
     /**
      * Define the model's default state.

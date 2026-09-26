@@ -40,12 +40,19 @@ class UpdateAgencyRequest extends FormRequest
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
+    public function messages(): array
+    {
+        return [
+            'phone.regex' => 'Le numéro doit être un numéro marocain valide (ex. +212612345678).',
+        ];
+    }
+
     public function rules(): array
     {
         return [
             'name' => ['sometimes', 'string', 'max:255'],
             'email' => ['sometimes', 'email', 'max:255'],
-            'phone' => ['sometimes', 'string', 'max:20'],
+            'phone' => ['sometimes', 'string', 'regex:/^(\+212|0)[5-7][0-9]{8}$/'],
             'address' => ['sometimes', 'string', 'max:255'],
         ];
     }

@@ -4,9 +4,9 @@
     <div v-if="createdReservation" data-testid="success-banner" class="turo-success">
       <div class="turo-success-icon">✓</div>
       <p class="turo-eyebrow turo-teal-text">Demande envoyée</p>
-      <h1 class="turo-car-title">Réservation confirmée</h1>
+      <h1 class="turo-car-title">Réservation créée</h1>
       <p class="turo-meta">
-        L’agence examinera votre demande. Vous recevrez une mise à jour sous peu.
+        Statut pending. Le paiement confirme la réservation auprès de l’agence.
       </p>
       <div class="turo-success-box">
         <div class="turo-row">
@@ -33,23 +33,19 @@
         </div>
       </div>
       <div class="turo-success-actions">
-        <RouterLink to="/myreservations" class="turo-btn-primary">Voir mes réservations</RouterLink>
+        <RouterLink
+          v-if="createdReservation.id"
+          :to="`/reservations/${createdReservation.id}/pay`"
+          class="turo-btn-primary"
+        >
+          Payer maintenant
+        </RouterLink>
+        <RouterLink to="/myreservations" class="turo-btn-ghost">Voir mes réservations</RouterLink>
         <button type="button" class="turo-btn-ghost" @click="resetForm">Nouvelle réservation</button>
       </div>
     </div>
 
     <template v-else>
-      <div class="turo-topbar">
-        <button type="button" class="turo-back" @click="goBack">← Retour</button>
-        <nav v-if="selectedCar" class="turo-crumb" aria-label="Fil d'Ariane">
-          <span>Maroc</span>
-          <span class="turo-crumb-sep">/</span>
-          <span>{{ locationLabel || 'Location' }}</span>
-          <span class="turo-crumb-sep">/</span>
-          <span class="turo-crumb-current">{{ carTitle }}</span>
-        </nav>
-      </div>
-
       <div v-if="globalError" data-testid="global-error" class="turo-alert">
         <strong>Impossible de finaliser la réservation</strong>
         <p>{{ globalError }}</p>
@@ -61,183 +57,79 @@
       </div>
 
       <form v-else class="turo-layout" @submit.prevent="handleSubmit">
-        <div class="turo-columns">
-          <!-- Car image (left, top) -->
-          <div class="turo-mosaic" :class="mosaicClass">
-            <button
-              type="button"
-              class="turo-mosaic-cell turo-mosaic-main"
-              @click="setActiveFromIndex(0)"
-            >
-              <img
-                v-if="mosaicSlots[0]"
-                :src="mosaicSlots[0]"
-                :alt="carTitle || 'Véhicule'"
-              />
-              <div v-else class="turo-mosaic-empty">
-                {{ selectedCar ? 'Photo indisponible' : 'Choisissez un véhicule ci-dessous' }}
-              </div>
-            </button>
-            <button
-              v-if="mosaicSlots[1]"
-              type="button"
-              class="turo-mosaic-cell turo-mosaic-side"
-              @click="setActiveFromIndex(1)"
-            >
-              <img :src="mosaicSlots[1]" :alt="`${carTitle} — 2`" />
-            </button>
-            <button
-              v-if="mosaicSlots[2]"
-              type="button"
-              class="turo-mosaic-cell turo-mosaic-side"
-              @click="setActiveFromIndex(2)"
-            >
-              <img :src="mosaicSlots[2]" :alt="`${carTitle} — 3`" />
-            </button>
-            <div class="turo-mosaic-actions">
-              <a href="#car-catalog" class="turo-change-car">Changer</a>
-              <span v-if="galleryImages.length" class="turo-view-photos">
-                Voir {{ galleryImages.length }} photo{{ galleryImages.length > 1 ? 's' : '' }}
-              </span>
+        <div class="turo-mosaic" :class="mosaicClass">
+          <button
+            type="button"
+            class="turo-mosaic-cell turo-mosaic-main"
+            @click="openGallery(0)"
+          >
+            <img
+              v-if="mosaicSlots[0]"
+              :src="mosaicSlots[0]"
+              :alt="carTitle || 'Véhicule'"
+            />
+            <div v-else class="turo-mosaic-empty">
+              {{ selectedCar ? 'Photo indisponible' : 'Choisissez un véhicule ci-dessous' }}
             </div>
-          </div>
+          </button>
+          <button
+            v-if="mosaicSlots[1]"
+            type="button"
+            class="turo-mosaic-cell turo-mosaic-side"
+            @click="openGallery(1)"
+          >
+            <img :src="mosaicSlots[1]" :alt="`${carTitle} — 2`" />
+            <span
+              class="turo-heart-btn"
+              :class="{ on: saved }"
+              role="presentation"
+              @click.stop.prevent="saved = !saved"
+            >
+              <svg viewBox="0 0 24 24" width="18" height="18" :fill="saved ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2">
+                <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21.4l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8z" />
+              </svg>
+            </span>
+          </button>
+          <button
+            v-if="mosaicSlots[2]"
+            type="button"
+            class="turo-mosaic-cell turo-mosaic-side"
+            @click="openGallery(2)"
+          >
+            <img :src="mosaicSlots[2]" :alt="`${carTitle} — 3`" />
+            <span v-if="galleryImages.length" class="turo-view-photos">
+              Voir {{ galleryImages.length }} photo{{ galleryImages.length > 1 ? 's' : '' }}
+            </span>
+          </button>
+          <button
+            v-else-if="galleryImages.length"
+            type="button"
+            class="turo-view-photos turo-view-photos-float"
+            @click="openGallery(0)"
+          >
+            Voir {{ galleryImages.length }} photo{{ galleryImages.length > 1 ? 's' : '' }}
+          </button>
+        </div>
 
-          <!-- Book card beside image -->
-          <aside class="turo-sidebar">
-            <div class="turo-book-card">
-              <div class="turo-price-line">
-                <span class="turo-price" data-testid="daily-price">{{ formatMoney(dailyPrice) }}</span>
-                <span class="turo-price-unit">MAD / jour</span>
-              </div>
-              <p class="turo-est-link">
-                {{ formatMoney(totalPrice) }} MAD est. total ·
-                <span data-testid="duration-days">{{ rentalDays }} jour{{ rentalDays > 1 ? 's' : '' }}</span>
-              </p>
-
-              <div class="turo-trip-box">
-                <div class="turo-trip-field">
-                  <label for="start-at" class="turo-field-label">Début du voyage</label>
-                  <input
-                    id="start-at"
-                    v-model="form.start_at"
-                    type="datetime-local"
-                    class="turo-input"
-                    :min="minStartDate"
-                    :class="{ error: errors.start_at }"
-                    required
-                    @change="onDateChange"
-                  />
-                  <p v-if="errors.start_at" class="turo-error">{{ errors.start_at[0] }}</p>
-                </div>
-                <div class="turo-trip-divider" aria-hidden="true" />
-                <div class="turo-trip-field">
-                  <label for="end-at" class="turo-field-label">Fin du voyage</label>
-                  <input
-                    id="end-at"
-                    v-model="form.end_at"
-                    type="datetime-local"
-                    class="turo-input"
-                    :min="form.start_at || minStartDate"
-                    :class="{ error: errors.end_at }"
-                    required
-                    @change="onDateChange"
-                  />
-                  <p v-if="errors.end_at" class="turo-error">{{ errors.end_at[0] }}</p>
-                </div>
-              </div>
-
-              <div v-if="dateError" data-testid="date-error" class="turo-error-box">{{ dateError }}</div>
-
-              <div class="turo-book-voyage">
-                <h3 class="turo-book-voyage-title">Votre voyage</h3>
-                <p class="turo-book-voyage-hint">Lieu de prise en charge et de restitution.</p>
-                <div class="turo-trip-box">
-                  <div class="turo-trip-field">
-                    <label for="pickup-point" class="turo-field-label">Prise en charge</label>
-                    <select
-                      id="pickup-point"
-                      v-model="form.pickup_point_id"
-                      class="turo-select"
-                      :class="{ error: errors.pickup_point_id }"
-                      required
-                    >
-                      <option value="" disabled>Choisir un lieu</option>
-                      <option v-for="p in pickupPoints" :key="p.id" :value="p.id">
-                        {{ pointLabel(p) }}
-                      </option>
-                    </select>
-                    <p v-if="errors.pickup_point_id" class="turo-error">{{ errors.pickup_point_id[0] }}</p>
-                    <p v-else-if="!pickupPoints.length" class="turo-error" data-testid="no-pickup-points">
-                      Aucun lieu de prise en charge pour cette agence.
-                    </p>
-                  </div>
-                  <div class="turo-trip-divider" aria-hidden="true" />
-                  <div class="turo-trip-field">
-                    <label for="return-point" class="turo-field-label">Restitution</label>
-                    <select
-                      id="return-point"
-                      v-model="form.return_point_id"
-                      class="turo-select"
-                      :class="{ error: errors.return_point_id }"
-                      required
-                    >
-                      <option value="" disabled>Choisir un lieu</option>
-                      <option v-for="p in returnPoints" :key="p.id" :value="p.id">
-                        {{ pointLabel(p) }}
-                      </option>
-                    </select>
-                    <p v-if="errors.return_point_id" class="turo-error">{{ errors.return_point_id[0] }}</p>
-                    <p v-else-if="!returnPoints.length" class="turo-error" data-testid="no-return-points">
-                      Aucun lieu de restitution pour cette agence.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div class="turo-breakdown">
-                <div class="turo-row">
-                  <span>{{ formatMoney(dailyPrice) }} MAD × {{ rentalDays }} jour{{ rentalDays > 1 ? 's' : '' }}</span>
-                  <span>{{ formatMoney(subtotal) }} MAD</span>
-                </div>
-                <div class="turo-row turo-row-total">
-                  <span>Total estimé</span>
-                  <span data-testid="total-price">{{ formatMoney(totalPrice) }} MAD</span>
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                class="turo-btn-primary turo-btn-block"
-                data-testid="submit-button"
-                :disabled="submitting || !isValid"
-              >
-                {{ submitting ? 'Envoi en cours…' : 'Continuer' }}
-              </button>
-
-              <p class="turo-note">Vous ne serez pas débité pour l’instant.</p>
-            </div>
-            <p class="turo-report">Signaler ce véhicule</p>
-          </aside>
-
-          <!-- Listing content under image -->
+        <div class="turo-body-grid">
           <div class="turo-main">
             <header class="turo-heading">
               <h1 class="turo-car-title" data-testid="car-name">
                 {{ carTitle || 'Sélectionnez un véhicule' }}
-                <span v-if="selectedCar?.year" class="turo-title-year">{{ selectedCar.year }}</span>
               </h1>
-              <div class="turo-meta-row">
-                <span v-if="agency?.avg_rating" class="turo-rating">
-                  <span class="turo-star">★</span>
-                  {{ agency.avg_rating }}
-                  <span v-if="agency.total_reviews" class="turo-muted">
-                    ({{ agency.total_reviews }} avis)
+              <p class="turo-subtitle">
+                <span v-if="selectedCar?.year">{{ selectedCar.year }}</span>
+                <span v-if="selectedCar?.year && selectedCar?.type"> {{ capitalize(selectedCar.type) }}</span>
+                <template v-if="agency?.avg_rating">
+                  <span class="turo-dot">·</span>
+                  <span class="turo-rating">
+                    {{ Number(agency.avg_rating).toFixed(1) }}
+                    <span class="turo-star">★</span>
+                    <a v-if="agency.total_reviews" class="turo-trips" href="#reviews">
+                      ({{ agency.total_reviews }} avis)
+                    </a>
                   </span>
-                </span>
-                <span v-if="agency?.name" class="turo-hosted-inline">
-                  Proposé par <strong>{{ agency.name }}</strong>
-                </span>
-                <span v-if="locationLabel" class="turo-location">{{ locationLabel }}</span>
+                </template>
                 <span
                   v-if="availabilityStatus"
                   data-testid="availability-pill"
@@ -246,18 +138,69 @@
                 >
                   {{ availabilityStatus.available ? 'Disponible' : 'Indisponible' }}
                 </span>
-              </div>
+              </p>
             </header>
 
-            <div v-if="specs.length" class="turo-specs-strip">
-              <div v-for="spec in specs" :key="spec.label" class="turo-spec-chip">
-                <span class="turo-spec-dot" aria-hidden="true" />
-                <div>
-                  <div class="turo-spec-value">{{ spec.value }}</div>
-                  <div class="turo-spec-label">{{ spec.label }}</div>
-                </div>
+            <div v-if="specs.length" class="turo-pills">
+              <div v-for="spec in specs" :key="spec.label" class="turo-pill">
+                <CarSpecIcon :name="spec.icon" compact />
+                <span>{{ spec.pill || spec.value }}</span>
               </div>
             </div>
+
+            <section v-if="featureGroups.length" class="turo-section">
+              <h2 class="turo-section-title">Équipements du véhicule</h2>
+              <div class="turo-feature-cols">
+                <div v-for="group in featureGroups" :key="group.title" class="turo-feature-col">
+                  <h3 class="turo-feature-heading">{{ group.title }}</h3>
+                  <ul>
+                    <li v-for="item in group.items" :key="item">{{ item }}</li>
+                  </ul>
+                </div>
+              </div>
+            </section>
+
+            <section class="turo-section">
+              <h2 class="turo-section-title">Inclus dans le prix</h2>
+              <ul class="turo-included">
+                <li>
+                  <span class="turo-included-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 17h14v-5H5z"/><path d="M7 12V7h10v5"/><path d="M5 17l-2 4h4"/><path d="M19 17l2 4h-4"/></svg>
+                  </span>
+                  <div>
+                    <strong>Retrait sans comptoir</strong>
+                    <p>Instructions de prise en charge et de restitution via l’agence.</p>
+                  </div>
+                </li>
+                <li>
+                  <span class="turo-included-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>
+                  </span>
+                  <div>
+                    <strong>Conducteurs supplémentaires</strong>
+                    <p>Ajoutez un conducteur selon les conditions de l’agence.</p>
+                  </div>
+                </li>
+                <li>
+                  <span class="turo-included-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                  </span>
+                  <div>
+                    <strong>30 minutes de grâce au retour</strong>
+                    <p>Pas besoin de prolonger le voyage si vous avez moins de 30 minutes de retard.</p>
+                  </div>
+                </li>
+                <li>
+                  <span class="turo-included-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V6l-8-3-8 3v6c0 6 8 10 8 10z"/></svg>
+                  </span>
+                  <div>
+                    <strong>Assistance pendant le voyage</strong>
+                    <p>Contactez l’agence en cas de besoin pendant la location.</p>
+                  </div>
+                </li>
+              </ul>
+            </section>
 
             <section v-if="agency" class="turo-section">
               <h2 class="turo-section-title">Proposé par</h2>
@@ -268,17 +211,25 @@
                     <div>
                       <div class="turo-host-name">{{ agency.name }}</div>
                       <div class="turo-host-meta">
-                        <span v-if="agency.avg_rating">★ {{ agency.avg_rating }}</span>
+                        <span v-if="agency.avg_rating"><span class="turo-star">★</span> {{ Number(agency.avg_rating).toFixed(1) }}</span>
                         <span v-if="agency.total_reviews"> · {{ agency.total_reviews }} avis</span>
-                        <span v-if="agency.phone"> · {{ agency.phone }}</span>
+                        <span v-if="locationLabel"> · {{ locationLabel }}</span>
                       </div>
                     </div>
-                    <span class="turo-allstar">All-Star Host</span>
+                    <span class="turo-allstar">Agence vérifiée</span>
                   </div>
                   <p class="turo-body turo-host-bio">
-                    Agence vérifiée sur GlobalRental.
+                    Agence partenaire GlobalRental.
                     <template v-if="agency.address"> Basée à {{ agency.address }}.</template>
                   </p>
+                  <RouterLink
+                    v-if="agency.id"
+                    :to="`/agencies/${agency.id}`"
+                    class="turo-change-car"
+                    data-testid="agency-link"
+                  >
+                    Voir la flotte et les avis de l’agence →
+                  </RouterLink>
                 </div>
               </div>
             </section>
@@ -299,64 +250,206 @@
               </p>
             </section>
 
-            <section v-if="highlights.length" class="turo-section">
-              <h2 class="turo-section-title">Équipements du véhicule</h2>
-              <ul class="turo-features">
-                <li v-for="item in highlights" :key="item">
-                  <span class="turo-check" aria-hidden="true">✓</span>
-                  {{ item }}
+            <section v-if="carReviews.length" id="reviews" class="turo-section">
+              <h2 class="turo-section-title">Avis</h2>
+              <p class="turo-review-score">
+                <strong>{{ Number(agency?.avg_rating || avgReviewScore).toFixed(1) }}</strong>
+                <span class="turo-star">★</span>
+                <span>{{ carReviews.length }} avis</span>
+              </p>
+              <ul class="turo-reviews">
+                <li v-for="review in carReviews.slice(0, 3)" :key="review.id">
+                  <p class="turo-review-text">{{ review.comment || 'Séjour recommandé.' }}</p>
+                  <p class="turo-review-meta">
+                    {{ review.user?.first_name || 'Client' }}
+                    <template v-if="review.car_rating"> · {{ Number(review.car_rating).toFixed(1) }}<span class="turo-star">★</span></template>
+                  </p>
                 </li>
               </ul>
             </section>
 
             <section class="turo-section">
               <h2 class="turo-section-title">Règles du voyage</h2>
-              <div class="turo-guidelines">
-                <div class="turo-guideline">
-                  <strong>Âge minimum</strong>
-                  <p>Conducteur âgé d’au moins 21 ans avec permis valide.</p>
-                </div>
-                <div class="turo-guideline">
-                  <strong>Carburant</strong>
-                  <p>Restituez le véhicule avec le même niveau de carburant.</p>
-                </div>
-                <div class="turo-guideline">
-                  <strong>Kilométrage</strong>
-                  <p>Usage normal inclus — confirmez les conditions avec l’agence.</p>
-                </div>
-                <div class="turo-guideline">
-                  <strong>Fumeur</strong>
-                  <p>Véhicule non-fumeur, sauf indication contraire de l’hôte.</p>
-                </div>
-              </div>
-            </section>
-
-            <section class="turo-section">
-              <h2 class="turo-section-title">Politique d’annulation</h2>
-              <div class="turo-policy">
-                <span class="turo-policy-tag">Flexible</span>
-                <h3>Annulation</h3>
-                <p>
-                  Annulation possible tant que la réservation est
-                  <em>en attente</em> ou <em>confirmée</em>, selon les conditions de l’agence.
-                  Vous ne serez pas débité avant confirmation.
-                </p>
-              </div>
+              <ul class="turo-rules">
+                <li>
+                  <strong>Interdiction de fumer</strong>
+                  <p>Véhicule non-fumeur. Un forfait de nettoyage peut s’appliquer.</p>
+                </li>
+                <li>
+                  <strong>Gardez le véhicule propre</strong>
+                  <p>Restituez-le dans un état raisonnable, sans déchets.</p>
+                </li>
+                <li>
+                  <strong>Faites le plein</strong>
+                  <p>Même niveau de carburant qu’au départ, sinon frais possibles.</p>
+                </li>
+                <li>
+                  <strong>Âge minimum 21 ans</strong>
+                  <p>Permis de conduire valide obligatoire au retrait.</p>
+                </li>
+              </ul>
             </section>
           </div>
+
+          <aside class="turo-sidebar">
+            <div class="turo-book-card">
+              <div class="turo-price-block">
+                <p class="turo-total-line">
+                  <span class="turo-price" data-testid="daily-price">{{ formatMoney(dailyPrice) }}</span>
+                  <span class="turo-price-unit">MAD / jour</span>
+                </p>
+                <p class="turo-est-link">
+                  <strong data-testid="total-price">{{ formatMoney(totalPrice) }} MAD total</strong>
+                  <span> · </span>
+                  <span data-testid="duration-days">{{ rentalDays }} jour{{ rentalDays > 1 ? 's' : '' }}</span>
+                </p>
+                <p class="turo-before-tax">Avant frais éventuels de l’agence</p>
+              </div>
+
+              <div class="turo-book-voyage">
+                <h3 class="turo-book-voyage-title">Votre voyage</h3>
+
+                <input
+                  id="start-at"
+                  v-model="form.start_at"
+                  type="datetime-local"
+                  class="turo-sr-only"
+                  :min="minStartDate"
+                  @change="onDateChange"
+                />
+                <input
+                  id="end-at"
+                  v-model="form.end_at"
+                  type="datetime-local"
+                  class="turo-sr-only"
+                  :min="form.start_at || minStartDate"
+                  @change="onDateChange"
+                />
+
+                <label class="turo-dt-label">Début du voyage</label>
+                <div class="turo-dt-row">
+                  <input
+                    :value="startDatePart"
+                    type="date"
+                    class="turo-dt-input"
+                    :min="minStartDate.slice(0, 10)"
+                    required
+                    @input="setStartDate($event.target.value)"
+                  />
+                  <input
+                    :value="startTimePart"
+                    type="time"
+                    class="turo-dt-input"
+                    required
+                    @input="setStartTime($event.target.value)"
+                  />
+                </div>
+                <p v-if="errors.start_at" class="turo-error">{{ errors.start_at[0] }}</p>
+
+                <label class="turo-dt-label">Fin du voyage</label>
+                <div class="turo-dt-row">
+                  <input
+                    :value="endDatePart"
+                    type="date"
+                    class="turo-dt-input"
+                    :min="(form.start_at || minStartDate).slice(0, 10)"
+                    required
+                    @input="setEndDate($event.target.value)"
+                  />
+                  <input
+                    :value="endTimePart"
+                    type="time"
+                    class="turo-dt-input"
+                    required
+                    @input="setEndTime($event.target.value)"
+                  />
+                </div>
+                <p v-if="errors.end_at" class="turo-error">{{ errors.end_at[0] }}</p>
+              </div>
+
+              <div v-if="dateError" data-testid="date-error" class="turo-error-box">{{ dateError }}</div>
+
+              <div class="turo-location-block">
+                <label for="pickup-point" class="turo-dt-label">Prise en charge</label>
+                <select
+                  id="pickup-point"
+                  v-model="form.pickup_point_id"
+                  class="turo-dt-input turo-dt-select"
+                  :class="{ error: errors.pickup_point_id }"
+                  required
+                >
+                  <option value="" disabled>Choisir un lieu</option>
+                  <option v-for="p in pickupPoints" :key="p.id" :value="p.id">
+                    {{ pointLabel(p) }}
+                  </option>
+                </select>
+                <p v-if="errors.pickup_point_id" class="turo-error">{{ errors.pickup_point_id[0] }}</p>
+                <p v-else-if="!pickupPoints.length" class="turo-error" data-testid="no-pickup-points">
+                  Aucun lieu de prise en charge pour cette agence.
+                </p>
+
+                <label for="return-point" class="turo-dt-label">Restitution</label>
+                <select
+                  id="return-point"
+                  v-model="form.return_point_id"
+                  class="turo-dt-input turo-dt-select"
+                  :class="{ error: errors.return_point_id }"
+                  required
+                >
+                  <option value="" disabled>Choisir un lieu</option>
+                  <option v-for="p in returnPoints" :key="p.id" :value="p.id">
+                    {{ pointLabel(p) }}
+                  </option>
+                </select>
+                <p v-if="errors.return_point_id" class="turo-error">{{ errors.return_point_id[0] }}</p>
+                <p v-else-if="!returnPoints.length" class="turo-error" data-testid="no-return-points">
+                  Aucun lieu de restitution pour cette agence.
+                </p>
+              </div>
+
+              <button
+                type="submit"
+                class="turo-btn-primary turo-btn-block"
+                data-testid="submit-button"
+                :disabled="submitting || !isValid"
+              >
+                {{ submitting ? 'Envoi en cours…' : submitLabel }}
+              </button>
+
+              <p v-if="isGuest" class="turo-note" data-testid="guest-note">
+                Connectez-vous ou créez un compte pour envoyer la demande. Vos dates seront conservées.
+              </p>
+              <p v-else class="turo-note">Vous ne serez pas débité pour l’instant.</p>
+
+              <div class="turo-card-policy">
+                <h4>Politique d’annulation</h4>
+                <p>
+                  Annulation gratuite tant que la réservation est en attente.
+                  Plus d’options flexibles au paiement.
+                </p>
+              </div>
+            </div>
+            <p class="turo-report">Signaler ce véhicule</p>
+          </aside>
+        </div>
+
+        <div v-if="galleryOpen" class="turo-lightbox" role="dialog" aria-modal="true" @click.self="galleryOpen = false">
+          <button type="button" class="turo-lightbox-close" @click="galleryOpen = false">Fermer</button>
+          <button type="button" class="turo-lightbox-nav prev" @click="shiftGallery(-1)">‹</button>
+          <img :src="lightboxUrl" :alt="carTitle" />
+          <button type="button" class="turo-lightbox-nav next" @click="shiftGallery(1)">›</button>
         </div>
 
         <!-- Catalog at bottom (replaces dropdown) — same page -->
         <section id="car-catalog" class="turo-catalog turo-section">
           <div class="turo-pick-head">
-            <p class="turo-eyebrow">Catalogue</p>
-            <h2 class="turo-section-title turo-section-title-tight">Choisir un véhicule</h2>
-            <p class="turo-meta">Sélectionnez une autre voiture pour mettre à jour la réservation.</p>
+            <h2 class="turo-section-title turo-section-title-tight">Parcourir d’autres véhicules</h2>
+            <p class="turo-meta">D’autres voitures disponibles aux mêmes dates.</p>
           </div>
 
-          <div v-if="availableCars.length" class="turo-car-grid" data-testid="car-card-grid">
+          <div v-if="similarCars.length" class="turo-car-grid" data-testid="car-card-grid">
             <button
-              v-for="car in availableCars"
+              v-for="car in similarCars"
               :key="car.id"
               type="button"
               class="turo-car-card"
@@ -421,7 +514,7 @@
             </div>
           </div>
           <button type="submit" class="turo-btn-primary" :disabled="submitting || !isValid">
-            {{ submitting ? '…' : 'Continuer' }}
+            {{ submitting ? '…' : submitLabel }}
           </button>
         </div>
       </form>
@@ -431,9 +524,11 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRouter, useRoute, RouterLink } from 'vue-router'
 import reservationsService from '@/services/reservations'
 import carsService from '@/services/cars'
+import CarSpecIcon from '@/components/CarSpecIcon.vue'
+import { useAuthStore } from '@/stores/auth'
 
 const props = defineProps({
   carId: { type: String, default: null },
@@ -441,6 +536,16 @@ const props = defineProps({
 
 const router = useRouter()
 const route = useRoute()
+
+// Public listing: guests can browse, they log in when they send the request
+let auth = null
+try {
+  auth = useAuthStore()
+} catch {
+  auth = null
+}
+const isGuest = computed(() => !!auth && !auth.isAuthenticated)
+const submitLabel = computed(() => (isGuest.value ? 'Se connecter pour réserver' : 'Continuer'))
 
 const loadingCar = ref(false)
 const submitting = ref(false)
@@ -450,6 +555,10 @@ const errors = reactive({})
 const createdReservation = ref(null)
 const availabilityStatus = ref(null)
 const activeImage = ref(null)
+const saved = ref(false)
+const galleryOpen = ref(false)
+const lightboxIndex = ref(0)
+const carReviews = ref([])
 
 const selectedCar = ref(null)
 const availableCars = ref([])
@@ -538,31 +647,85 @@ const specs = computed(() => {
   const car = selectedCar.value
   if (!car) return []
   const list = []
-  if (car.energy_type) list.push({ label: 'Carburant', value: capitalize(car.energy_type) })
-  if (car.seats) list.push({ label: 'Places', value: `${car.seats} places` })
-  if (car.transmission) list.push({ label: 'Boîte', value: capitalize(car.transmission) })
-  if (car.type) list.push({ label: 'Type', value: capitalize(car.type) })
-  if (car.color) list.push({ label: 'Couleur', value: capitalize(car.color) })
+  if (car.seats) {
+    list.push({ icon: 'seats', label: 'Places', value: `${car.seats} places`, pill: `${car.seats} places` })
+  }
+  if (car.energy_type) {
+    list.push({
+      icon: energyIcon(car.energy_type),
+      label: 'Carburant',
+      value: capitalize(car.energy_type),
+      pill: capitalize(car.energy_type),
+    })
+  }
   if (car.fuel_consumption) {
-    list.push({ label: 'Conso.', value: `${car.fuel_consumption} L/100` })
+    list.push({
+      icon: 'gauge',
+      label: 'Conso.',
+      value: `${car.fuel_consumption} L/100`,
+      pill: `${car.fuel_consumption} L/100`,
+    })
+  }
+  if (car.transmission) {
+    list.push({
+      icon: 'gearbox',
+      label: 'Boîte',
+      value: capitalize(car.transmission),
+      pill: capitalize(car.transmission),
+    })
   }
   if (car.electric_range) {
-    list.push({ label: 'Autonomie', value: `${car.electric_range} km` })
+    list.push({
+      icon: 'battery',
+      label: 'Autonomie',
+      value: `${car.electric_range} km`,
+      pill: `${car.electric_range} km`,
+    })
   }
   return list
 })
 
-const highlights = computed(() => {
+const featureGroups = computed(() => {
   const car = selectedCar.value
   if (!car) return []
-  const items = []
-  if (car.transmission) items.push(`Transmission ${car.transmission}`)
-  if (car.seats) items.push(`${car.seats} places assises`)
-  if (car.energy_type) items.push(`Motorisation ${car.energy_type}`)
-  if (pickupPoints.value.length) items.push(`${pickupPoints.value.length} point(s) de retrait`)
-  if (agency.value?.name) items.push(`Hôte : ${agency.value.name}`)
-  items.push('Assistance pendant le voyage')
-  return items
+  const drive = []
+  const comfort = []
+  if (car.transmission) drive.push(`Boîte ${car.transmission}`)
+  if (car.energy_type) drive.push(`Motorisation ${car.energy_type}`)
+  if (car.type) drive.push(capitalize(car.type))
+  if (car.seats) comfort.push(`${car.seats} places assises`)
+  if (car.color) comfort.push(`Couleur ${car.color}`)
+  if (pickupPoints.value.length) comfort.push(`${pickupPoints.value.length} point(s) de retrait`)
+  const groups = []
+  if (drive.length) groups.push({ title: 'Conduite', items: drive })
+  if (comfort.length) groups.push({ title: 'Confort', items: comfort })
+  return groups
+})
+
+const startDatePart = computed(() => form.start_at?.slice(0, 10) || '')
+const startTimePart = computed(() => form.start_at?.slice(11, 16) || '10:00')
+const endDatePart = computed(() => form.end_at?.slice(0, 10) || '')
+const endTimePart = computed(() => form.end_at?.slice(11, 16) || '10:00')
+
+const lightboxUrl = computed(() => {
+  const img = galleryImages.value[lightboxIndex.value]
+  return img ? imageUrl(img) : mosaicSlots.value[0]
+})
+
+const similarCars = computed(() => {
+  const current = selectedCar.value
+  const cars = availableCars.value || []
+  if (!current) return cars.slice(0, 8)
+  const others = cars.filter((car) => car.id !== current.id)
+  const sameBrand = others.filter((car) => car.brand === current.brand)
+  const rest = others.filter((car) => car.brand !== current.brand)
+  return [...sameBrand, ...rest].slice(0, 8)
+})
+
+const avgReviewScore = computed(() => {
+  if (!carReviews.value.length) return 0
+  const sum = carReviews.value.reduce((acc, r) => acc + Number(r.car_rating || r.agency_rating || 0), 0)
+  return sum / carReviews.value.length
 })
 
 const dailyPrice = computed(() =>
@@ -593,6 +756,13 @@ const isValid = computed(
     )
 )
 
+function energyIcon(type) {
+  const value = String(type || '').toLowerCase()
+  if (value.includes('electric') || value.includes('électr')) return 'bolt'
+  if (value.includes('hybrid') || value.includes('hybride')) return 'hybrid'
+  return 'fuel'
+}
+
 function capitalize(value) {
   if (!value) return ''
   return String(value).charAt(0).toUpperCase() + String(value).slice(1)
@@ -607,7 +777,33 @@ function statusLabel(status) {
 }
 
 function pointLabel(p) {
-  return `${p.name}${p.address ? ` — ${p.address}` : p.city ? ` — ${p.city}` : ''}`
+  if (p.city && typeof p.city === 'string') return `${p.name} — ${p.city}`
+  if (p.city?.name) return `${p.name} — ${p.city.name}`
+  return p.name
+}
+
+function toLocalInput(date) {
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
+function applyDefaultTrip() {
+  if (form.start_at && form.end_at) return
+  // Dates carried over from the home search / login redirect
+  const qStart = typeof route?.query?.start_at === 'string' ? route.query.start_at : ''
+  const qEnd = typeof route?.query?.end_at === 'string' ? route.query.end_at : ''
+  if (qStart && qEnd && new Date(qEnd) > new Date(qStart)) {
+    form.start_at = qStart.slice(0, 16)
+    form.end_at = qEnd.slice(0, 16)
+    return
+  }
+  const start = new Date()
+  start.setDate(start.getDate() + 1)
+  start.setHours(10, 0, 0, 0)
+  const end = new Date(start)
+  end.setDate(end.getDate() + 3)
+  form.start_at = toLocalInput(start)
+  form.end_at = toLocalInput(end)
 }
 
 function formatRange(start, end) {
@@ -621,7 +817,7 @@ function formatRange(start, end) {
 
 function goBack() {
   if (window.history.length > 1) router.back()
-  else router.push('/')
+  else router.push('/cars')
 }
 
 function selectCarCard(car) {
@@ -658,6 +854,57 @@ function syncGallery() {
 function setActiveFromIndex(i) {
   const img = galleryImages.value[i]
   if (img) activeImage.value = imageUrl(img)
+}
+
+function openGallery(index) {
+  lightboxIndex.value = index
+  galleryOpen.value = true
+}
+
+function shiftGallery(step) {
+  const total = galleryImages.value.length
+  if (!total) return
+  lightboxIndex.value = (lightboxIndex.value + step + total) % total
+}
+
+function combineDateTime(date, time) {
+  if (!date) return ''
+  return `${date}T${time || '10:00'}`
+}
+
+function setStartDate(date) {
+  form.start_at = combineDateTime(date, startTimePart.value)
+  onDateChange()
+}
+
+function setStartTime(time) {
+  form.start_at = combineDateTime(startDatePart.value || minStartDate.value.slice(0, 10), time)
+  onDateChange()
+}
+
+function setEndDate(date) {
+  form.end_at = combineDateTime(date, endTimePart.value)
+  onDateChange()
+}
+
+function setEndTime(time) {
+  const fallback = form.start_at?.slice(0, 10) || minStartDate.value.slice(0, 10)
+  form.end_at = combineDateTime(endDatePart.value || fallback, time)
+  onDateChange()
+}
+
+async function loadReviews(carId) {
+  if (!carId || typeof carsService.getCarReviews !== 'function') {
+    carReviews.value = []
+    return
+  }
+  try {
+    const res = await carsService.getCarReviews(carId)
+    const payload = res?.reviews
+    carReviews.value = payload?.data || (Array.isArray(payload) ? payload : [])
+  } catch {
+    carReviews.value = []
+  }
 }
 
 function onDateChange() {
@@ -704,6 +951,16 @@ async function handleSubmit() {
   Object.keys(errors).forEach((key) => delete errors[key])
   if (!isValid.value) return
 
+  if (isGuest.value) {
+    // Come back to this car with the same dates after login
+    const redirect = router.resolve({
+      path: `/cars/${form.car_id}`,
+      query: { start_at: form.start_at, end_at: form.end_at },
+    }).fullPath
+    router.push({ name: 'login', query: { redirect } })
+    return
+  }
+
   submitting.value = true
   try {
     const response = await reservationsService.createReservation({
@@ -734,6 +991,16 @@ async function handleSubmit() {
 }
 
 watch(galleryImages, syncGallery)
+watch(
+  () => selectedCar.value?.id,
+  (id) => {
+    if (id) loadReviews(id)
+  }
+)
+watch(
+  () => [form.start_at, form.end_at],
+  () => onDateChange()
+)
 
 onMounted(async () => {
   const targetCarId = form.car_id
@@ -765,6 +1032,7 @@ onMounted(async () => {
       syncPointsFromCar(car)
       syncGallery()
     }
+    applyDefaultTrip()
   } catch (e) {
     console.error('Erreur chargement voitures', e)
     globalError.value = e?.message || 'Impossible de charger le catalogue de voitures.'
@@ -777,9 +1045,8 @@ onMounted(async () => {
 
 <style scoped>
 .turo-page {
-  /* Align with global frontend tokens (style.css :root) */
-  --turo-purple: var(--accent);
-  --turo-purple-pressed: var(--ink-secondary);
+  --turo-purple: #593cfb;
+  --turo-purple-pressed: #4a2ee0;
   --turo-teal: var(--ink-muted);
   --turo-teal-deep: var(--ink-secondary);
   --turo-ink: var(--ink);
@@ -788,10 +1055,10 @@ onMounted(async () => {
   --turo-surface: var(--bg);
   --turo-divider: var(--border);
   --turo-error: #ef4444;
-  --turo-star: var(--ink);
+  --turo-star: #f59e0b; /* same amber as PublicCarCard / AgencyPublic / ReservationDetail */
 
   min-height: 100vh;
-  background: var(--bg);
+  background: #fff;
   color: var(--ink);
   font-family: 'DM Sans', system-ui, sans-serif;
   padding: 16px 16px 110px;
@@ -799,112 +1066,65 @@ onMounted(async () => {
 
 @media (min-width: 1024px) {
   .turo-page {
-    padding: 20px 40px 64px;
+    padding: 24px 40px 64px;
   }
 }
 
-.turo-topbar {
-  max-width: 1180px;
-  margin: 0 auto 12px;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px 20px;
-}
-
-.turo-back {
-  background: none;
-  border: none;
-  color: var(--turo-muted);
-  font-weight: 700;
-  font-size: 0.85rem;
-  cursor: pointer;
+.turo-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
   padding: 0;
-}
-.turo-back:hover {
-  color: var(--turo-ink);
-}
-
-.turo-crumb {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  font-size: 0.78rem;
-  color: var(--turo-muted);
-}
-.turo-crumb-sep {
-  opacity: 0.5;
-}
-.turo-crumb-current {
-  color: var(--turo-ink);
-  font-weight: 600;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .turo-layout {
-  max-width: 1180px;
+  max-width: 1120px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
   gap: 28px;
 }
-.turo-columns {
+
+.turo-body-grid {
   display: grid;
-  gap: 20px;
+  gap: 28px;
   align-items: start;
 }
-.turo-mosaic {
-  order: 1;
-}
-.turo-sidebar {
-  order: 2;
-  display: block;
-}
-.turo-main {
-  order: 3;
-}
 @media (min-width: 1024px) {
-  .turo-columns {
-    grid-template-columns: 1fr 360px;
-    gap: 28px 40px;
-  }
-  .turo-mosaic {
-    grid-column: 1;
-    grid-row: 1;
-    order: unset;
+  .turo-body-grid {
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 40px 56px;
   }
   .turo-sidebar {
-    grid-column: 2;
-    grid-row: 1 / span 2;
     position: sticky;
-    top: 20px;
-    order: unset;
-  }
-  .turo-main {
-    grid-column: 1;
-    grid-row: 2;
-    order: unset;
+    top: 88px;
   }
 }
 
-/* —— Photo mosaic (beside book card) —— */
+/* —— Photo mosaic (full width, separate rounded tiles) —— */
 .turo-mosaic {
   position: relative;
   display: grid;
   gap: 8px;
-  border-radius: 16px;
-  overflow: hidden;
-  min-height: 240px;
-  background: var(--accent);
+  background: transparent;
+  overflow: visible;
+  min-height: 0;
 }
 .turo-mosaic.has-1 {
   grid-template-columns: 1fr;
 }
 .turo-mosaic.has-2 {
-  grid-template-columns: 1.4fr 1fr;
+  grid-template-columns: 1.7fr 1fr;
 }
 .turo-mosaic.has-3 {
-  grid-template-columns: 1.55fr 1fr;
+  grid-template-columns: 1.75fr 1fr;
   grid-template-rows: 1fr 1fr;
+  height: min(52vw, 430px);
 }
 .turo-mosaic.has-3 .turo-mosaic-main {
   grid-row: 1 / span 2;
@@ -914,6 +1134,7 @@ onMounted(async () => {
   .turo-mosaic.has-3 {
     grid-template-columns: 1fr;
     grid-template-rows: none;
+    height: auto;
   }
   .turo-mosaic.has-3 .turo-mosaic-main {
     grid-row: auto;
@@ -927,15 +1148,16 @@ onMounted(async () => {
   margin: 0;
   padding: 0;
   border: none;
-  background: var(--ink);
+  background: #111;
   cursor: pointer;
   overflow: hidden;
   min-height: 180px;
+  border-radius: 12px;
 }
 .turo-mosaic.has-3 .turo-mosaic-main,
 .turo-mosaic.has-2 .turo-mosaic-main,
 .turo-mosaic.has-1 .turo-mosaic-main {
-  min-height: min(42vw, 380px);
+  min-height: min(42vw, 430px);
 }
 .turo-mosaic.has-3 .turo-mosaic-side {
   min-height: 0;
@@ -953,24 +1175,44 @@ onMounted(async () => {
   place-items: center;
   color: var(--ink-muted);
   font-size: 0.9rem;
+  background: #f4f4f5;
 }
-.turo-mosaic-actions {
+.turo-heart-btn {
   position: absolute;
-  right: 14px;
-  bottom: 14px;
-  display: flex;
-  gap: 8px;
-  align-items: center;
+  top: 10px;
+  right: 10px;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: #fff;
+  color: #111;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.12);
   z-index: 2;
 }
+.turo-heart-btn.on {
+  color: #e11d48;
+}
 .turo-view-photos {
-  background: var(--surface);
-  color: var(--ink);
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  background: #fff;
+  color: #111;
   font-size: 0.78rem;
   font-weight: 700;
   padding: 8px 12px;
-  border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(10, 10, 11, 0.12);
+  border-radius: 8px;
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.12);
+  z-index: 2;
+  border: none;
+  cursor: pointer;
+}
+.turo-view-photos-float {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
 }
 .turo-hosted-inline {
   font-size: 0.88rem;
@@ -979,6 +1221,142 @@ onMounted(async () => {
 .turo-hosted-inline strong {
   color: var(--turo-ink);
   font-weight: 700;
+}
+
+.turo-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0 8px;
+}
+.turo-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #f4f4f5;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #111;
+}
+.turo-subtitle {
+  margin: 6px 0 0;
+  font-size: 0.95rem;
+  color: #3f3f46;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.turo-dot {
+  color: #a1a1aa;
+}
+.turo-trips {
+  color: #3f3f46;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  font-weight: 600;
+}
+.turo-feature-cols {
+  display: grid;
+  gap: 20px;
+}
+@media (min-width: 640px) {
+  .turo-feature-cols {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.turo-feature-heading {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+.turo-feature-col ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+  font-size: 0.92rem;
+  color: #3f3f46;
+}
+.turo-included {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 16px;
+}
+.turo-included li {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.turo-included-icon {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  color: #111;
+}
+.turo-included-icon svg {
+  width: 24px;
+  height: 24px;
+}
+.turo-included strong {
+  display: block;
+  font-size: 0.92rem;
+}
+.turo-included p {
+  margin: 2px 0 0;
+  font-size: 0.82rem;
+  color: #71717a;
+  line-height: 1.4;
+}
+.turo-rules {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 14px;
+}
+.turo-rules strong {
+  display: block;
+  font-size: 0.92rem;
+  margin-bottom: 2px;
+}
+.turo-rules p {
+  margin: 0;
+  font-size: 0.84rem;
+  color: #71717a;
+}
+.turo-review-score {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0 0 16px;
+}
+.turo-review-score strong {
+  font-size: 1.8rem;
+  font-weight: 800;
+}
+.turo-reviews {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 16px;
+}
+.turo-review-text {
+  margin: 0 0 6px;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+.turo-review-meta {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #71717a;
+  font-weight: 600;
 }
 
 .turo-specs-strip {
@@ -994,22 +1372,6 @@ onMounted(async () => {
   align-items: center;
   gap: 10px;
   min-width: 110px;
-}
-.turo-spec-dot {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: var(--turo-surface);
-  border: 1px solid var(--turo-divider);
-  flex-shrink: 0;
-  position: relative;
-}
-.turo-spec-dot::after {
-  content: '';
-  position: absolute;
-  inset: 11px;
-  border-radius: 3px;
-  background: var(--accent);
 }
 .turo-spec-chip .turo-spec-value {
   font-weight: 700;
@@ -1050,11 +1412,11 @@ onMounted(async () => {
 }
 .turo-car-title {
   font-family: 'Bricolage Grotesque', 'DM Sans', sans-serif;
-  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-size: clamp(1.7rem, 3vw, 2.15rem);
   font-weight: 800;
-  letter-spacing: -0.03em;
-  margin: 0 0 10px;
-  line-height: 1.15;
+  letter-spacing: -0.04em;
+  margin: 0;
+  line-height: 1.1;
 }
 .turo-title-year {
   color: var(--turo-muted);
@@ -1234,7 +1596,7 @@ onMounted(async () => {
   font-weight: 600;
 }
 .turo-card-star {
-  color: var(--turo-purple);
+  color: var(--turo-star);
   font-size: 0.78rem;
   line-height: 1;
 }
@@ -1398,9 +1760,6 @@ onMounted(async () => {
   display: flex;
   gap: 16px;
   align-items: flex-start;
-  background: var(--turo-surface);
-  border-radius: 16px;
-  padding: 20px;
 }
 .turo-host-avatar {
   width: 56px;
@@ -1503,20 +1862,26 @@ onMounted(async () => {
 }
 
 .turo-book-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  padding: 22px;
-  box-shadow: 0 10px 36px rgba(10, 10, 11, 0.06);
+  background: #fff;
+  border: 1px solid #e4e4e7;
+  border-radius: 16px;
+  padding: 22px 22px 18px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.06);
 }
-.turo-price-line {
+.turo-price-block {
+  margin-bottom: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f4f4f5;
+}
+.turo-total-line {
   display: flex;
   align-items: baseline;
   gap: 6px;
+  margin: 0;
 }
 .turo-price {
   font-family: 'Bricolage Grotesque', sans-serif;
-  font-size: 1.75rem;
+  font-size: 1.35rem;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
@@ -1525,27 +1890,76 @@ onMounted(async () => {
   font-size: 0.85rem;
 }
 .turo-est-link {
-  margin: 6px 0 14px;
-  color: var(--ink-secondary);
-  font-size: 0.8rem;
-  font-weight: 700;
+  margin: 4px 0 2px;
+  color: #111;
+  font-size: 1.05rem;
+}
+.turo-est-link strong {
+  font-size: 1.35rem;
+  font-weight: 800;
+}
+.turo-before-tax {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #71717a;
 }
 
 .turo-book-voyage {
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 .turo-book-voyage-title {
-  margin: 0 0 4px;
-  font-size: 0.95rem;
+  margin: 0 0 12px;
+  font-size: 1rem;
   font-weight: 800;
   color: var(--ink);
-  letter-spacing: -0.01em;
 }
-.turo-book-voyage-hint {
-  margin: 0 0 10px;
+.turo-dt-label {
+  display: block;
   font-size: 0.78rem;
-  color: var(--ink-muted);
-  line-height: 1.4;
+  font-weight: 600;
+  color: #3f3f46;
+  margin: 10px 0 6px;
+}
+.turo-dt-row {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 8px;
+}
+.turo-dt-input {
+  width: 100%;
+  border: 1px solid #d4d4d8;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #fff;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #111;
+}
+.turo-dt-select {
+  margin-bottom: 4px;
+}
+.turo-dt-input.error {
+  border-color: var(--turo-error);
+  color: var(--turo-error);
+}
+.turo-location-block {
+  margin-bottom: 16px;
+}
+.turo-card-policy {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid #f4f4f5;
+}
+.turo-card-policy h4 {
+  margin: 0 0 6px;
+  font-size: 0.95rem;
+}
+.turo-card-policy p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #71717a;
+  line-height: 1.45;
 }
 
 .turo-trust-row {
@@ -1629,8 +2043,8 @@ onMounted(async () => {
 .turo-btn-primary {
   appearance: none;
   border: none;
-  background: var(--accent);
-  color: var(--surface);
+  background: var(--turo-purple);
+  color: #fff;
   font-weight: 800;
   font-size: 1rem;
   border-radius: 10px;
@@ -1642,7 +2056,7 @@ onMounted(async () => {
   justify-content: center;
 }
 .turo-btn-primary:hover:not(:disabled) {
-  background: var(--ink-secondary);
+  background: var(--turo-purple-pressed);
 }
 .turo-btn-primary:disabled {
   opacity: 0.45;
@@ -1810,5 +2224,51 @@ onMounted(async () => {
   flex-wrap: wrap;
   gap: 10px;
   justify-content: center;
+}
+
+.turo-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(10, 10, 11, 0.92);
+  display: grid;
+  place-items: center;
+  padding: 48px 72px;
+}
+.turo-lightbox img {
+  max-width: 100%;
+  max-height: 85vh;
+  object-fit: contain;
+  border-radius: 8px;
+}
+.turo-lightbox-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.turo-lightbox-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 999px;
+  background: #fff;
+  font-size: 1.6rem;
+  cursor: pointer;
+  line-height: 1;
+}
+.turo-lightbox-nav.prev {
+  left: 16px;
+}
+.turo-lightbox-nav.next {
+  right: 16px;
 }
 </style>

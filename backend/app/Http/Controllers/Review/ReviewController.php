@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Review;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Review\StoreReviewRequest;
+use App\Models\Agency;
+use App\Models\Car;
 use App\Models\Reservation;
 use App\Models\Review;
 use Illuminate\Http\JsonResponse;
@@ -11,15 +13,44 @@ use Illuminate\Http\Request;
 
 class ReviewController extends Controller
 {
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $reviews = Review::with([
-            'user',
-            'reservation.car',
-            'reservation.agency',
-        ])
+        $reviews = $request->user()
+            ->reviews()
+            ->with([
+                'reservation.car',
+                'reservation.agency',
+            ])
             ->latest()
             ->get();
+
+        return response()->json([
+            'reviews' => $reviews,
+        ]);
+    }
+
+    public function carReviews(Car $car): JsonResponse
+    {
+        $reviews = $car->reviews()
+            ->with('user:id,first_name')
+            ->latest('reviews.created_at')
+            ->paginate(10);
+
+        return response()->json([
+            'reviews' => $reviews,
+        ]);
+    }
+
+    public function agencyReviews(Agency $agency): JsonResponse
+    {
+        $reviews = $agency->reviews()
+            ->with([
+                'user:id,first_name',
+                'reservation:id,car_id',
+                'reservation.car:id,brand,model',
+            ])
+            ->latest('reviews.created_at')
+            ->paginate(10);
 
         return response()->json([
             'reviews' => $reviews,

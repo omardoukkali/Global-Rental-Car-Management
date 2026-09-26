@@ -7,17 +7,38 @@ use App\Http\Requests\Payment\StorePaymentRequest;
 use App\Models\Payment;
 use App\Models\Reservation;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class PaymentController extends Controller
 {
+    public function index(Request $request): JsonResponse
+    {
+        $payments = Payment::whereHas(
+            'reservation',
+            fn ($query) => $query->where('client_id', $request->user()->id)
+        )
+            ->with([
+                'reservation:id,reference,car_id,agency_id,start_at,end_at,status',
+                'reservation.car:id,brand,model',
+                'reservation.agency:id,name',
+                'refund',
+            ])
+            ->latest()
+            ->get();
+
+        return response()->json([
+            'payments' => $payments,
+        ]);
+    }
+
     public function store(StorePaymentRequest $request): JsonResponse
     {
         $data = $request->validated();
 
         $payment = DB::transaction(function () use ($request, $data) {
-            $reservation = Reservation::with('payment')
+            $reservation = Reservation::with(['payment', 'agency'])
                 ->where('id', $data['reservation_id'])
                 ->lockForUpdate()
                 ->firstOrFail();
@@ -40,13 +61,14 @@ class PaymentController extends Controller
                 ], 422));
             }
 
-            $amount = $reservation->total_amount;
+            $amount = (float) $reservation->total_amount;
 
-            $commissionRate = 15;
+            // Each agency negotiates its own platform commission.
+            $commissionRate = (float) $reservation->agency->commission_rate;
 
-            $platformCommission = $amount * ($commissionRate / 100);
+            $platformCommission = round($amount * ($commissionRate / 100), 2);
 
-            $agencyAmount = $amount - $platformCommission;
+            $agencyAmount = round($amount - $platformCommission, 2);
 
             $payment = Payment::create([
                 'reservation_id' => $reservation->id,

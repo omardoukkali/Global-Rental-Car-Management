@@ -46,7 +46,24 @@ CACHE_STORE="${CACHE_STORE:-database}"
 QUEUE_CONNECTION="database"
 FILESYSTEM_DISK="local"
 BROADCAST_CONNECTION="log"
-MAIL_MAILER="log"
+# Frontend address used in e-mail links (password reset)
+FRONTEND_URL="${FRONTEND_URL:-http://localhost:3000}"
+
+# Mail: "log" writes the e-mail in storage/logs/laravel.log.
+# Set MAIL_MAILER=smtp and the MAIL_* values to send real e-mails.
+MAIL_MAILER="${MAIL_MAILER:-log}"
+MAIL_HOST="${MAIL_HOST:-}"
+MAIL_PORT="${MAIL_PORT:-587}"
+MAIL_USERNAME="${MAIL_USERNAME:-}"
+MAIL_PASSWORD="${MAIL_PASSWORD:-}"
+MAIL_ENCRYPTION="${MAIL_ENCRYPTION:-tls}"
+MAIL_FROM_ADDRESS="${MAIL_FROM_ADDRESS:-no-reply@globalrental.local}"
+MAIL_FROM_NAME="${MAIL_FROM_NAME:-Global Rental Car}"
+
+# Security settings (F-04 token lifetime, F-06 CORS, F-11 token prefix)
+CORS_ALLOWED_ORIGINS="${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:3333}"
+SANCTUM_TOKEN_PREFIX="${SANCTUM_TOKEN_PREFIX:-grcm_}"
+SANCTUM_TOKEN_EXPIRATION="${SANCTUM_TOKEN_EXPIRATION:-1440}"
 
 AI_SERVICE_URL="${AI_SERVICE_URL:-http://ai_service:5000}"
 EOF
@@ -69,5 +86,9 @@ else
     echo "Database already seeded. Skipping."
 fi
 
-# 7. Hand off execution to CMD (php artisan serve)
+# 7. Start the Laravel scheduler in the background (runs refunds:process-expired, etc.)
+echo "Starting scheduler in the background..."
+php artisan schedule:work &
+
+# 8. Hand off execution to CMD (php artisan serve)
 exec "$@"

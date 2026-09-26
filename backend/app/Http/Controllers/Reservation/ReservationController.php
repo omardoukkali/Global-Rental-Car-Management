@@ -36,6 +36,64 @@ class ReservationController extends Controller
         ]);
     }
 
+    public function agencyIndex(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'status' => [
+                'sometimes',
+                'in:pending,confirmed,rejected,picked_up,completed,cancelled,disputed',
+            ],
+
+            'car_id' => [
+                'sometimes',
+                'uuid',
+            ],
+
+            // Calendar window: reservations overlapping [from, to]
+            'from' => [
+                'required_with:to',
+                'date',
+            ],
+
+            'to' => [
+                'required_with:from',
+                'date',
+                'after:from',
+            ],
+        ]);
+
+        $query = $request->user()
+            ->agency
+            ->reservations()
+            ->with([
+                'client:id,first_name,last_name,email,phone',
+                'car',
+                'pickupPoint',
+                'returnPoint',
+                'payment.refund',
+            ]);
+
+        if (isset($validated['status'])) {
+            $query->where('status', $validated['status']);
+        }
+
+        if (isset($validated['car_id'])) {
+            $query->where('car_id', $validated['car_id']);
+        }
+
+        // Calendar: reservations that overlap the [from, to] window
+        if (isset($validated['from'])) {
+            $query->where('start_at', '<', $validated['to']);
+            $query->where('end_at', '>', $validated['from']);
+        }
+
+        $reservations = $query->latest()->get();
+
+        return response()->json([
+            'reservations' => $reservations,
+        ]);
+    }
+
     public function store(StoreReservationRequest $request): JsonResponse
     {
         $data = $request->validated();
@@ -48,7 +106,7 @@ class ReservationController extends Controller
                 ->firstOrFail();
 
             // Check if the car is available
-            if ($car->status !== 'available') {
+            if ($car->status !== 'available' || $car->agency?->status !== 'approved') {
                 abort(response()->json([
                     'message' => 'Car is not available.',
                 ], 422));
@@ -175,86 +233,99 @@ class ReservationController extends Controller
             ], 403);
         }
 
-        if (!in_array($reservation->status, ['pending', 'confirmed'])) {
-            return response()->json([
-                'message' => 'This reservation cannot be updated.',
-            ], 422);
-        }
-
         $data = $request->validated();
 
-        $pickupPointId = $data['pickup_point_id']
-            ?? $reservation->pickup_point_id;
+        DB::transaction(function () use ($reservation, $data) {
+            // Lock the car first (same order as store) so overlap checks are serialized
+            Car::where('id', $reservation->car_id)->lockForUpdate()->first();
 
-        $returnPointId = $data['return_point_id']
-            ?? $reservation->return_point_id;
+            $reservation = Reservation::with('payment')
+                ->where('id', $reservation->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        $startAt = $data['start_at']
-            ?? $reservation->start_at;
+            if (!in_array($reservation->status, ['pending', 'confirmed'])) {
+                abort(response()->json([
+                    'message' => 'This reservation cannot be updated.',
+                ], 422));
+            }
 
-        $endAt = $data['end_at']
-            ?? $reservation->end_at;
+            $pickupPointId = $data['pickup_point_id']
+                ?? $reservation->pickup_point_id;
 
-        $pickupPoint = AgencyPoint::findOrFail($pickupPointId);
-        $returnPoint = AgencyPoint::findOrFail($returnPointId);
+            $returnPointId = $data['return_point_id']
+                ?? $reservation->return_point_id;
 
-        if ($pickupPoint->agency_id !== $reservation->agency_id) {
-            return response()->json([
-                'message' => 'Pickup point does not belong to the reservation agency.',
-            ], 422);
-        }
+            $startAt = Carbon::parse($data['start_at'] ?? $reservation->start_at);
+            $endAt = Carbon::parse($data['end_at'] ?? $reservation->end_at);
 
-        if ($returnPoint->agency_id !== $reservation->agency_id) {
-            return response()->json([
-                'message' => 'Return point does not belong to the reservation agency.',
-            ], 422);
-        }
+            $datesChanged = !$startAt->equalTo($reservation->start_at)
+                || !$endAt->equalTo($reservation->end_at);
 
-        if (!$pickupPoint->is_active || !$pickupPoint->allows_pickup) {
-            return response()->json([
-                'message' => 'Pickup point is not available for pickup.',
-            ], 422);
-        }
+            // The payment amount is fixed once paid, so the dates are too
+            if ($datesChanged && $reservation->payment?->status === 'paid') {
+                abort(response()->json([
+                    'message' => 'Dates of a paid reservation cannot be changed.',
+                ], 422));
+            }
 
-        if (!$returnPoint->is_active || !$returnPoint->allows_return) {
-            return response()->json([
-                'message' => 'Return point is not available for return.',
-            ], 422);
-        }
+            $pickupPoint = AgencyPoint::findOrFail($pickupPointId);
+            $returnPoint = AgencyPoint::findOrFail($returnPointId);
 
-        $hasOverlap = $reservation->car
-            ->reservations()
-            ->where('id', '!=', $reservation->id)
-            ->whereIn('status', [
-                'pending',
-                'confirmed',
-                'picked_up',
-            ])
-            ->where('start_at', '<', $endAt)
-            ->where('end_at', '>', $startAt)
-            ->exists();
+            if ($pickupPoint->agency_id !== $reservation->agency_id) {
+                abort(response()->json([
+                    'message' => 'Pickup point does not belong to the reservation agency.',
+                ], 422));
+            }
 
-        if ($hasOverlap) {
-            return response()->json([
-                'message' => 'Car is already reserved for the selected period.',
-            ], 422);
-        }
+            if ($returnPoint->agency_id !== $reservation->agency_id) {
+                abort(response()->json([
+                    'message' => 'Return point does not belong to the reservation agency.',
+                ], 422));
+            }
 
-        $startAt = Carbon::parse($startAt);
-        $endAt = Carbon::parse($endAt);
+            if (!$pickupPoint->is_active || !$pickupPoint->allows_pickup) {
+                abort(response()->json([
+                    'message' => 'Pickup point is not available for pickup.',
+                ], 422));
+            }
 
-        $days = max(1, (int) ceil($startAt->diffInHours($endAt) / 24));
+            if (!$returnPoint->is_active || !$returnPoint->allows_return) {
+                abort(response()->json([
+                    'message' => 'Return point is not available for return.',
+                ], 422));
+            }
 
-        $dailyPrice = $reservation->daily_price_snapshot;
-        $totalAmount = $days * $dailyPrice;
+            $hasOverlap = Reservation::where('car_id', $reservation->car_id)
+                ->where('id', '!=', $reservation->id)
+                ->whereIn('status', [
+                    'pending',
+                    'confirmed',
+                    'picked_up',
+                ])
+                ->where('start_at', '<', $endAt)
+                ->where('end_at', '>', $startAt)
+                ->exists();
 
-        $reservation->update([
-            'pickup_point_id' => $pickupPointId,
-            'return_point_id' => $returnPointId,
-            'start_at' => $startAt,
-            'end_at' => $endAt,
-            'total_amount' => $totalAmount,
-        ]);
+            if ($hasOverlap) {
+                abort(response()->json([
+                    'message' => 'Car is already reserved for the selected period.',
+                ], 422));
+            }
+
+            $days = max(1, (int) ceil($startAt->diffInHours($endAt) / 24));
+
+            $dailyPrice = $reservation->daily_price_snapshot;
+            $totalAmount = $days * $dailyPrice;
+
+            $reservation->update([
+                'pickup_point_id' => $pickupPointId,
+                'return_point_id' => $returnPointId,
+                'start_at' => $startAt,
+                'end_at' => $endAt,
+                'total_amount' => $totalAmount,
+            ]);
+        });
 
         return response()->json([
             'message' => 'Reservation updated successfully.',
@@ -335,81 +406,81 @@ class ReservationController extends Controller
             ], 403);
         }
 
-        if (!in_array($reservation->status, ['pending', 'confirmed'])) {
-            return response()->json([
-                'message' => 'This reservation cannot be cancelled.',
-            ], 422);
-        }
+        $payment = DB::transaction(function () use ($reservation) {
+            $reservation = Reservation::with('payment')
+                ->where('id', $reservation->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        $payment = $reservation->payment;
+            if (!in_array($reservation->status, ['pending', 'confirmed'])) {
+                abort(response()->json([
+                    'message' => 'This reservation cannot be cancelled.',
+                ], 422));
+            }
 
-        if (!$payment) {
+            $payment = $reservation->payment;
+
             $reservation->update([
                 'status' => 'cancelled',
             ]);
 
-            return response()->json([
-                'message' => 'Reservation cancelled successfully.',
-                'reservation' => $reservation->fresh()->load([
-                    'car',
-                    'agency',
-                    'pickupPoint',
-                    'returnPoint',
-                ]),
-            ]);
-        }
+            if (!$payment) {
+                return null;
+            }
 
-        $hoursUntilPickup = now()->diffInHours(
-            Carbon::parse($reservation->start_at),
-            false
-        );
+            $hoursUntilPickup = now()->diffInHours(
+                Carbon::parse($reservation->start_at),
+                false
+            );
 
-        $reservation->update([
-            'status' => 'cancelled',
-        ]);
+            if ($hoursUntilPickup >= 24) {
+                Refund::create([
+                    'payment_id' => $payment->id,
+                    'agency_id' => $reservation->agency_id,
+                    'percentage' => 100,
+                    'refunded_amount' => $payment->amount,
+                    'decision_source' => 'automatic',
+                    'status' => 'processed',
+                    'reason' => 'Cancellation at least 24 hours before pickup.',
+                    'decided_at' => now(),
+                    'processed_at' => now(),
+                ]);
 
-        if ($hoursUntilPickup >= 24) {
-            $refundedAmount = $payment->amount;
+                $payment->update([
+                    'status' => 'refunded',
+                ]);
+            } else {
+                Refund::create([
+                    'payment_id' => $payment->id,
+                    'agency_id' => $reservation->agency_id,
+                    'percentage' => 50,
+                    'refunded_amount' => $payment->amount * 0.50,
+                    'decision_source' => 'automatic',
+                    'status' => 'pending',
+                    'reason' => 'Late cancellation. Waiting for agency decision.',
+                    'decided_at' => now(),
+                ]);
+            }
 
-            Refund::create([
-                'payment_id' => $payment->id,
-                'agency_id' => $reservation->agency_id,
-                'percentage' => 100,
-                'refunded_amount' => $refundedAmount,
-                'decision_source' => 'automatic',
-                'status' => 'processed',
-                'reason' => 'Cancellation at least 24 hours before pickup.',
-                'decided_at' => now(),
-                'processed_at' => now(),
-            ]);
+            return $payment;
+        });
 
-            $payment->update([
-                'status' => 'refunded',
-            ]);
-        } else {
-            Refund::create([
-                'payment_id' => $payment->id,
-                'agency_id' => $reservation->agency_id,
-                'percentage' => 50,
-                'refunded_amount' => $payment->amount * 0.50,
-                'decision_source' => 'automatic',
-                'status' => 'pending',
-                'reason' => 'Late cancellation. Waiting for agency decision.',
-                'decided_at' => now(),
-            ]);
+        $relations = ['car', 'agency', 'pickupPoint', 'returnPoint'];
+
+        if ($payment) {
+            $relations[] = 'payment.refund';
         }
 
         return response()->json([
             'message' => 'Reservation cancelled successfully.',
-            'reservation' => $reservation->fresh()->load([
-                'car',
-                'agency',
-                'pickupPoint',
-                'returnPoint',
-                'payment.refund',
-            ]),
+            'reservation' => $reservation->fresh()->load($relations),
         ]);
     }
+
+    // Pickup and return need both the client and the agency to confirm.
+    // Each method locks the reservation row (lockForUpdate) inside a transaction,
+    // so if both sides confirm at the same time, the second one waits and then
+    // sees the first confirmation.
 
     public function confirmPickup(
         Request $request,
@@ -421,24 +492,33 @@ class ReservationController extends Controller
             ], 403);
         }
 
-        if ($reservation->status !== 'confirmed') {
-            return response()->json([
-                'message' => 'Only confirmed reservations can confirm pickup.',
-            ], 422);
-        }
+        DB::transaction(function () use ($reservation) {
+            $reservation = Reservation::where('id', $reservation->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        if (!$reservation->client_pickup_confirmed_at) {
-            $reservation->update([
-                'client_pickup_confirmed_at' => now(),
-            ]);
-        }
+            if ($reservation->client_pickup_confirmed_at) {
+                abort(response()->json([
+                    'message' => 'Pickup has already been confirmed by the client.',
+                ], 422));
+            }
 
-        if ($reservation->agency_pickup_confirmed_at) {
-            $reservation->update([
-                'status' => 'picked_up',
-                'picked_up_at' => now(),
-            ]);
-        }
+            if ($reservation->status !== 'confirmed') {
+                abort(response()->json([
+                    'message' => 'Only confirmed reservations can confirm pickup.',
+                ], 422));
+            }
+
+            $reservation->client_pickup_confirmed_at = now();
+
+            // Both sides confirmed: the car is picked up
+            if ($reservation->agency_pickup_confirmed_at) {
+                $reservation->status = 'picked_up';
+                $reservation->picked_up_at = now();
+            }
+
+            $reservation->save();
+        });
 
         return response()->json([
             'message' => 'Pickup confirmed successfully.',
@@ -463,24 +543,33 @@ class ReservationController extends Controller
             ], 403);
         }
 
-        if ($reservation->status !== 'confirmed') {
-            return response()->json([
-                'message' => 'Only confirmed reservations can confirm pickup.',
-            ], 422);
-        }
+        DB::transaction(function () use ($reservation) {
+            $reservation = Reservation::where('id', $reservation->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        if (!$reservation->agency_pickup_confirmed_at) {
-            $reservation->update([
-                'agency_pickup_confirmed_at' => now(),
-            ]);
-        }
+            if ($reservation->agency_pickup_confirmed_at) {
+                abort(response()->json([
+                    'message' => 'Pickup has already been confirmed by the agency.',
+                ], 422));
+            }
 
-        if ($reservation->client_pickup_confirmed_at) {
-            $reservation->update([
-                'status' => 'picked_up',
-                'picked_up_at' => now(),
-            ]);
-        }
+            if ($reservation->status !== 'confirmed') {
+                abort(response()->json([
+                    'message' => 'Only confirmed reservations can confirm pickup.',
+                ], 422));
+            }
+
+            $reservation->agency_pickup_confirmed_at = now();
+
+            // Both sides confirmed: the car is picked up
+            if ($reservation->client_pickup_confirmed_at) {
+                $reservation->status = 'picked_up';
+                $reservation->picked_up_at = now();
+            }
+
+            $reservation->save();
+        });
 
         return response()->json([
             'message' => 'Pickup confirmed successfully.',
@@ -492,6 +581,7 @@ class ReservationController extends Controller
             ]),
         ]);
     }
+
     public function confirmReturn(
         Request $request,
         Reservation $reservation
@@ -502,24 +592,33 @@ class ReservationController extends Controller
             ], 403);
         }
 
-        if ($reservation->status !== 'picked_up') {
-            return response()->json([
-                'message' => 'Only picked up reservations can confirm return.',
-            ], 422);
-        }
+        DB::transaction(function () use ($reservation) {
+            $reservation = Reservation::where('id', $reservation->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        if (!$reservation->client_return_confirmed_at) {
-            $reservation->update([
-                'client_return_confirmed_at' => now(),
-            ]);
-        }
+            if ($reservation->client_return_confirmed_at) {
+                abort(response()->json([
+                    'message' => 'Return has already been confirmed by the client.',
+                ], 422));
+            }
 
-        if ($reservation->agency_return_confirmed_at) {
-            $reservation->update([
-                'status' => 'completed',
-                'returned_at' => now(),
-            ]);
-        }
+            if ($reservation->status !== 'picked_up') {
+                abort(response()->json([
+                    'message' => 'Only picked up reservations can confirm return.',
+                ], 422));
+            }
+
+            $reservation->client_return_confirmed_at = now();
+
+            // Both sides confirmed: the rental is completed
+            if ($reservation->agency_return_confirmed_at) {
+                $reservation->status = 'completed';
+                $reservation->returned_at = now();
+            }
+
+            $reservation->save();
+        });
 
         return response()->json([
             'message' => 'Return confirmed successfully.',
@@ -531,6 +630,7 @@ class ReservationController extends Controller
             ]),
         ]);
     }
+
     public function confirmAgencyReturn(
         Request $request,
         Reservation $reservation
@@ -543,24 +643,33 @@ class ReservationController extends Controller
             ], 403);
         }
 
-        if ($reservation->status !== 'picked_up') {
-            return response()->json([
-                'message' => 'Only picked up reservations can confirm return.',
-            ], 422);
-        }
+        DB::transaction(function () use ($reservation) {
+            $reservation = Reservation::where('id', $reservation->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        if (!$reservation->agency_return_confirmed_at) {
-            $reservation->update([
-                'agency_return_confirmed_at' => now(),
-            ]);
-        }
+            if ($reservation->agency_return_confirmed_at) {
+                abort(response()->json([
+                    'message' => 'Return has already been confirmed by the agency.',
+                ], 422));
+            }
 
-        if ($reservation->client_return_confirmed_at) {
-            $reservation->update([
-                'status' => 'completed',
-                'returned_at' => now(),
-            ]);
-        }
+            if ($reservation->status !== 'picked_up') {
+                abort(response()->json([
+                    'message' => 'Only picked up reservations can confirm return.',
+                ], 422));
+            }
+
+            $reservation->agency_return_confirmed_at = now();
+
+            // Both sides confirmed: the rental is completed
+            if ($reservation->client_return_confirmed_at) {
+                $reservation->status = 'completed';
+                $reservation->returned_at = now();
+            }
+
+            $reservation->save();
+        });
 
         return response()->json([
             'message' => 'Return confirmed successfully.',

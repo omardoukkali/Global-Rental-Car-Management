@@ -2,11 +2,14 @@
 import { ref, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import reservationsService from '@/services/reservations'
+import carsService from '@/services/cars'
 
 const reservations = ref([])
 const loading = ref(true)
 const error = ref('')
 const cancellingId = ref(null)
+const confirmingPickupId = ref(null)
+const confirmingReturnId = ref(null)
 const actionError = ref('')
 
 const STATUS_LABELS = {
@@ -35,11 +38,12 @@ async function loadReservations() {
   actionError.value = ''
   try {
     const data = await reservationsService.getReservations()
-    reservations.value = Array.isArray(data?.reservations)
+    const list = Array.isArray(data?.reservations)
       ? data.reservations
       : Array.isArray(data?.data?.reservations)
         ? data.data.reservations
         : []
+    reservations.value = await attachCarImages(list)
   } catch (err) {
     error.value = err?.message || 'Impossible de charger vos réservations.'
     reservations.value = []
@@ -60,11 +64,64 @@ function canCancel(reservation) {
   return ['pending', 'confirmed'].includes(reservation?.status)
 }
 
+function canPay(reservation) {
+  return reservation?.status === 'pending'
+}
+
+function canConfirmPickup(reservation) {
+  return (
+    reservation?.status === 'confirmed' &&
+    !reservation?.client_pickup_confirmed_at
+  )
+}
+
+function waitingAgencyPickup(reservation) {
+  return (
+    reservation?.status === 'confirmed' &&
+    !!reservation?.client_pickup_confirmed_at &&
+    !reservation?.agency_pickup_confirmed_at
+  )
+}
+
+function canConfirmReturn(reservation) {
+  return (
+    reservation?.status === 'picked_up' &&
+    !reservation?.client_return_confirmed_at
+  )
+}
+
+function waitingAgencyReturn(reservation) {
+  return (
+    reservation?.status === 'picked_up' &&
+    !!reservation?.client_return_confirmed_at &&
+    !reservation?.agency_return_confirmed_at
+  )
+}
+
 function carImageUrl(car) {
   const images = car?.images
-  if (!images?.length) return null
+  if (!images?.length) return car?.image_url || null
   const primary = images.find((img) => img.is_primary) || images[0]
   return primary.url || primary.image_url || null
+}
+
+// GET /reservations returns the car without its photos. The public catalog has them.
+async function attachCarImages(list) {
+  const missing = list.some((res) => res.car?.id && !carImageUrl(res.car))
+  if (!missing) return list
+  let cars = []
+  try {
+    const catalog = await carsService.getPublicCars()
+    cars = catalog?.cars || catalog?.data?.cars || []
+  } catch {
+    return list
+  }
+  const byId = new Map(cars.map((car) => [car.id, car]))
+  return list.map((res) => {
+    const full = byId.get(res.car?.id)
+    if (!full?.images?.length) return res
+    return { ...res, car: { ...res.car, images: full.images } }
+  })
 }
 
 function formatDate(value) {
@@ -106,41 +163,60 @@ async function cancelReservation(reservation) {
   }
 }
 
+async function confirmPickup(reservation) {
+  if (!canConfirmPickup(reservation) || confirmingPickupId.value) return
+  actionError.value = ''
+  confirmingPickupId.value = reservation.id
+  try {
+    const data = await reservationsService.confirmPickupClient(reservation.id)
+    const updated = data?.reservation || data?.data?.reservation
+    if (updated) {
+      reservations.value = reservations.value.map((item) =>
+        item.id === reservation.id ? { ...item, ...updated } : item
+      )
+    } else {
+      await loadReservations()
+    }
+  } catch (err) {
+    actionError.value = err?.message || 'Échec de la confirmation du pickup.'
+  } finally {
+    confirmingPickupId.value = null
+  }
+}
+
+async function confirmReturn(reservation) {
+  if (!canConfirmReturn(reservation) || confirmingReturnId.value) return
+  actionError.value = ''
+  confirmingReturnId.value = reservation.id
+  try {
+    const data = await reservationsService.confirmReturnClient(reservation.id)
+    const updated = data?.reservation || data?.data?.reservation
+    if (updated) {
+      reservations.value = reservations.value.map((item) =>
+        item.id === reservation.id ? { ...item, ...updated } : item
+      )
+    } else {
+      await loadReservations()
+    }
+  } catch (err) {
+    actionError.value = err?.message || 'Échec de la confirmation du retour.'
+  } finally {
+    confirmingReturnId.value = null
+  }
+}
+
 onMounted(loadReservations)
 </script>
 
 <template>
-  <div class="min-h-screen bg-[#F8FAFC]">
-    <header class="bg-white border-b border-slate-200">
-      <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-        <RouterLink to="/" class="font-bricolage font-extrabold text-lg text-[#0F172A] tracking-tight">
-          GlobalRental
-        </RouterLink>
-        <div class="flex items-center gap-3 text-sm">
-          <span class="font-bold text-[#0F172A]">Mes réservations</span>
-          <RouterLink
-            to="/reservations/new"
-            class="font-semibold text-slate-500 hover:text-slate-800 transition-colors"
-          >
-            Nouvelle
-          </RouterLink>
-          <RouterLink
-            to="/logout"
-            class="font-semibold text-rose-600 hover:text-rose-700 transition-colors"
-          >
-            Déconnexion
-          </RouterLink>
-        </div>
-      </div>
-    </header>
-
+  <div class="min-h-[calc(100vh-4rem)] bg-[#F8FAFC]">
     <main class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       <div>
         <h1 class="text-2xl sm:text-3xl font-extrabold text-[#0F172A] tracking-tight font-bricolage">
           Mes réservations
         </h1>
         <p class="text-sm text-slate-500 mt-1">
-          Suivez vos locations et annulez celles encore en attente ou confirmées.
+          Suivez vos locations, confirmez la prise en charge, et annulez celles encore en attente ou confirmées.
         </p>
       </div>
 
@@ -195,7 +271,7 @@ onMounted(loadReservations)
         >
           <div class="p-5 sm:p-6 flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
             <div class="flex items-start gap-4 min-w-0">
-              <div class="h-14 w-14 rounded-xl bg-slate-100 overflow-hidden flex-shrink-0 flex items-center justify-center">
+              <div class="h-20 w-28 rounded-xl bg-slate-100 overflow-hidden flex-shrink-0 flex items-center justify-center">
                 <img
                   v-if="carImageUrl(res.car)"
                   :src="carImageUrl(res.car)"
@@ -220,6 +296,13 @@ onMounted(loadReservations)
                 <p v-if="res.reference" class="text-xs text-slate-400 mt-1 font-mono">
                   {{ res.reference }}
                 </p>
+                <RouterLink
+                  :to="`/reservations/${res.id}`"
+                  data-testid="detail-link"
+                  class="inline-block mt-2 text-sm font-semibold text-[#0F172A] underline underline-offset-4"
+                >
+                  Voir le voyage →
+                </RouterLink>
               </div>
             </div>
 
@@ -235,6 +318,14 @@ onMounted(loadReservations)
                 {{ formatMoney(res.total_amount) }}
                 <span class="text-xs font-normal text-slate-500">MAD</span>
               </p>
+              <RouterLink
+                v-if="canPay(res)"
+                :to="`/reservations/${res.id}/pay`"
+                data-testid="pay-link"
+                class="text-sm font-semibold text-emerald-700 hover:text-emerald-800"
+              >
+                Payer
+              </RouterLink>
               <button
                 v-if="canCancel(res)"
                 type="button"
@@ -245,10 +336,45 @@ onMounted(loadReservations)
               >
                 {{ cancellingId === res.id ? 'Annulation…' : 'Annuler' }}
               </button>
+              <button
+                v-if="canConfirmPickup(res)"
+                type="button"
+                data-testid="confirm-pickup-button"
+                class="text-sm font-semibold text-emerald-700 hover:text-emerald-800 disabled:opacity-50"
+                :disabled="confirmingPickupId === res.id"
+                @click="confirmPickup(res)"
+              >
+                {{ confirmingPickupId === res.id ? 'Confirmation…' : 'Confirmer la prise en charge' }}
+              </button>
+              <p
+                v-else-if="waitingAgencyPickup(res)"
+                data-testid="waiting-agency-pickup"
+                class="text-xs font-semibold text-slate-500"
+              >
+                En attente de confirmation de l’agence
+              </p>
+              <button
+                v-if="canConfirmReturn(res)"
+                type="button"
+                data-testid="confirm-return-button"
+                class="text-sm font-semibold text-emerald-700 hover:text-emerald-800 disabled:opacity-50"
+                :disabled="confirmingReturnId === res.id"
+                @click="confirmReturn(res)"
+              >
+                {{ confirmingReturnId === res.id ? 'Confirmation…' : 'Confirmer le retour' }}
+              </button>
+              <p
+                v-else-if="waitingAgencyReturn(res)"
+                data-testid="waiting-agency-return"
+                class="text-xs font-semibold text-slate-500"
+              >
+                En attente de confirmation de retour de l’agence
+              </p>
             </div>
           </div>
         </li>
       </ul>
     </main>
+
   </div>
 </template>

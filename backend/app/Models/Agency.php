@@ -74,4 +74,14 @@ class Agency extends Model
             'reservation_id'
         );
     }
+
+    public function refreshRating(): void
+    {
+        $average = $this->reviews()->avg('reviews.agency_rating');
+
+        $this->update([
+            'avg_rating' => $average === null ? null : number_format($average, 2, '.', ''),
+            'total_reviews' => $this->reviews()->count(),
+        ]);
+    }
 }

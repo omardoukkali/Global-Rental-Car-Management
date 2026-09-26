@@ -60,6 +60,22 @@ services:
       DB_USERNAME: ${DB_USERNAME:-grader}
       DB_PASSWORD: ${DB_PASSWORD:-secret}
       AI_SERVICE_URL: ${AI_SERVICE_URL:-http://ai_service:5000}
+      # Frontend address used in e-mail links (password reset, e-mail verification)
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      # Mail: "log" writes to storage/logs/laravel.log, "smtp" really sends.
+      # Put the real values in your own .env, never here.
+      MAIL_MAILER: ${MAIL_MAILER:-log}
+      MAIL_HOST: ${MAIL_HOST:-}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_ENCRYPTION: ${MAIL_ENCRYPTION:-tls}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-no-reply@globalrental.local}
+      MAIL_FROM_NAME: "${MAIL_FROM_NAME:-Global Rental Car}"
+      # Security settings (F-04, F-06, F-11)
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:3333}
+      SANCTUM_TOKEN_PREFIX: ${SANCTUM_TOKEN_PREFIX:-grcm_}
+      SANCTUM_TOKEN_EXPIRATION: ${SANCTUM_TOKEN_EXPIRATION:-1440}
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     volumes:

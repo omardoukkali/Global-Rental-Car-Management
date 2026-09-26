@@ -13,7 +13,7 @@ class CarAvailabilityController extends Controller
     {
         $data = $request->validated();
 
-        if ($car->status !== 'available') {
+        if ($car->status !== 'available' || $car->agency?->status !== 'approved') {
             return response()->json([
                 'car_id' => $car->id,
                 'available' => false,

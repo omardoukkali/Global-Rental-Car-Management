@@ -1,15 +1,10 @@
 <template>
-  <div class="min-h-screen flex flex-col md:flex-row">
+  <div class="min-h-[calc(100vh-4rem)] flex flex-col md:flex-row">
     <!-- LEFT DECORATIVE PANEL -->
     <div class="hidden md:flex w-[45%] lg:w-1/2 left-panel-bg relative text-white flex-col justify-between p-10 lg:p-14">
       <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/20"></div>
 
-      <div class="relative z-10 flex flex-col h-full justify-between">
-        <RouterLink to="/" class="gr-logo text-white hover:opacity-80 transition-opacity">
-          <span class="gr-logo-dot bg-white"></span>GlobalRental
-        </RouterLink>
-
-        <div class="mt-auto pb-10 fade-up">
+      <div class="relative z-10 mt-auto pb-10 fade-up">
           <h1 class="font-bricolage text-4xl lg:text-5xl leading-tight mb-8">
             La liberté de conduire ce que vous voulez, où vous voulez.
           </h1>
@@ -36,29 +31,14 @@
           </ul>
 
           <div class="flex items-center gap-3 pt-6 border-t border-white/20">
-            <div class="flex text-yellow-400 text-xl">★★★★★</div>
+            <div class="flex text-amber-500 text-xl">★★★★★</div>
             <span class="font-medium">5.0 — Noté excellent par nos utilisateurs</span>
           </div>
-        </div>
       </div>
     </div>
 
     <!-- RIGHT FORM PANEL -->
-    <div class="flex-1 flex flex-col min-h-screen bg-white relative">
-      <header class="p-3 flex justify-between items-center w-full">
-        <div class="md:hidden">
-          <RouterLink to="/" class="gr-logo" style="color: var(--ink);">
-            <span class="gr-logo-dot" style="background: var(--ink);"></span>GlobalRental
-          </RouterLink>
-        </div>
-        <div class="ml-auto">
-          <RouterLink to="/" class="text-sm font-semibold flex items-center gap-2" style="color: var(--ink-muted);">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
-            Retour à l'accueil
-          </RouterLink>
-        </div>
-      </header>
-
+    <div class="flex-1 flex flex-col min-h-[calc(100vh-4rem)] bg-white relative">
       <div class="flex-1 flex items-center justify-center p-4 lg:p-6">
         <div class="w-full max-w-[440px] fade-up fade-up-1">
           <!-- Tabs -->
@@ -170,7 +150,9 @@
                 <input v-model="form.password_confirmation" type="password" id="reg-password-confirm" class="form-input" placeholder="••••••••" minlength="8" required />
               </div>
             </div>
-            <p class="text-xs" style="color: var(--ink-muted);">8 caractères min, avec au moins une lettre et un chiffre.</p>
+            <p class="text-xs" style="color: var(--ink-muted);">
+              8 caractères minimum, avec une lettre et un chiffre. Évitez un mot de passe connu (password, azerty, 123456…) : il est refusé.
+            </p>
 
             <div class="flex items-start gap-3 mt-4">
               <input v-model="form.terms" type="checkbox" id="terms" class="checkbox mt-0.5" required />
@@ -238,6 +220,48 @@ function normalizePhone(local) {
   return digits ? `+212${digits}` : ''
 }
 
+const MOROCCAN_PHONE = /^(\+212|0)[5-7][0-9]{8}$/
+
+function phoneError(local, required) {
+  const digits = (local || '').replace(/\D/g, '')
+  if (!digits) return required ? 'Indiquez un numéro marocain (9 chiffres, commence par 5, 6 ou 7).' : ''
+  return MOROCCAN_PHONE.test(normalizePhone(local))
+    ? ''
+    : 'Numéro invalide : 9 chiffres après +212, commençant par 5, 6 ou 7.'
+}
+
+function passwordError(password, confirmation) {
+  if (password !== confirmation) return 'Les deux mots de passe ne correspondent pas.'
+  if (password.length < 8) return 'Le mot de passe doit contenir au moins 8 caractères.'
+  if (!/[A-Za-z]/.test(password) || !/\d/.test(password)) {
+    return 'Le mot de passe doit contenir au moins une lettre et un chiffre.'
+  }
+  return ''
+}
+
+function translateApiMessage(message) {
+  const text = String(message || '')
+  if (/data leak|uncompromised|pwned/i.test(text)) {
+    return 'Ce mot de passe a déjà fuité. Choisissez-en un autre, plus personnel.'
+  }
+  if (/at least 8/i.test(text)) return 'Le mot de passe doit contenir au moins 8 caractères.'
+  if (/one letter/i.test(text)) return 'Le mot de passe doit contenir au moins une lettre.'
+  if (/one number/i.test(text)) return 'Le mot de passe doit contenir au moins un chiffre.'
+  if (/confirmation does not match/i.test(text)) return 'Les deux mots de passe ne correspondent pas.'
+  if (/phone/i.test(text) && /invalid|format/i.test(text)) {
+    return 'Numéro invalide : 9 chiffres après +212, commençant par 5, 6 ou 7.'
+  }
+  if (/email.*taken|already been taken/i.test(text)) return 'Cette adresse e-mail est déjà utilisée.'
+  return text
+}
+
+function assignApiErrors(raw) {
+  Object.entries(raw || {}).forEach(([key, value]) => {
+    const list = Array.isArray(value) ? value : [value]
+    errors[key] = list.map(translateApiMessage)
+  })
+}
+
 function resetErrors() {
   Object.keys(errors).forEach(k => delete errors[k])
   globalError.value = ''
@@ -253,10 +277,23 @@ async function handleSubmit() {
     globalError.value = 'Vous devez accepter les CGU pour continuer.'
     return
   }
-  if (form.password !== form.password_confirmation) {
-    console.log('3. STOP - passwords do not match')
-    errors.password = ['Les deux mots de passe ne correspondent pas.']
+  const pwd = passwordError(form.password, form.password_confirmation)
+  if (pwd) {
+    errors.password = [pwd]
     return
+  }
+
+  const ownPhone = phoneError(form.phone, form.role === 'agency')
+  if (ownPhone) {
+    errors.phone = [ownPhone]
+    return
+  }
+  if (form.role === 'agency') {
+    const agencyPhone = phoneError(form.agency_phone, true)
+    if (agencyPhone) {
+      errors.agency_phone = [agencyPhone]
+      return
+    }
   }
 
   loading.value = true
@@ -274,10 +311,8 @@ async function handleSubmit() {
       }
       console.log('5a. Calling auth.registerClient with:', payload)
       await auth.registerClient(payload)
-      console.log('6a. registerClient SUCCESS, now calling login...')
       await auth.login({ email: form.email, password: form.password })
-      console.log('7a. login SUCCESS, redirecting to /')
-      router.push('/')
+      router.push('/myreservations')
     } else {
       const payload = {
         first_name: form.first_name,
@@ -293,15 +328,15 @@ async function handleSubmit() {
       }
       console.log('5b. Calling auth.registerAgency with:', payload)
       await auth.registerAgency(payload)
-      console.log('6b. registerAgency SUCCESS')
-      success.value = 'Demande enregistrée. Votre agence est en attente de validation.'
-      setTimeout(() => router.push('/login'), 3000)
+      await auth.login({ email: form.email, password: form.password })
+      router.push('/agency/dashboard')
     }
   } catch (e) {
     console.log('8. ERROR caught:', e)
     console.log('   status:', e?.status, '| message:', e?.message, '| errors:', e?.errors)
-    if (e.status === 422 && e.errors) Object.assign(errors, e.errors)
-    else globalError.value = e.message
+    if (e.status === 422 && e.errors) assignApiErrors(e.errors)
+    else if (e.status === 429) globalError.value = 'Trop de tentatives. Réessayez dans une minute.'
+    else globalError.value = translateApiMessage(e.message)
   } finally {
     loading.value = false
     console.log('9. handleSubmit finished')

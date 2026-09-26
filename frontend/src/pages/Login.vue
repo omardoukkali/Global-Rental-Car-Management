@@ -1,37 +1,18 @@
 <template>
-  <div class="min-h-screen flex flex-col md:flex-row">
+  <div class="min-h-[calc(100vh-4rem)] flex flex-col md:flex-row">
     <!-- LEFT PANEL -->
-    <div class="hidden md:flex w-[45%] lg:w-1/2 left-panel-bg relative text-white flex-col justify-between p-10 lg:p-14">
+    <div class="hidden md:flex w-[45%] lg:w-1/2 left-panel-bg relative text-white flex-col justify-end p-10 lg:p-14">
       <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/20"></div>
-      <div class="relative z-10 flex flex-col h-full justify-between">
-        <RouterLink to="/" class="gr-logo text-white hover:opacity-80 transition-opacity">
-          <span class="gr-logo-dot bg-white"></span>GlobalRental
-        </RouterLink>
-        <div class="mt-auto pb-10 fade-up">
-          <h1 class="font-bricolage text-4xl lg:text-5xl leading-tight mb-8">
-            Bon retour parmi nous.
-          </h1>
-          <p class="text-lg opacity-90">Connectez-vous pour accéder à votre espace et gérer vos réservations.</p>
-        </div>
+      <div class="relative z-10 fade-up">
+        <h1 class="font-bricolage text-4xl lg:text-5xl leading-tight mb-8">
+          Bon retour parmi nous.
+        </h1>
+        <p class="text-lg opacity-90">Connectez-vous pour accéder à votre espace et gérer vos réservations.</p>
       </div>
     </div>
 
     <!-- RIGHT PANEL -->
-    <div class="flex-1 flex flex-col min-h-screen bg-white relative">
-      <header class="p-6 flex justify-between items-center w-full">
-        <div class="md:hidden">
-          <RouterLink to="/" class="gr-logo" style="color: var(--ink);">
-            <span class="gr-logo-dot" style="background: var(--ink);"></span>GlobalRental
-          </RouterLink>
-        </div>
-        <div class="ml-auto">
-          <RouterLink to="/" class="text-sm font-semibold flex items-center gap-2" style="color: var(--ink-muted);">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
-            Retour à l'accueil
-          </RouterLink>
-        </div>
-      </header>
-
+    <div class="flex-1 flex flex-col min-h-[calc(100vh-4rem)] bg-white relative">
       <div class="flex-1 flex items-center justify-center p-6 lg:p-12">
         <div class="w-full max-w-[440px] fade-up fade-up-1">
           <div class="flex border-b mb-8" style="border-color: var(--border);">
@@ -44,6 +25,15 @@
             <p style="color: var(--ink-muted);">Connectez-vous pour accéder à votre espace</p>
           </div>
 
+          <div
+            v-if="sessionNotice"
+            data-testid="session-notice"
+            class="mb-6 p-3 rounded-lg text-sm"
+            :style="sessionNotice.style"
+          >
+            {{ sessionNotice.text }}
+          </div>
+
           <form @submit.prevent="handleSubmit" class="space-y-5" novalidate>
             <div>
               <label class="form-label" for="login-email">Adresse e-mail</label>
@@ -54,7 +44,7 @@
             <div>
               <div class="flex justify-between items-center mb-1">
                 <label class="form-label mb-0" for="login-password">Mot de passe</label>
-                <a href="#" class="text-sm font-medium hover:underline" style="color: var(--ink);" @click.prevent>Mot de passe oublié ?</a>
+                <RouterLink to="/forgot-password" class="text-sm font-medium hover:underline" style="color: var(--ink);">Mot de passe oublié ?</RouterLink>
               </div>
               <input v-model="form.password" type="password" id="login-password" class="form-input" placeholder="••••••••" required />
             </div>
@@ -78,7 +68,7 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { RouterLink, useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
@@ -91,10 +81,30 @@ const errors = reactive({})
 const globalError = ref('')
 const loading = ref(false)
 
+// Why the user landed here (set by the API client on 401 / 403, see services/api.js)
+const WARNING_STYLE = 'background: #FFFBEB; color: #92400E; border: 1px solid #FDE68A;'
+const DANGER_STYLE = 'background: rgba(239,68,68,0.08); color: #B91C1C; border: 1px solid rgba(239,68,68,0.25);'
+
+const sessionNotice = computed(() => {
+  if (route.query.expired) {
+    return { text: 'Votre session a expiré. Veuillez vous reconnecter.', style: WARNING_STYLE }
+  }
+  if (route.query.suspended) {
+    return { text: 'Votre compte a été désactivé. Contactez le support si vous pensez qu’il s’agit d’une erreur.', style: DANGER_STYLE }
+  }
+  if (route.query.verified === '1') {
+    return { text: 'Adresse e-mail confirmée. Vous pouvez vous connecter.', style: 'background: #ECFDF5; color: #047857; border: 1px solid #A7F3D0;' }
+  }
+  if (route.query.verified === '0') {
+    return { text: 'Lien de confirmation invalide ou expiré. Inscrivez-vous à nouveau ou demandez un nouvel e-mail.', style: DANGER_STYLE }
+  }
+  return null
+})
+
 function homeForRole(user) {
   const role = user?.role
   if (role === 'agency') return '/agency/dashboard'
-  if (role === 'admin') return '/admin/agencies/validation'
+  if (role === 'admin') return '/admin/dashboard'
   return '/myreservations'
 }
 
@@ -108,6 +118,8 @@ async function handleSubmit() {
     router.push(redirect || homeForRole(user))
   } catch (e) {
     if (e.status === 422 && e.errors) Object.assign(errors, e.errors)
+    else if (e.status === 401) globalError.value = 'E-mail ou mot de passe incorrect.'
+    else if (e.status === 403) globalError.value = 'Votre compte a été suspendu. Contactez le support.'
     else globalError.value = e.message
   } finally {
     loading.value = false
