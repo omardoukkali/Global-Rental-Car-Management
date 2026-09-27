@@ -1,5 +1,9 @@
 import api from '@/services/api'
 
+const AI_SERVICE_URL = (
+  import.meta.env.VITE_SMARTDRIVE_AI_URL || 'http://localhost:5000'
+).replace(/\/$/, '')
+
 /**
  * SmartDrive AI client (SCRUM-181).
  *
@@ -27,6 +31,7 @@ export function buildPayload(preferences) {
     start_at: preferences.startDate,
     end_at: preferences.endDate,
     city_id: preferences.cityId,
+    ...(preferences.cityName ? { city_name: preferences.cityName } : {}),
     passengers: Number(preferences.passengers),
     vehicle_type: optional(preferences.vehicleType),
     transmission: optional(preferences.transmission),
@@ -56,6 +61,25 @@ function firstFieldMessage(errors) {
   return Array.isArray(first) ? first[0] : String(first || '')
 }
 
+async function getAiFallback(payload) {
+  const response = await fetch(`${AI_SERVICE_URL}/api/recommend`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify(payload),
+  })
+
+  if (!response.ok) {
+    const error = new Error('Le service SmartDrive est indisponible.')
+    error.status = response.status
+    throw error
+  }
+
+  return await response.json()
+}
+
 export default {
   /**
    * Sends the preferences to Laravel and returns the full recommendation:
@@ -63,9 +87,12 @@ export default {
    * Throws a SmartDriveError on validation / availability problems.
    */
   async getRecommendation(preferences) {
+    const payload = buildPayload(preferences)
+    let recommendation
+
     try {
       // `api` already returns the JSON body (not the Axios response).
-      return await api.post(RECOMMEND_URL, buildPayload(preferences))
+      recommendation = await api.post(RECOMMEND_URL, payload)
     } catch (error) {
       const status = error?.status ?? null
 
@@ -79,15 +106,38 @@ export default {
       }
 
       if (status === 503 || status === null) {
-        throw new SmartDriveError(
-            'unavailable',
-            error?.message || 'Le service de recommandation est momentanément indisponible. Réessayez dans quelques instants.',
-            null,
-            status,
-        )
+        try {
+          // In local/Docker development this preserves the previously working
+          // direct-AI path when Laravel cannot reach the AI container.
+          return await getAiFallback(payload)
+        } catch {
+          throw new SmartDriveError(
+              'unavailable',
+              error?.message || 'Le service de recommandation est momentanément indisponible. Réessayez dans quelques instants.',
+              null,
+              status,
+          )
+        }
       }
 
       throw new SmartDriveError('error', error?.message || 'Une erreur est survenue.', error?.errors || null, status)
     }
+
+    // Keep the existing experimental AI fleet available when Laravel has no
+    // eligible vehicles. The AI service returns the same response contract.
+    if (Array.isArray(recommendation?.results) && recommendation.results.length === 0) {
+      try {
+        return await getAiFallback(payload)
+      } catch (error) {
+        throw new SmartDriveError(
+            'unavailable',
+            error?.message || 'Le service de recommandation est momentanément indisponible. Réessayez dans quelques instants.',
+            null,
+            error?.status ?? null,
+        )
+      }
+    }
+
+    return recommendation
   },
 }

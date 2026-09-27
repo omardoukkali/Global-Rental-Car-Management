@@ -2,7 +2,7 @@ import json
 import unittest
 from pathlib import Path
 
-from main import SCORING_WEIGHTS, RecommendationRequest, analyze_vehicles, confidence_for, explain_vehicle, load_experimental_vehicles, score_breakdown
+from main import EXPERIMENTAL_CITIES, SCORING_WEIGHTS, RecommendationRequest, analyze_vehicles, confidence_for, explain_vehicle, load_experimental_vehicles, score_breakdown
 
 CITY_IDS = {
     "Agadir": "a2c296b8-dd35-43da-b3df-52459a2033f6",
@@ -44,6 +44,10 @@ class SmartDriveEngineTests(unittest.TestCase):
         self.assertTrue(all(len(fleet) > 0 for fleet in city_fleets.values()))
         self.assertEqual(sum(len(fleet) for fleet in city_fleets.values()), len(self.vehicles))
         self.assertEqual(len({vehicle["id"] for fleet in city_fleets.values() for vehicle in fleet}), len(self.vehicles))
+
+    def test_city_name_alias_uses_the_matching_experimental_fleet(self):
+        for name, city_id in EXPERIMENTAL_CITIES.items():
+            self.assertEqual(load_experimental_vehicles(name.lower()), load_experimental_vehicles(city_id))
 
     def test_personalized_matching_vehicle_is_ranked_first(self):
         results = analyze_vehicles(self.vehicles, self.request)

@@ -20,7 +20,10 @@ const preferences = {
 }
 
 describe('smartdrive service (SCRUM-181)', () => {
-  beforeEach(() => post.mockReset())
+  beforeEach(() => {
+    post.mockReset()
+    vi.stubGlobal('fetch', vi.fn())
+  })
 
   it('maps the form to the Laravel snake_case contract', () => {
     expect(buildPayload(preferences)).toEqual({
@@ -28,6 +31,20 @@ describe('smartdrive service (SCRUM-181)', () => {
       start_at: '2026-09-21',
       end_at: '2026-09-25',
       city_id: '11111111-1111-1111-1111-111111111111',
+      passengers: 3,
+      vehicle_type: 'suv',
+      transmission: 'automatic',
+      energy_type: 'gasoline',
+    })
+  })
+
+  it('includes the selected city name when it is available', () => {
+    expect(buildPayload({ ...preferences, cityName: 'Casablanca' })).toEqual({
+      budget_per_day: 450,
+      start_at: '2026-09-21',
+      end_at: '2026-09-25',
+      city_id: '11111111-1111-1111-1111-111111111111',
+      city_name: 'Casablanca',
       passengers: 3,
       vehicle_type: 'suv',
       transmission: 'automatic',
@@ -73,6 +90,7 @@ describe('smartdrive service (SCRUM-181)', () => {
 
   it('maps a 503 to an "unavailable" SmartDriveError', async () => {
     post.mockRejectedValueOnce({ status: 503, message: 'Service indisponible.' })
+    fetch.mockRejectedValueOnce(new Error('AI service offline'))
     const error = await smartdriveService.getRecommendation(preferences).catch((e) => e)
     expect(error).toBeInstanceOf(SmartDriveError)
     expect(error.code).toBe('unavailable')
@@ -80,8 +98,55 @@ describe('smartdrive service (SCRUM-181)', () => {
 
   it('treats a network failure (no status) as "unavailable"', async () => {
     post.mockRejectedValueOnce({ status: null, message: 'Le serveur est indisponible.' })
+    fetch.mockRejectedValueOnce(new Error('AI service offline'))
     const error = await smartdriveService.getRecommendation(preferences).catch((e) => e)
     expect(error.code).toBe('unavailable')
     expect(error.message).toContain('indisponible')
+  })
+
+  it('uses the direct AI fallback when Laravel returns 503', async () => {
+    const fallback = {
+      trip: null,
+      total: 1,
+      results: [{ id: 'experimental-car', score: 89 }],
+      alternatives: {},
+      source: 'experimental',
+    }
+    post.mockRejectedValueOnce({ status: 503, message: 'Service indisponible.' })
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => fallback,
+    })
+
+    await expect(
+      smartdriveService.getRecommendation({ ...preferences, cityName: 'Casablanca' }),
+    ).resolves.toEqual(fallback)
+
+    expect(fetch).toHaveBeenCalledWith(
+      'http://localhost:5000/api/recommend',
+      expect.objectContaining({
+        method: 'POST',
+        body: expect.stringContaining('"city_name":"Casablanca"'),
+      }),
+    )
+  })
+
+  it('uses the direct AI fleet when Laravel returns no eligible vehicles', async () => {
+    const fallback = {
+      trip: null,
+      total: 1,
+      results: [{ id: 'experimental-car', score: 83 }],
+      alternatives: {},
+      source: 'experimental',
+    }
+    post.mockResolvedValueOnce({ total: 0, results: [] })
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => fallback,
+    })
+
+    await expect(
+      smartdriveService.getRecommendation({ ...preferences, cityName: 'Casablanca' }),
+    ).resolves.toEqual(fallback)
   })
 })

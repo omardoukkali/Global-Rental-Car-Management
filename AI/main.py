@@ -28,6 +28,13 @@ BACKEND_URL = os.environ.get("BACKEND_URL", "http://backend:8000/api")
 EXPERIMENTAL_DATA_PATH = BASE_DIR / "data" / "experimental_vehicles.json"
 MODEL_PATH = BASE_DIR / "ml-training" / "model_smartdrive.pkl"
 COLUMNS_PATH = BASE_DIR / "ml-training" / "model_smartdrive_columns.json"
+EXPERIMENTAL_CITIES = {
+    "Agadir": "a2c296b8-dd35-43da-b3df-52459a2033f6",
+    "Casablanca": "a2c296b8-72d9-4163-9b99-74673eb932da",
+    "Marrakech": "a2c296b8-aa39-40be-8f10-2c700b3585b5",
+    "Rabat": "a2c296b8-9360-4b43-abec-7d2f41ae1260",
+    "Tanger": "a2c296b8-355a-4455-8bdd-8ab5255f813c",
+}
 ML_MODEL = None
 ML_CONTRACT = {}
 try:
@@ -55,6 +62,7 @@ class RecommendationRequest(BaseModel):
     start_at: str
     end_at: str
     city_id: str
+    city_name: Optional[str] = None
     passengers: int = Field(ge=1, le=9)
     vehicle_type: Optional[str] = None
     transmission: Optional[str] = None
@@ -199,11 +207,33 @@ def build_ml_features(car, request):
     return pd.DataFrame([[row[column] for column in ML_CONTRACT["input_columns"]]], columns=ML_CONTRACT["input_columns"])
 
 
-def load_experimental_vehicles(city_id=None):
+def resolve_city_name(city_id):
+    if not city_id:
+        return None
+    try:
+        with urlopen(f"{BACKEND_URL}/cities", timeout=2) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+        cities = payload if isinstance(payload, list) else payload.get("cities", payload.get("data", []))
+        for city in cities:
+            if str(city.get("id")) == str(city_id):
+                return city.get("name")
+    except Exception:
+        return None
+    return None
+
+
+def load_experimental_vehicles(city_id=None, city_name=None):
     with EXPERIMENTAL_DATA_PATH.open(encoding="utf-8") as data_file:
         vehicles = json.load(data_file)
     if not city_id:
         return vehicles
+    city_aliases = {name.lower(): identifier for name, identifier in EXPERIMENTAL_CITIES.items()}
+    if city_name:
+        city_id = city_aliases.get(str(city_name).strip().lower(), city_id)
+    else:
+        city_name = resolve_city_name(city_id)
+        city_id = city_aliases.get(str(city_name).strip().lower(), city_id) if city_name else city_id
+    city_id = city_aliases.get(str(city_id).strip().lower(), city_id)
     return [vehicle for vehicle in vehicles if vehicle.get("city_id") == city_id]
 
 
@@ -317,7 +347,7 @@ def health():
 
 @app.get("/cities")
 def cities():
-    fallback = [{"id": name.lower(), "name": name} for name in ("Casablanca", "Marrakech", "Rabat", "Tanger", "Agadir")]
+    fallback = [{"id": city_id, "name": name} for name, city_id in EXPERIMENTAL_CITIES.items()]
     try:
         with urlopen(f"{BACKEND_URL}/cities", timeout=2) as response:
             payload = json.loads(response.read().decode("utf-8"))
@@ -399,7 +429,7 @@ def recommend(request: RecommendationRequest):
     except Exception as error:
         if not use_experimental:
             raise HTTPException(status_code=503, detail="Le service de véhicules éligibles est indisponible.") from error
-        vehicles = load_experimental_vehicles(request.city_id)
+        vehicles = load_experimental_vehicles(request.city_id, request.city_name)
         request_data = request.model_dump() if hasattr(request, "model_dump") else request.dict()
         eligible = {"trip": None, "preferences": request_data}
         source = "experimental"
