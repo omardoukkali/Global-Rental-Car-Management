@@ -6,7 +6,6 @@ on:
     branches:
       - develop
       - main
-      - Develop1
       - 'feature/**'
       - 'infra/**'
       - 'refactor/**'
@@ -74,6 +73,21 @@ jobs:
       - name: Validate Composer dependencies
         run: |
           docker compose exec -T backend composer validate --strict
+
+      # --- SAST: static analysis of the code this team writes ---
+      # Trivy scans dependencies and container images; TruffleHog scans for
+      # credentials. Neither reads our own PHP and JS. Semgrep closes that gap:
+      # it pattern-matches the source against the OWASP Top 10 ruleset.
+      # continue-on-error while the initial findings are triaged - same
+      # rationale as Trivy below. Making this blocking is an open task.
+      - name: Semgrep static analysis (SAST)
+        uses: semgrep/semgrep-action@v1
+        continue-on-error: true
+        with:
+          config: >-
+            p/owasp-top-ten
+            p/php
+            p/javascript
 
       - name: Run backend tests (PHPUnit)
         run: |
